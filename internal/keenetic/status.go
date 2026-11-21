@@ -261,7 +261,9 @@ func (s *Snapshot) Fields() map[string]any {
 			row["ht"] = width
 		}
 		radioTable = append(radioTable, row)
-		radios = append(radios, map[string]any{"name": name, "radio": band, "channel": number(r["channel"]), "ht": r["bandwidth"], "num_sta": count, "user-num_sta": count, "temperature": number(r["temperature"])})
+		// The controller uses bw for measured operating width; radio_table.ht
+		// may retain its desired configuration while this daemon is log-only.
+		radios = append(radios, map[string]any{"name": name, "radio": band, "channel": number(r["channel"]), "ht": r["bandwidth"], "bw": number(r["bandwidth"]), "num_sta": count, "user-num_sta": count, "temperature": number(r["temperature"])})
 	}
 	count := len(s.StationFields())
 	return map[string]any{"num_sta": count, "user-num_sta": count, "stat": map[string]any{"user-num_sta": count}, "sta_table": s.StationFields(), "vap_table": s.VAPFields(), "sys_stats": stats, "system-stats": map[string]any{"cpu": s.System["cpuload"], "mem": fmt.Sprintf("%.1f", 100*float64(total-free)/float64(max(total, 1))), "uptime": number(s.System["uptime"])}, "uptime": number(s.System["uptime"]), "radio_table": radioTable, "radio_table_stats": radios}

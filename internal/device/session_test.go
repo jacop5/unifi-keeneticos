@@ -21,7 +21,7 @@ func TestAdoptedHardwareTelemetryWins(t *testing.T) {
 	x := newSession(t)
 	x.S.Adopted = true
 	x.Extra = func() map[string]any {
-		return map[string]any{"sys_stats": map[string]any{"mem_total": 262144000}, "radio_table_stats": []map[string]any{{"num_sta": 17}}}
+		return map[string]any{"sys_stats": map[string]any{"mem_total": 262144000}, "radio_table_stats": []map[string]any{{"num_sta": 17, "bw": 80}}}
 	}
 	b, err := x.Payload(time.Now())
 	if err != nil {
@@ -34,7 +34,7 @@ func TestAdoptedHardwareTelemetryWins(t *testing.T) {
 	if got["sys_stats"].(map[string]any)["mem_total"] != float64(262144000) {
 		t.Fatal(got["sys_stats"])
 	}
-	if got["radio_table_stats"].([]any)[0].(map[string]any)["num_sta"] != float64(17) {
+	if stats := got["radio_table_stats"].([]any)[0].(map[string]any); stats["num_sta"] != float64(17) || stats["bw"] != float64(80) {
 		t.Fatal(got["radio_table_stats"])
 	}
 }

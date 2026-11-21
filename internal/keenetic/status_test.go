@@ -86,7 +86,7 @@ func TestMeasuredRadioTelemetry(t *testing.T) {
 	f := s.Fields()
 	radios := f["radio_table"].([]map[string]any)
 	stats := f["radio_table_stats"].([]map[string]any)
-	if radios[0]["ht"] != "40" || radios[1]["ht"] != "80" || radios[1]["channel"] != int64(36) || stats[1]["num_sta"] != 1 {
+	if radios[0]["ht"] != "40" || radios[1]["ht"] != "80" || radios[1]["channel"] != int64(36) || stats[1]["num_sta"] != 1 || stats[0]["bw"] != int64(40) || stats[1]["bw"] != int64(80) {
 		t.Fatalf("radios=%#v stats=%#v", radios, stats)
 	}
 	for _, row := range radios {
