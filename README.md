@@ -6,6 +6,12 @@ This fork adds the Keenetic backend and the `ukn` daemon. It reuses the upstream
 
 README rewritten for this fork by the unifi-keeneticos contributors on **2026-11-21**.
 
+## AI slop disclaimer
+
+Much of this fork's Keenetic-specific code and documentation was generated with OpenAI Codex. It has had automated checks and limited live testing, but **has not undergone a comprehensive independent human review**. Expect bugs, incomplete features, questionable assumptions, and documentation that may overstate what works. Passing tests are not proof that it is safe for your network: inspect the code, back up your configuration, and use a spare router with independent management access before trusting it.
+
+This disclaimer applies to the changes in this fork, not to the original upstream project or its authors.
+
 ## Credits
 
 The original project is **[unifi-openwrt](https://github.com/antoniocosta/unifi-openwrt)** by **[@antoniocosta](https://github.com/antoniocosta)** and its contributors. The starting upstream revision is [a211831](https://github.com/antoniocosta/unifi-openwrt/commit/a211831). Credit for the original protocol implementation, OpenWrt backend, documentation and test infrastructure belongs to that project.
