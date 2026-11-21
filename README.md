@@ -60,6 +60,8 @@ Radio telemetry reports native channel widths without guessing antenna or transm
 
 Unknown controller settings are not comprehensively classified. A successful adoption does not establish support for every control exposed by the selected UniFi model. This daemon never installs Ubiquiti firmware.
 
+Keenetic sessions explicitly reject controller firmware upgrades without changing the reported compatibility version or simulating a reboot. A controller reboot request is logged; it does not reset uptime or restart the router. The displayed UniFi model/version is a protocol compatibility profile, not the installed Keenetic firmware version.
+
 ## Requirements
 
 - KeeneticOS with Entware and a working `ndmc` command.

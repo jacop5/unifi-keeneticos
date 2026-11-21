@@ -211,6 +211,14 @@ has been made on the Wi-Fi-connected Hero DSL.
 
 ## Optional controller LED actions
 
+The native session disables the upstream emulator's simulated upgrade and
+reboot state changes. Both top-level firmware requests and `cmd upgrade`
+are rejected without downloading an image, adopting the requested version,
+or moving the boot clock. Reboot/restart requests reach the backend action
+allowlist, where they remain unsupported; they cannot be enabled by
+`-led-control`. This behavior has automated coverage. No live firmware or
+reboot test was performed on the Wi-Fi-connected Hero.
+
 `ukn -led-control` enables the controller's LED on/off requests independently
 of WLAN provisioning. It changes the device-wide LED shutdown setting using
 `system led power shutdown all` and `system no led power shutdown`; it does

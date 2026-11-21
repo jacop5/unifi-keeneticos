@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Modified by unifi-keeneticos contributors, 2026-11-21:
-// add regression coverage for adopted hardware telemetry.
+// add regression coverage for hardware telemetry and physical system actions.
 
 package device
 
@@ -111,6 +111,30 @@ func TestUpgradeIsNeverApplied(t *testing.T) {
 	o := handle(t, x, `{"_type":"upgrade","version":"6.8.9.99999","url":"http://192.168.1.1:8080/dl/firmware/x.bin","sha256sum":"00"}`)
 	if x.S.Version != "6.8.9.99999" || !x.Boot.After(before) || !o.Immediate {
 		t.Fatalf("upgrade handling: version=%s boot moved=%v", x.S.Version, x.Boot.After(before))
+	}
+}
+
+func TestPhysicalDeviceDoesNotSimulateFirmwareOrReboot(t *testing.T) {
+	for _, reply := range []string{
+		`{"_type":"upgrade","version":"99.99.99","url":"http://192.0.2.1/firmware.bin"}`,
+		`{"_type":"cmd","cmd":"upgrade","version":"99.99.99","url":"http://192.0.2.1/firmware.bin"}`,
+		`{"_type":"cmd","cmd":"reboot"}`,
+		`{"_type":"cmd","cmd":"restart"}`,
+	} {
+		x := newSession(t)
+		x.PhysicalDevice = true
+		beforeBoot, beforeVersion := x.Boot, x.S.Version
+		o := handle(t, x, reply)
+		if !x.Boot.Equal(beforeBoot) || x.S.Version != beforeVersion || o.Changed {
+			t.Fatalf("physical device simulated a system change: reply=%s outcome=%+v", reply, o)
+		}
+		if strings.Contains(reply, "upgrade") {
+			if len(o.Actions) != 0 || !strings.Contains(strings.Join(o.Events, " "), "rejected") {
+				t.Fatalf("firmware request was not explicitly rejected: %+v", o)
+			}
+		} else if len(o.Actions) != 1 || o.Actions[0] != "reboot" {
+			t.Fatalf("native reboot action was lost: %+v", o)
+		}
 	}
 }
 

@@ -177,6 +177,7 @@ func main() {
 	}
 	x := &device.Session{S: st, StateDir: *stateDir, Boot: time.Now(), Dev: inform.Device{MAC: mac, IP: s.Home["address"], Netmask: s.Home["mask"], Hostname: s.System["hostname"], Radios: []inform.Radio{}}}
 	x.Dev.Model = profile.Model
+	x.PhysicalDevice = true
 	x.Dev.ModelDisplay = profile.Display
 	x.RestoreFromMgmtCfg()
 	journal := filepath.Join(*stateDir, "rollback.json")

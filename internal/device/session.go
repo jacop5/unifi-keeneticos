@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Modified by unifi-keeneticos contributors, 2026-11-21:
-// preserve backend hardware telemetry in adopted inform payloads.
+// preserve backend hardware telemetry and prevent simulated firmware/reboot
+// state changes when running on physical Keenetic hardware.
 
 // Package device is the device side of the inform protocol: the state a
 // UniFi AP keeps (key, cipher, cfgversion, adopted), the payload it sends,
@@ -97,6 +98,9 @@ type Session struct {
 	// Extra, when set, returns fields read from the real AP (radios, VAPs,
 	// clients, system); they replace the static U7PG2 defaults.
 	Extra func() map[string]any
+	// PhysicalDevice disables emulator-only version and reboot-clock changes.
+	// Native actions still need a separate backend implementation/allowlist.
+	PhysicalDevice bool
 	// WifiCaps is the UNIFI_WIFI_CAP bitmap we claim (0 = not sent). Claim
 	// only what the AP really does: the controller trusts it.
 	WifiCaps int
@@ -411,6 +415,10 @@ func sections(cfg string) []string {
 }
 
 func (x *Session) upgrade(version, url string, now time.Time, o *Outcome) {
+	if x.PhysicalDevice {
+		o.Events = append(o.Events, "UPGRADE rejected: controller firmware is not compatible with this native backend; version and uptime unchanged")
+		return
+	}
 	// Never download or apply anything. Report the target version and fake
 	// a reboot so the controller does not loop on the upgrade.
 	host := url
@@ -453,7 +461,9 @@ func (x *Session) cmd(r Reply, js []byte, now time.Time, o *Outcome) {
 		o.Immediate = true
 		o.Events = append(o.Events, fmt.Sprintf("cmd %s: key stored, uri=%q", r.Cmd, r.URI))
 	case "reboot", "restart":
-		x.Boot = now
+		if !x.PhysicalDevice {
+			x.Boot = now
+		}
 		o.Immediate = true
 		o.Actions = append(o.Actions, "reboot")
 		o.Events = append(o.Events, "cmd "+r.Cmd+": reboot requested")
