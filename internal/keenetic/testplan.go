@@ -31,7 +31,7 @@ func BuildWLANTestPlan(text string, slots map[string]string) (Plan, error) {
 				keys = append(keys, key)
 			}
 		}
-		if strings.HasPrefix(key, "vlan.") {
+		if strings.HasPrefix(key, "vlan.") || strings.HasPrefix(key, "bridge.") {
 			keys = append(keys, key)
 		}
 	}

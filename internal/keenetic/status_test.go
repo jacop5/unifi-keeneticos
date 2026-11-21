@@ -81,6 +81,23 @@ func TestHardwareTelemetry(t *testing.T) {
 	}
 }
 
+func TestMeasuredRadioTelemetry(t *testing.T) {
+	s := &Snapshot{Radios: []map[string]string{{"id": "WifiMaster0", "channel": "12", "bandwidth": "40"}, {"id": "WifiMaster1", "channel": "36", "bandwidth": "80"}}, Stations: []map[string]string{{"ap": "WifiMaster1/AccessPoint6", "authenticated": "yes"}, {"ap": "WifiMaster1/AccessPoint6", "authenticated": "no"}}}
+	f := s.Fields()
+	radios := f["radio_table"].([]map[string]any)
+	stats := f["radio_table_stats"].([]map[string]any)
+	if radios[0]["ht"] != "40" || radios[1]["ht"] != "80" || radios[1]["channel"] != int64(36) || stats[1]["num_sta"] != 1 {
+		t.Fatalf("radios=%#v stats=%#v", radios, stats)
+	}
+	for _, row := range radios {
+		for _, key := range []string{"nss", "tx_power", "max_txpower", "radio_caps"} {
+			if _, exists := row[key]; exists {
+				t.Fatalf("unmeasured capability %s advertised", key)
+			}
+		}
+	}
+}
+
 func TestVAPContainsControllerClientRows(t *testing.T) {
 	s := &Snapshot{VAPs: []map[string]string{{"id": "WifiMaster0/AccessPoint0", "ssid": "Example", "mac": "02:00:00:00:00:01"}}, Stations: []map[string]string{{"ap": "WifiMaster0/AccessPoint0", "mac": "02:00:00:00:00:02", "authenticated": "yes", "txrate": "72.2", "rxrate": "65", "ht": "40", "mode": "11n", "txbytes": "100", "rxbytes": "200"}}}
 	v := s.VAPFields()[0]

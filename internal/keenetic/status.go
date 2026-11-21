@@ -242,6 +242,7 @@ func (s *Snapshot) Fields() map[string]any {
 	free := number(s.System["memfree"]) * 1024
 	stats := map[string]any{"mem_total": total, "mem_used": total - free, "mem_buffer": number(s.System["membuffers"]) * 1024}
 	radios := []map[string]any{}
+	radioTable := []map[string]any{}
 	for i, r := range s.Radios {
 		band, name := "ng", "wifi0"
 		if i == 1 {
@@ -253,10 +254,17 @@ func (s *Snapshot) Fields() map[string]any {
 				count++
 			}
 		}
-		radios = append(radios, map[string]any{"name": name, "radio": band, "channel": number(r["channel"]), "num_sta": count, "temperature": number(r["temperature"])})
+		row := map[string]any{"name": name, "radio": band, "channel": number(r["channel"])}
+		// Publish native measurements without advertising guessed power or
+		// antenna capabilities from the emulated device profile.
+		if width := r["bandwidth"]; width != "" {
+			row["ht"] = width
+		}
+		radioTable = append(radioTable, row)
+		radios = append(radios, map[string]any{"name": name, "radio": band, "channel": number(r["channel"]), "ht": r["bandwidth"], "num_sta": count, "user-num_sta": count, "temperature": number(r["temperature"])})
 	}
 	count := len(s.StationFields())
-	return map[string]any{"num_sta": count, "user-num_sta": count, "stat": map[string]any{"user-num_sta": count}, "sta_table": s.StationFields(), "vap_table": s.VAPFields(), "sys_stats": stats, "system-stats": map[string]any{"cpu": s.System["cpuload"], "mem": fmt.Sprintf("%.1f", 100*float64(total-free)/float64(max(total, 1))), "uptime": number(s.System["uptime"])}, "uptime": number(s.System["uptime"]), "radio_table_stats": radios}
+	return map[string]any{"num_sta": count, "user-num_sta": count, "stat": map[string]any{"user-num_sta": count}, "sta_table": s.StationFields(), "vap_table": s.VAPFields(), "sys_stats": stats, "system-stats": map[string]any{"cpu": s.System["cpuload"], "mem": fmt.Sprintf("%.1f", 100*float64(total-free)/float64(max(total, 1))), "uptime": number(s.System["uptime"])}, "uptime": number(s.System["uptime"]), "radio_table": radioTable, "radio_table_stats": radios}
 }
 
 func (s *Snapshot) FieldsForConfig(text string) map[string]any {

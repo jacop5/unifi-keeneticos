@@ -134,3 +134,19 @@ func TestTaggedNetworkCannotApplyAsUntagged(t *testing.T) {
 		t.Fatal("VLAN plan allowed to apply untagged")
 	}
 }
+
+func TestTaggedBridgeWithoutVLANSectionIsRejected(t *testing.T) {
+	text := wlan + "bridge.2.devname=br0.77\nbridge.2.port.1.devname=wifi0ap5\nbridge.2.port.2.devname=eth0.77\n"
+	for _, build := range []func(string, map[string]string) (Plan, error){BuildPlan, BuildWLANTestPlan} {
+		p, err := build(strings.ReplaceAll(text, "Home WiFi", "UKN-Test-Example"), map[string]string{"1": "WifiMaster0/AccessPoint6"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(p.Unsupported) == 0 {
+			t.Fatal("tagged bridge accepted as Home network")
+		}
+		if _, err := Preimage(p, ""); err == nil {
+			t.Fatal("tagged bridge allowed to apply")
+		}
+	}
+}

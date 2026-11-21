@@ -49,6 +49,15 @@ func BuildPlan(text string, slots map[string]string) (Plan, error) {
 		if strings.HasPrefix(key, "vlan.") && strings.HasSuffix(key, ".id") && value != "" && value != "0" {
 			p.Unsupported = append(p.Unsupported, key)
 		}
+		// A tagged bridge is also a VLAN request, even when a controller
+		// omits the separate vlan section. Never silently attach it to Home.
+		if strings.HasPrefix(key, "bridge.") && strings.HasSuffix(key, ".devname") {
+			if dot := strings.LastIndexByte(value, '.'); dot >= 0 {
+				if id, err := strconv.Atoi(value[dot+1:]); err == nil && id != 0 {
+					p.Unsupported = append(p.Unsupported, key)
+				}
+			}
+		}
 	}
 	sort.Strings(p.Unsupported)
 	add := func(s string) { p.Commands = append(p.Commands, Command{Text: s}) }
