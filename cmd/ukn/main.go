@@ -35,6 +35,7 @@ func main() {
 	probe := flag.Bool("probe", false, "collect router status and exit without contacting a controller")
 	terminalProbe := flag.Bool("terminal-probe", false, "test read-only NDM terminal execution and exit")
 	rollbackProbe := flag.String("rollback-probe", "", "test rollback on an unused disabled AP slot, then exit")
+	probeMode := flag.String("rollback-probe-mode", "ssid", "disabled-slot rollback probe: ssid or owe")
 	crashProbe := flag.Bool("crash-probe", false, "with -rollback-probe, exit before confirmation to test detached recovery")
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
 	wlanTestOnly := flag.Bool("wlan-test-only", false, "restrict planning to UKN-Test SSIDs on non-primary slots; exclude all radio changes")
@@ -97,9 +98,9 @@ func main() {
 		if err := os.MkdirAll(*stateDir, 0700); err != nil {
 			log.Fatal(err)
 		}
-		c, cancel := context.WithTimeout(ctx, 45*time.Second)
+		c, cancel := context.WithTimeout(ctx, 90*time.Second)
 		defer cancel()
-		if err := probeRollback(c, *rollbackProbe, *stateDir, *crashProbe); err != nil {
+		if err := probeRollback(c, *rollbackProbe, *stateDir, *crashProbe, *probeMode); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println("NDM rollback probe passed")

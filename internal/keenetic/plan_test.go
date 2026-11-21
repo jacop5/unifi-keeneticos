@@ -31,7 +31,7 @@ func TestPlanWPA2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Unsupported) != 0 || len(p.Commands) != 14 {
+	if len(p.Unsupported) != 0 || len(p.Commands) != 15 {
 		t.Fatalf("%#v", p)
 	}
 	for _, c := range p.Commands {

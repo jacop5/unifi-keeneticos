@@ -77,6 +77,35 @@ Omit `-apply` for log-only operation. The test state above is temporary;
 production state belongs under `/opt/var/lib/unifi-keenetic`. Do not use the
 unrestricted apply mode while relying on the AP's own Wi-Fi for management.
 
+### Security feature follow-up
+
+The planner accepts explicitly open WLANs (`aaa.N.security=open` or `none`,
+without WPA/PSK settings), and maps Enhanced Open to `encryption owe` with
+mandatory PMF when `wpa3.support=enabled`. Ambiguous security, WEP and EAP
+remain rejected; unsupported modes are never treated as open. Personal
+WLAN plans explicitly turn off OWE. WPA2 also accepts valid 64-hex raw PSKs;
+raw PSKs are not accepted for SAE.
+
+Security translation and inverse commands have regression coverage. The
+`-rollback-probe-mode owe` probe sets OWE/PMF on an unused disabled AP slot,
+verifies the flags while the slot is still down, forces rollback, and compares
+the entire interface block to its preimage. It never enables or bridges the
+probe slot. No open or OWE client association has been tested.
+
+On Hero DSL 5.1.5, this OWE probe passed on AccessPoint5 of both WifiMaster0
+and WifiMaster1. Each slot remained disabled and its complete configuration
+block was restored exactly. Serving primary AP and radio configuration hashes
+matched the pre-test baseline. The running management daemon was left unchanged
+in log-only mode; these tests did not publish an open or OWE SSID.
+
+```sh
+ukn -rollback-probe WifiMaster0/AccessPoint5 \
+  -rollback-probe-mode owe -state /tmp/ukn-security-probe-state
+```
+
+This command refuses primary APs, active slots and slots with an existing
+SSID. It is a live configuration/rollback test, not a read-only probe.
+
 Build for this device:
 
 ```sh

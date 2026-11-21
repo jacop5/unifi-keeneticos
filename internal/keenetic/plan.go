@@ -2,6 +2,7 @@
 package keenetic
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/antoniocosta/unifi-openwrt/internal/translate"
 	"sort"
@@ -157,38 +158,65 @@ func BuildPlan(text string, slots map[string]string) (Plan, error) {
 			mgmt += " " + cfg[fmt.Sprintf("%swpa.key.%d.mgmt", aaa, i)]
 		}
 		sae := strings.Contains(mgmt, "SAE")
-		if cfg[aaa+"ssid"] != ssid || cfg[aaa+"wpa"] != "2" || strings.Contains(mgmt, "EAP") || (cfg[aaa+"wpa3.support"] == "enabled" && !sae) {
+		open := cfg[aaa+"wpa"] == "" && cfg[aaa+"wpa.psk"] == "" && (cfg[aaa+"security"] == "open" || cfg[aaa+"security"] == "none")
+		owe := open && cfg[aaa+"wpa3.support"] == "enabled"
+		if cfg[aaa+"ssid"] != ssid || (!open && (cfg[aaa+"wpa"] != "2" || strings.Contains(mgmt, "EAP") || (cfg[aaa+"wpa3.support"] == "enabled" && !sae))) || (open && strings.TrimSpace(mgmt) != "") {
 			p.Unsupported = append(p.Unsupported, prefix+"security")
 			continue
 		}
 		key := cfg[aaa+"wpa.psk"]
-		if len(key) < 8 || len(key) > 63 {
-			return p, fmt.Errorf("invalid WPA2 passphrase length")
-		}
-		qssid, err := quoted(ssid)
-		if err != nil {
-			return p, err
-		}
-		if len(ssid) == 0 || len(ssid) > 32 {
-			return p, fmt.Errorf("invalid SSID length")
-		}
-		qkey, err := quoted(key)
-		if err != nil {
-			return p, err
-		}
-		add("interface " + target + " ssid " + qssid)
-		p.Commands = append(p.Commands, Command{Text: "interface " + target + " authentication wpa-psk " + qkey, Secret: true})
-		add("interface " + target + " encryption enable")
-		add("interface " + target + " no encryption wpa")
-		if sae {
-			add("interface " + target + " encryption wpa3")
+		if !open {
+			_, hexErr := hex.DecodeString(key)
+			rawPSK := len(key) == 64 && hexErr == nil && !sae
+			if !rawPSK && (len(key) < 8 || len(key) > 63) {
+				return p, fmt.Errorf("invalid personal WLAN key length or format")
+			}
+			qssid, err := quoted(ssid)
+			if err != nil {
+				return p, err
+			}
+			if len(ssid) == 0 || len(ssid) > 32 {
+				return p, fmt.Errorf("invalid SSID length")
+			}
+			qkey, err := quoted(key)
+			if err != nil {
+				return p, err
+			}
+			add("interface " + target + " ssid " + qssid)
+			p.Commands = append(p.Commands, Command{Text: "interface " + target + " authentication wpa-psk " + qkey, Secret: true})
+			add("interface " + target + " encryption enable")
+			add("interface " + target + " no encryption wpa")
+			if sae {
+				add("interface " + target + " encryption wpa3")
+			} else {
+				add("interface " + target + " no encryption wpa3")
+			}
+			if !sae || cfg[aaa+"wpa3.transition"] == "enabled" {
+				add("interface " + target + " encryption wpa2")
+			} else {
+				add("interface " + target + " no encryption wpa2")
+			}
+			add("interface " + target + " no encryption owe")
 		} else {
-			add("interface " + target + " no encryption wpa3")
-		}
-		if !sae || cfg[aaa+"wpa3.transition"] == "enabled" {
-			add("interface " + target + " encryption wpa2")
-		} else {
-			add("interface " + target + " no encryption wpa2")
+			qssid, err := quoted(ssid)
+			if err != nil {
+				return p, err
+			}
+			if len(ssid) == 0 || len(ssid) > 32 {
+				return p, fmt.Errorf("invalid SSID length")
+			}
+			add("interface " + target + " ssid " + qssid)
+			p.Commands = append(p.Commands, Command{Text: "interface " + target + " no authentication wpa-psk", Secret: true})
+			for _, mode := range []string{"wpa", "wpa2", "wpa3"} {
+				add("interface " + target + " no encryption " + mode)
+			}
+			if owe {
+				add("interface " + target + " encryption enable")
+				add("interface " + target + " encryption owe")
+			} else {
+				add("interface " + target + " no encryption owe")
+				add("interface " + target + " no encryption enable")
+			}
 		}
 		hidden := cfg[prefix+"hide_ssid"] == "true" || cfg[aaa+"hide_ssid"] == "true"
 		if hidden {
@@ -200,7 +228,7 @@ func BuildPlan(text string, slots map[string]string) (Plan, error) {
 		if cfg[aaa+"pmf.status"] == "enabled" || sae {
 			pmf = "pmf"
 		}
-		if cfg[aaa+"pmf.mode"] == "2" || (sae && cfg[aaa+"wpa3.transition"] != "enabled") {
+		if cfg[aaa+"pmf.mode"] == "2" || (sae && cfg[aaa+"wpa3.transition"] != "enabled") || owe {
 			pmf = "pmf force"
 		}
 		add("interface " + target + " " + pmf)

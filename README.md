@@ -47,11 +47,12 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Uptime, memory, CPU and radio/client telemetry | Implemented; basic live reporting verified, not every field is complete |
 | Private rollback journal, inverse commands, watchdog, startup recovery | Implemented; immediate failure and detached crash recovery verified on Titan |
 | WPA3 personal, transition mode, PMF, hidden SSID, peer isolation, RRM | Implemented and unit-tested; not comprehensively tested live |
+| Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
 | Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN provisioning, fast roaming, mesh, guest portal, scanning, QoS | Not ported; VLAN/fast-roaming configurations are explicitly rejected |
 | Client block/kick, locate/LED/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
-| Enterprise/open/OWE/WEP security, transmit-power/country control, advanced management | Not supported by the Keenetic translator |
+| Enterprise/WEP security, transmit-power/country control, advanced management | Not supported by the Keenetic translator |
 
 Unknown controller settings are not comprehensively classified. A successful adoption does not establish support for every control exposed by the selected UniFi model. This daemon never installs Ubiquiti firmware.
 
