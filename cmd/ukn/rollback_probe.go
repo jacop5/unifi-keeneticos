@@ -124,6 +124,9 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 			if err := verifySecurityProbe(mode, block, status["state"]); err != nil {
 				return err
 			}
+			if err := keenetic.VerifyWLANSettings(plan, block); err != nil {
+				return err
+			}
 		}
 		if mode == "acl" {
 			block, err := readBlock()

@@ -98,3 +98,66 @@ func VerifyBridgeMembership(plan Plan, running string) error {
 	}
 	return nil
 }
+
+// VerifyWLANSettings checks native security flags before a transaction is
+// confirmed. Being up on the correct bridge does not prove the requested
+// encryption was applied. Password contents remain private; successful client
+// authentication is a separate end-to-end check.
+func VerifyWLANSettings(plan Plan, running string) error {
+	blocks := interfaceBlocks(running)
+	for _, c := range plan.Commands {
+		fields := strings.SplitN(c.Text, " ", 3)
+		if len(fields) != 3 || fields[0] != "interface" || !regexpAP.MatchString(fields[1]) {
+			continue
+		}
+		lines, exists := blocks[fields[1]]
+		if !exists {
+			return fmt.Errorf("mapped WLAN missing from native readback")
+		}
+		setting := strings.TrimPrefix(fields[2], "no ")
+		enabled := setting == fields[2]
+		checked := false
+		for _, flag := range []string{"encryption enable", "encryption wpa", "encryption wpa2", "encryption wpa3", "encryption owe", "hide-ssid", "peer-isolation", "rrm"} {
+			if setting != flag {
+				continue
+			}
+			present := false
+			for _, line := range lines {
+				present = present || line == flag
+			}
+			if present != enabled {
+				return fmt.Errorf("native WLAN flag does not match plan: %s", flag)
+			}
+			checked = true
+			break
+		}
+		if checked {
+			continue
+		}
+		if setting == "pmf" || setting == "pmf force" {
+			actual := ""
+			for _, line := range lines {
+				if line == "pmf" || line == "pmf force" {
+					actual = line
+				}
+			}
+			want := ""
+			if enabled {
+				want = setting
+			}
+			if actual != want {
+				return fmt.Errorf("native WLAN PMF mode does not match plan")
+			}
+		}
+		if strings.HasPrefix(setting, "authentication wpa-psk") {
+			present := false
+			for _, line := range lines {
+				present = present || strings.HasPrefix(line, "authentication wpa-psk ")
+			}
+			if present != enabled {
+				return fmt.Errorf("native WLAN key presence does not match plan")
+			}
+		}
+	}
+	return nil
+}

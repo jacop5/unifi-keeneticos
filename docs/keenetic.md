@@ -171,6 +171,15 @@ the main daemon has not confirmed. Each journal has a unique identity so
 old watchdogs do not undo later transactions. Advanced features remain under development. The Entware service
 defaults to log-only mode; explicit action switches are described below.
 
+Before confirmation, native readback must match the requested encryption
+flags, PMF mode, hidden-SSID state, peer isolation, RRM, and key presence,
+in addition to SSID operation, bridge membership and MAC lists. A driver
+acknowledgement alone is insufficient. Regression tests simulate commands
+being silently ignored and verify journaled rollback. The shared checker
+also passed live WPA3-only and transition probes on the disabled Hero slot
+on 2026-11-21. Key contents are not compared or printed by this checker;
+successful client authentication remains a separate end-to-end check.
+
 `-model CODE` selects a model from `-models`; the Entware configuration
 uses `MODEL`. Fast roaming, VLAN provisioning, guest portal, mesh, scanning,
 client actions, QoS and several upstream management features are unfinished.
