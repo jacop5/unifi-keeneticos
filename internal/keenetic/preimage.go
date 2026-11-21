@@ -6,12 +6,7 @@ import (
 	"strings"
 )
 
-// Preimage attaches inverses using only existing interface blocks. It never
-// restores an entire router configuration over unrelated WAN or VPN settings.
-func Preimage(plan Plan, running string) ([]Change, error) {
-	if len(plan.Unsupported) > 0 {
-		return nil, fmt.Errorf("plan contains unsupported settings")
-	}
+func interfaceBlocks(running string) map[string][]string {
 	blocks := map[string][]string{}
 	current := ""
 	for _, line := range strings.Split(running, "\n") {
@@ -29,7 +24,51 @@ func Preimage(plan Plan, running string) ([]Change, error) {
 			blocks[current] = append(blocks[current], strings.TrimSpace(line))
 		}
 	}
+	return blocks
+}
+
+// Preimage attaches inverses using only existing interface blocks. It never
+// restores an entire router configuration over unrelated WAN or VPN settings.
+func Preimage(plan Plan, running string) ([]Change, error) {
+	if len(plan.Unsupported) > 0 {
+		return nil, fmt.Errorf("plan contains unsupported settings")
+	}
+	blocks := interfaceBlocks(running)
+	known := map[string]bool{}
+	for _, line := range strings.Split(running, "\n") {
+		if !strings.HasPrefix(line, "known host ") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) > 0 {
+			if mac, err := clientMAC(fields[len(fields)-1]); err == nil {
+				known[mac] = true
+			}
+		}
+	}
 	var changes []Change
+	seenACL := map[string]bool{}
+	for _, acl := range plan.AccessLists {
+		lines, exists := blocks[acl.Target]
+		if !exists || seenACL[acl.Target] {
+			return nil, fmt.Errorf("missing or duplicate ACL target")
+		}
+		seenACL[acl.Target] = true
+		delta, err := aclChanges(acl, lines)
+		if err != nil {
+			return nil, err
+		}
+		// Native NDM only accepts registered hosts. Check both directions
+		// before quiescing an AP; rollback must be able to restore old entries.
+		for _, change := range delta {
+			for _, command := range []Command{change.Forward, change.Undo} {
+				if _, mac, ok := strings.Cut(command.Text, " mac access-list address "); ok && !known[mac] {
+					return nil, fmt.Errorf("MAC ACL requires existing Keenetic known-host registrations")
+				}
+			}
+		}
+		changes = append(changes, delta...)
+	}
 	aliases := map[string]string{}
 	for id, lines := range blocks {
 		aliases[id] = id

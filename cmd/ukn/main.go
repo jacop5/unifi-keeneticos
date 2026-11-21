@@ -35,7 +35,7 @@ func main() {
 	probe := flag.Bool("probe", false, "collect router status and exit without contacting a controller")
 	terminalProbe := flag.Bool("terminal-probe", false, "test read-only NDM terminal execution and exit")
 	rollbackProbe := flag.String("rollback-probe", "", "test rollback on an unused disabled AP slot, then exit")
-	probeMode := flag.String("rollback-probe-mode", "ssid", "disabled-slot rollback probe: ssid or owe")
+	probeMode := flag.String("rollback-probe-mode", "ssid", "disabled-slot rollback probe: ssid, owe or acl")
 	crashProbe := flag.Bool("crash-probe", false, "with -rollback-probe, exit before confirmation to test detached recovery")
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
 	ledControl := flag.Bool("led-control", false, "allow controller LED on/off commands independently of WLAN apply; no reboot or locate")
@@ -106,6 +106,9 @@ func main() {
 		}
 		for _, unsupported := range plan.Unsupported {
 			fmt.Printf("unsupported: %s\n", unsupported)
+		}
+		for _, acl := range plan.AccessLists {
+			fmt.Printf("MAC ACL: %s policy=%s clients=%v (AP pauses during replacement)\n", acl.Target, acl.Policy, acl.MACs)
 		}
 		return
 	}
@@ -263,6 +266,9 @@ func main() {
 						for _, setting := range plan.Unsupported {
 							log.Printf("unsupported: %s", setting)
 						}
+						for _, acl := range plan.AccessLists {
+							log.Printf("MAC ACL: %s policy=%s clients=%d", acl.Target, acl.Policy, len(acl.MACs))
+						}
 						applyEligible := *apply && x.S.Adopted
 						if applyEligible && *wlanTestOnly {
 							c, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -301,6 +307,9 @@ func main() {
 									return err
 								}
 								if err := keenetic.VerifyBridgeMembership(plan, string(running)); err != nil {
+									return err
+								}
+								if err := keenetic.VerifyAccessLists(plan, string(running)); err != nil {
 									return err
 								}
 								if err := exchange(checkCtx, client, x, path, &interval, actionHandler); err != nil {

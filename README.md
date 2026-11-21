@@ -48,6 +48,7 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Private rollback journal, inverse commands, watchdog, startup recovery | Implemented; immediate failure and detached crash recovery verified on Titan |
 | WPA3 personal, transition mode, PMF, hidden SSID, peer isolation, RRM | Implemented and unit-tested; not comprehensively tested live |
 | Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
+| Per-WLAN MAC allow/deny lists | Implemented with registered Keenetic hosts; native list and rollback verified on an unused disabled Hero slot; client enforcement not yet verified |
 | Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |

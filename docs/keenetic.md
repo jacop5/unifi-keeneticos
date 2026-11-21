@@ -209,6 +209,42 @@ VLAN mappings cannot be used with `-wlan-test-only`. This feature has automated
 plan, rejection, inverse, and membership-health coverage; no live VLAN change
 has been made on the Wi-Fi-connected Hero DSL.
 
+## WLAN MAC allow/deny lists
+
+The native planner translates the controller's `macacl` section by WLAN
+device name, not by assuming its indexes equal WLAN indexes. `allow` maps to
+Keenetic's `permit`; `deny` maps directly. Empty permit lists intentionally
+deny all clients; empty deny lists disable filtering. An absent global ACL
+request preserves native rules. An explicit disabled request clears filtering
+and its address list on the mapped AP.
+
+NDM requires addresses to be registered as Keenetic known hosts. The daemon
+checks the running configuration before making changes and refuses missing
+registrations; it does not register, rename, or delete hosts automatically.
+This also checks addresses needed for rollback. Normal `-apply` and explicit
+WLAN slots are required. Connected test mode only targets its dedicated test
+slots, even when the controller supplies ACLs for other WLANs.
+
+Changed lists briefly pause an active mapped AP while policy and address
+entries are replaced, then restore its administrative state before continuing
+the WLAN plan. Unchanged lists do not pause it. Each change is journaled with
+its inverse, and confirmation checks the resulting policy and complete list.
+Only MAC lists are supported here; controller-wide block/kick actions remain
+unimplemented.
+
+On 2026-11-21 a native deny-list probe on Hero DSL's unused, disabled
+WifiMaster0/AccessPoint5 passed verification and forced-failure rollback.
+The complete AP configuration matched its preimage afterwards. A temporary
+test-host registration was created for that test and removed afterwards.
+The final binary also rejected the unregistered address before application.
+Serving radio/primary AP configuration hashes matched the saved baseline,
+and the existing log-only daemon continued exchanging informs.
+The probe never enabled the AP. This proves native command/rollback behavior,
+not enforcement against an associated client or a controller UI round trip.
+`-rollback-probe-mode acl` uses test MAC `02:00:00:00:00:fe` and requires that
+test address to be registered before running; the probe itself never changes
+the known-host registry.
+
 ## Optional controller LED actions
 
 The native session disables the upstream emulator's simulated upgrade and

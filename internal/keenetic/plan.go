@@ -26,6 +26,7 @@ func (c Command) String() string {
 type Plan struct {
 	Commands    []Command
 	Unsupported []string
+	AccessLists []AccessList
 }
 
 // quoted uses NDM's documented double-quote syntax. NDM does not document
@@ -157,6 +158,13 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		if !valid {
 			return p, fmt.Errorf("invalid slot for WLAN %s", id)
+		}
+		acl, err := controllerACL(cfg, cfg[prefix+"devname"], target)
+		if err != nil {
+			return p, err
+		}
+		if acl != nil {
+			p.AccessLists = append(p.AccessLists, *acl)
 		}
 		aaa := "aaa." + id + "."
 		mgmt := ""
