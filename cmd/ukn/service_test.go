@@ -29,6 +29,8 @@ func TestEntwareServiceOptions(t *testing.T) {
 		{"defaults", "", true, nil},
 		{"test apply", "APPLY=1\nWLAN_TEST_ONLY=1\nSLOTS='" + slots + "'\n", true, []string{"-apply", "-wlan-test-only", "-slots", slots}},
 		{"LED only", "LED_CONTROL=1\n", true, []string{"-led-control"}},
+		{"version reporting", "REPORT_UPGRADE_VERSION=1\n", true, []string{"-report-upgrade-version"}},
+		{"invalid version mode", "REPORT_UPGRADE_VERSION=yes\n", false, nil},
 		{"missing slots", "APPLY=1\n", false, nil},
 		{"invalid switch", "APPLY=yes\n", false, nil},
 		{"missing file", "SLOTS='/missing-ukn-slots'\n", false, nil},
@@ -62,7 +64,7 @@ set -- start
 				}
 			}
 			if tc.name == "defaults" {
-				for _, flag := range []string{"-apply", "-wlan-test-only", "-led-control", "-networks", "-slots"} {
+				for _, flag := range []string{"-apply", "-wlan-test-only", "-led-control", "-networks", "-slots", "-report-upgrade-version"} {
 					if strings.Contains(string(out), "ARG:"+flag+"\n") {
 						t.Fatalf("default service enabled %s", flag)
 					}

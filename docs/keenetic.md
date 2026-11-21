@@ -245,15 +245,22 @@ not enforcement against an associated client or a controller UI round trip.
 test address to be registered before running; the probe itself never changes
 the known-host registry.
 
-## Optional controller LED actions
+## Controller firmware requests
 
-The native session disables the upstream emulator's simulated upgrade and
-reboot state changes. Both top-level firmware requests and `cmd upgrade`
-are rejected without downloading an image, adopting the requested version,
-or moving the boot clock. Reboot/restart requests reach the backend action
+The native session disables the upstream emulator's simulated reboot state
+changes. Both top-level firmware requests and `cmd upgrade` are refused by
+default. `-report-upgrade-version` instead reports the offered version and
+saves it in private state; it remains reported across restarts. Disabling the
+option refuses future updates without undoing the last reported version.
+In the Entware service, set
+`REPORT_UPGRADE_VERSION=0` to refuse or `1` to report only. Neither mode
+downloads an image, installs firmware, or moves the boot clock.
+Reboot/restart requests reach the backend action
 allowlist, where they remain unsupported; they cannot be enabled by
 `-led-control`. This behavior has automated coverage. No live firmware or
 reboot test was performed on the Wi-Fi-connected Hero.
+
+## Optional controller LED actions
 
 `ukn -led-control` enables the controller's LED on/off requests independently
 of WLAN provisioning. It changes the device-wide LED shutdown setting using

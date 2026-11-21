@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/antoniocosta/unifi-openwrt/internal/device"
 	"github.com/antoniocosta/unifi-openwrt/internal/inform"
 	"github.com/antoniocosta/unifi-openwrt/internal/keenetic"
@@ -52,6 +53,78 @@ func TestEncryptedControllerLEDDispatch(t *testing.T) {
 	}
 	if len(commands) != 2 || commands[0] != "system led power shutdown all" || commands[1] != "system no led power shutdown" {
 		t.Fatal(commands)
+	}
+}
+
+func TestControllerUpgradePolicy(t *testing.T) {
+	for _, report := range []bool{false, true} {
+		t.Run(fmt.Sprintf("report=%t", report), func(t *testing.T) {
+			mac, _ := net.ParseMAC("02:00:00:00:00:01")
+			requests := 0
+			firmwareURL := ""
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost || r.URL.Path != "/inform" {
+					t.Error("firmware URL was fetched")
+					w.WriteHeader(500)
+					return
+				}
+				requests++
+				body, _ := io.ReadAll(r.Body)
+				_, plain, err := inform.Decode(body, inform.DefaultKeyHex)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				var payload map[string]any
+				if err := json.Unmarshal(plain, &payload); err != nil {
+					t.Error(err)
+				}
+				if requests == 2 {
+					want := inform.U7PG2Version
+					if report {
+						want = "99.99.99"
+					}
+					if payload["version"] != want {
+						t.Errorf("reported version=%v want=%s", payload["version"], want)
+					}
+				}
+				reply := map[string]string{"_type": "noop"}
+				if requests == 1 {
+					reply = map[string]string{"_type": "upgrade", "version": "99.99.99", "url": firmwareURL}
+				}
+				encoded, _ := json.Marshal(reply)
+				packet, err := inform.Encode(mac, inform.DefaultKeyHex, inform.CBC, encoded, nil)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				w.Write(packet)
+			}))
+			defer server.Close()
+			firmwareURL = server.URL + "/firmware.bin"
+			dir := t.TempDir()
+			x := &device.Session{S: device.NewState(server.URL + "/inform"), StateDir: dir, Dev: inform.Device{MAC: mac}, Boot: time.Now().Add(-time.Hour), PhysicalDevice: true, ReportUpgradeVersion: report}
+			boot := x.Boot
+			path := filepath.Join(dir, "state.json")
+			interval := time.Second
+			for i := 0; i < 2; i++ {
+				if err := exchange(context.Background(), server.Client(), x, path, &interval, func(context.Context, string) error {
+					t.Error("upgrade invoked a native action")
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if !x.Boot.Equal(boot) || requests != 2 {
+				t.Fatal("upgrade moved boot clock or fetched firmware")
+			}
+			if report {
+				saved, found, err := device.Load(path)
+				if err != nil || !found || saved.Version != "99.99.99" {
+					t.Fatalf("reported version not persisted: found=%v err=%v version=%s", found, err, saved.Version)
+				}
+			}
+		})
 	}
 }
 

@@ -10,6 +10,7 @@ MODEL='U7PG2'
 APPLY=0
 WLAN_TEST_ONLY=0
 LED_CONTROL=0
+REPORT_UPGRADE_VERSION=0
 SLOTS=''
 NETWORKS=''
 config=${UKN_CONFIG:-/opt/etc/unifi-keenetic.conf}
@@ -20,8 +21,8 @@ case "${1:-}" in
  start)
   [ "$ENABLED" = 1 ] || { printf '%s\n' 'unifi-keenetic is disabled'; exit 0; }
   [ -n "$INFORM_URL" ] || { printf '%s\n' 'INFORM_URL is required' >&2; exit 1; }
-  for option in "$APPLY" "$WLAN_TEST_ONLY" "$LED_CONTROL"; do
-   case "$option" in 0|1) ;; *) printf '%s\n' 'APPLY, WLAN_TEST_ONLY and LED_CONTROL must be 0 or 1' >&2; exit 1 ;; esac
+  for option in "$APPLY" "$WLAN_TEST_ONLY" "$LED_CONTROL" "$REPORT_UPGRADE_VERSION"; do
+   case "$option" in 0|1) ;; *) printf '%s\n' 'Action switches must be 0 or 1' >&2; exit 1 ;; esac
   done
   if [ "$APPLY" = 1 ] || [ "$WLAN_TEST_ONLY" = 1 ]; then
    [ -n "$SLOTS" ] || { printf '%s\n' 'SLOTS is required for application or WLAN test mode' >&2; exit 1; }
@@ -42,6 +43,7 @@ case "${1:-}" in
   [ "$APPLY" = 0 ] || set -- "$@" -apply
   [ "$WLAN_TEST_ONLY" = 0 ] || set -- "$@" -wlan-test-only
   [ "$LED_CONTROL" = 0 ] || set -- "$@" -led-control
+  [ "$REPORT_UPGRADE_VERSION" = 0 ] || set -- "$@" -report-upgrade-version
   mkdir -p /opt/var/run /opt/var/lib/unifi-keenetic
   chmod 700 /opt/var/lib/unifi-keenetic
   start-stop-daemon -S -b -m -p "$pid" -x "$daemon" -- "$@"

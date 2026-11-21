@@ -101,6 +101,9 @@ type Session struct {
 	// PhysicalDevice disables emulator-only version and reboot-clock changes.
 	// Native actions still need a separate backend implementation/allowlist.
 	PhysicalDevice bool
+	// ReportUpgradeVersion opts physical backends into version-only upgrade
+	// acknowledgement. It never downloads firmware or simulates a reboot.
+	ReportUpgradeVersion bool
 	// WifiCaps is the UNIFI_WIFI_CAP bitmap we claim (0 = not sent). Claim
 	// only what the AP really does: the controller trusts it.
 	WifiCaps int
@@ -416,6 +419,15 @@ func sections(cfg string) []string {
 
 func (x *Session) upgrade(version, url string, now time.Time, o *Outcome) {
 	if x.PhysicalDevice {
+		if x.ReportUpgradeVersion {
+			if version != "" && version != x.S.Version {
+				x.S.Version = version
+				o.Changed = true
+			}
+			o.Immediate = true
+			o.Events = append(o.Events, "UPGRADE acknowledged by version reporting only; firmware and uptime unchanged")
+			return
+		}
 		o.Events = append(o.Events, "UPGRADE rejected: controller firmware is not compatible with this native backend; version and uptime unchanged")
 		return
 	}

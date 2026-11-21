@@ -39,6 +39,7 @@ func main() {
 	crashProbe := flag.Bool("crash-probe", false, "with -rollback-probe, exit before confirmation to test detached recovery")
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
 	ledControl := flag.Bool("led-control", false, "allow controller LED on/off commands independently of WLAN apply; no reboot or locate")
+	reportUpgradeVersion := flag.Bool("report-upgrade-version", false, "acknowledge controller upgrades by reporting their version only; never download firmware or reboot (default: refuse)")
 	wlanTestOnly := flag.Bool("wlan-test-only", false, "restrict planning to UKN-Test SSIDs on non-primary slots; exclude all radio changes")
 	watchPath := flag.String("rollback-watch", "", "internal rollback watchdog journal")
 	watchID := flag.String("rollback-id", "", "internal rollback journal identity")
@@ -173,7 +174,9 @@ func main() {
 	if !found {
 		st = device.NewState(*informURL)
 	}
-	st.Version = profile.Version
+	if !found || st.Version == "" {
+		st.Version = profile.Version
+	}
 	mac, err := net.ParseMAC(s.Home["mac"])
 	if err != nil {
 		log.Fatal(err)
@@ -181,6 +184,12 @@ func main() {
 	x := &device.Session{S: st, StateDir: *stateDir, Boot: time.Now(), Dev: inform.Device{MAC: mac, IP: s.Home["address"], Netmask: s.Home["mask"], Hostname: s.System["hostname"], Radios: []inform.Radio{}}}
 	x.Dev.Model = profile.Model
 	x.PhysicalDevice = true
+	x.ReportUpgradeVersion = *reportUpgradeVersion
+	if *reportUpgradeVersion {
+		log.Print("controller firmware policy: report offered version only; no download or reboot")
+	} else {
+		log.Print("controller firmware policy: refuse upgrades")
+	}
 	x.Dev.ModelDisplay = profile.Display
 	x.RestoreFromMgmtCfg()
 	journal := filepath.Join(*stateDir, "rollback.json")
