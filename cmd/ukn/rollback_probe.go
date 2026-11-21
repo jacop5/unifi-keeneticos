@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/antoniocosta/unifi-openwrt/internal/keenetic"
@@ -15,7 +17,7 @@ import (
 // ProbeRollback uses an unused, administratively disabled AP slot. It never
 // enables the interface or changes a serving WLAN's credentials.
 func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode string) error {
-	if mode != "ssid" && mode != "owe" && mode != "acl" {
+	if mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" {
 		return fmt.Errorf("unknown rollback probe mode")
 	}
 	if !regexp.MustCompile(`^WifiMaster[01]/AccessPoint[1-6]$`).MatchString(id) {
@@ -98,8 +100,31 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	if mode == "acl" {
 		plan.AccessLists = []keenetic.AccessList{{Target: id, Policy: "deny", MACs: []string{"02:00:00:00:00:fe"}}}
 	}
+	if mode == "wpa3" || mode == "transition" {
+		var key [24]byte
+		if _, err := rand.Read(key[:]); err != nil {
+			return err
+		}
+		plan, err = securityProbePlan(id, mode, hex.EncodeToString(key[:]))
+		if err != nil {
+			return err
+		}
+	}
 	verified := false
 	err = keenetic.ApplyPlanWatched(ctx, keenetic.Local, plan, journal, func(context.Context) error {
+		if mode == "wpa3" || mode == "transition" {
+			block, err := readBlock()
+			if err != nil {
+				return err
+			}
+			status, err := read()
+			if err != nil {
+				return err
+			}
+			if err := verifySecurityProbe(mode, block, status["state"]); err != nil {
+				return err
+			}
+		}
 		if mode == "acl" {
 			block, err := readBlock()
 			if err != nil {
@@ -157,6 +182,54 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	}
 	if afterBlock != beforeBlock {
 		return fmt.Errorf("probe interface configuration differs after rollback")
+	}
+	return nil
+}
+
+// Use the real WLAN translator, but retain only commands on the disabled probe
+// AP. Do not add bridge membership or enable any interface during a probe.
+func securityProbePlan(id, mode, key string) (keenetic.Plan, error) {
+	if mode != "wpa3" && mode != "transition" {
+		return keenetic.Plan{}, fmt.Errorf("invalid personal-security probe mode")
+	}
+	parent := "wifi0"
+	if strings.HasPrefix(id, "WifiMaster1/") {
+		parent = "wifi1"
+	}
+	cfg := "wireless.1.ssid=UKN-Test-Security-Probe\nwireless.1.parent=" + parent + "\nwireless.1.usage=user\nwireless.1.status=disabled\naaa.1.ssid=UKN-Test-Security-Probe\naaa.1.wpa=2\naaa.1.wpa3.support=enabled\naaa.1.wpa.key.1.mgmt=SAE\naaa.1.wpa.psk=" + key + "\n"
+	if mode == "transition" {
+		cfg += "aaa.1.wpa3.transition=enabled\n"
+	}
+	p, err := keenetic.BuildWLANTestPlan(cfg, map[string]string{"1": id})
+	if err != nil {
+		return p, err
+	}
+	commands := p.Commands[:0]
+	for _, c := range p.Commands {
+		if strings.HasPrefix(c.Text, "interface "+id+" ") {
+			if c.Text == "interface "+id+" up" {
+				return keenetic.Plan{}, fmt.Errorf("security probe attempted to enable an AP")
+			}
+			commands = append(commands, c)
+		}
+	}
+	p.Commands = commands
+	return p, nil
+}
+
+func verifySecurityProbe(mode, block, state string) error {
+	if mode != "wpa3" && mode != "transition" {
+		return fmt.Errorf("invalid security verification mode")
+	}
+	if state != "down" || !strings.Contains(block, "\n    encryption enable\n") || !strings.Contains(block, "\n    encryption wpa3\n") || !strings.Contains(block, "\n    authentication wpa-psk ") || strings.Contains(block, "\n    encryption wpa\n") || strings.Contains(block, "\n    encryption owe\n") {
+		return fmt.Errorf("personal-security settings missing or probe AP enabled")
+	}
+	wpa2 := strings.Contains(block, "\n    encryption wpa2\n")
+	if mode == "wpa3" && (wpa2 || !strings.Contains(block, "\n    pmf force\n")) {
+		return fmt.Errorf("WPA3-only probe did not require PMF and exclude WPA2")
+	}
+	if mode == "transition" && (!wpa2 || !strings.Contains(block, "\n    pmf\n")) {
+		return fmt.Errorf("transition probe did not enable WPA2/WPA3 with optional PMF")
 	}
 	return nil
 }

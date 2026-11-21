@@ -106,6 +106,28 @@ ukn -rollback-probe WifiMaster0/AccessPoint5 \
 This command refuses primary APs, active slots and slots with an existing
 SSID. It is a live configuration/rollback test, not a read-only probe.
 
+The `wpa3` and `transition` probe modes use the real WLAN translator with a
+random temporary passphrase. They retain only commands for the unused,
+disabled AP and exclude bridge membership and all radio changes. Verification
+requires encryption and WPA3 enabled, legacy WPA and OWE disabled, plus
+mandatory PMF with WPA2 disabled for WPA3-only, or optional PMF and WPA2
+enabled for transition mode. The key is never printed. Each probe forces a
+health failure and checks that the entire native interface block is restored.
+
+On 2026-11-21, all four combinations (WPA3-only and transition on each band)
+passed on Hero DSL 5.1.5, using WifiMaster0/AccessPoint5 and
+WifiMaster1/AccessPoint5. These prove native configuration and rollback,
+not SAE authentication or roaming with a connected client. The management
+daemon remained in log-only WLAN mode with version-only upgrade reporting.
+Serving radio and primary AP configuration hashes matched the saved baseline,
+and controller informs continued after the probes.
+
+```sh
+ukn -rollback-probe WifiMaster0/AccessPoint5 \
+  -rollback-probe-mode wpa3 -state /tmp/ukn-personal-probe-state
+# Use -rollback-probe-mode transition for the mixed WPA2/WPA3 probe.
+```
+
 Build for this device:
 
 ```sh
