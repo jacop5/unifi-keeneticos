@@ -7,16 +7,44 @@ ENABLED=0
 INFORM_URL=''
 SSH_LISTEN=':2222'
 MODEL='U7PG2'
-[ ! -r /opt/etc/unifi-keenetic.conf ] || . /opt/etc/unifi-keenetic.conf
+APPLY=0
+WLAN_TEST_ONLY=0
+LED_CONTROL=0
+SLOTS=''
+NETWORKS=''
+config=${UKN_CONFIG:-/opt/etc/unifi-keenetic.conf}
+[ ! -r "$config" ] || . "$config"
 daemon=/opt/sbin/ukn
 pid=/opt/var/run/unifi-keenetic.pid
 case "${1:-}" in
  start)
   [ "$ENABLED" = 1 ] || { printf '%s\n' 'unifi-keenetic is disabled'; exit 0; }
   [ -n "$INFORM_URL" ] || { printf '%s\n' 'INFORM_URL is required' >&2; exit 1; }
+  for option in "$APPLY" "$WLAN_TEST_ONLY" "$LED_CONTROL"; do
+   case "$option" in 0|1) ;; *) printf '%s\n' 'APPLY, WLAN_TEST_ONLY and LED_CONTROL must be 0 or 1' >&2; exit 1 ;; esac
+  done
+  if [ "$APPLY" = 1 ] || [ "$WLAN_TEST_ONLY" = 1 ]; then
+   [ -n "$SLOTS" ] || { printf '%s\n' 'SLOTS is required for application or WLAN test mode' >&2; exit 1; }
+  fi
+  if [ "$WLAN_TEST_ONLY" = 1 ] && [ -n "$NETWORKS" ]; then
+   printf '%s\n' 'NETWORKS cannot be used in connected Wi-Fi test mode' >&2
+   exit 1
+  fi
+  set -- -url "$INFORM_URL" -ssh-listen "$SSH_LISTEN" -model "$MODEL"
+  if [ -n "$SLOTS" ]; then
+   [ -r "$SLOTS" ] || { printf '%s\n' 'SLOTS file is not readable' >&2; exit 1; }
+   set -- "$@" -slots "$SLOTS"
+  fi
+  if [ -n "$NETWORKS" ]; then
+   [ -r "$NETWORKS" ] || { printf '%s\n' 'NETWORKS file is not readable' >&2; exit 1; }
+   set -- "$@" -networks "$NETWORKS"
+  fi
+  [ "$APPLY" = 0 ] || set -- "$@" -apply
+  [ "$WLAN_TEST_ONLY" = 0 ] || set -- "$@" -wlan-test-only
+  [ "$LED_CONTROL" = 0 ] || set -- "$@" -led-control
   mkdir -p /opt/var/run /opt/var/lib/unifi-keenetic
   chmod 700 /opt/var/lib/unifi-keenetic
-  start-stop-daemon -S -b -m -p "$pid" -x "$daemon" -- -url "$INFORM_URL" -ssh-listen "$SSH_LISTEN" -model "$MODEL"
+  start-stop-daemon -S -b -m -p "$pid" -x "$daemon" -- "$@"
   ;;
  stop)
   start-stop-daemon -K -p "$pid" -x "$daemon" -s TERM || true

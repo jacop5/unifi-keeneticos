@@ -147,7 +147,7 @@ exclude shared radio settings. Recovery runs at daemon
 startup; a separate watchdog also attempts recovery after 65 seconds if
 the main daemon has not confirmed. Each journal has a unique identity so
 old watchdogs do not undo later transactions. Advanced features remain under development. The Entware service
-currently starts in log-only mode.
+defaults to log-only mode; explicit action switches are described below.
 
 `-model CODE` selects a model from `-models`; the Entware configuration
 uses `MODEL`. Fast roaming, VLAN provisioning, guest portal, mesh, scanning,
@@ -168,6 +168,14 @@ The planner uses documented `interface … channel`, `channel width`, `ssid`,
 `authentication wpa-psk`, and `encryption` commands. Interface slot mappings
 are explicit; the planner does not infer ownership from existing SSIDs.
 ## VLAN WLAN binding
+
+The Entware service exposes `APPLY`, `WLAN_TEST_ONLY`, `LED_CONTROL`, `SLOTS`,
+and `NETWORKS` in `/opt/etc/unifi-keenetic.conf`. All action switches default
+to `0`. `APPLY=1` requires an explicit readable `SLOTS` JSON file. While using
+the device's Wi-Fi for management, keep `WLAN_TEST_ONLY=1`, use only the
+dedicated test slots, and leave `NETWORKS` empty. `LED_CONTROL=1` is an
+independent opt-in for device-wide LED on/off; it is not restricted by WLAN
+test mode. Restarting the service loads the edited settings.
 
 The optional `-networks` file maps UniFi VLAN IDs to **existing**, operator-
 provisioned Keenetic bridges. For example, `{"77":"Bridge2"}` maps VLAN 77
