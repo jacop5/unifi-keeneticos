@@ -167,7 +167,41 @@ CLI reference: [KeeneticOS 5.1 Titan command guide](https://storage.googleapis.c
 The planner uses documented `interface … channel`, `channel width`, `ssid`,
 `authentication wpa-psk`, and `encryption` commands. Interface slot mappings
 are explicit; the planner does not infer ownership from existing SSIDs.
-# Optional controller LED actions
+## VLAN WLAN binding
+
+The optional `-networks` file maps UniFi VLAN IDs to **existing**, operator-
+provisioned Keenetic bridges. For example, `{"77":"Bridge2"}` maps VLAN 77
+to Bridge2. Create and verify that bridge and its tagged Ethernet uplink
+separately, with wired management available. The daemon does not configure
+switch ports, create VLAN interfaces or bridges, start DHCP, or change routing.
+It cannot validate the external switch or prove that the operator's Bridge2
+really reaches VLAN 77.
+
+Preview a saved controller configuration before enabling application:
+
+```sh
+ukn -plan system_cfg.txt -slots slots.json -networks networks.json
+```
+
+The controller must supply a matching `vlan.N.id`/`devname`, tagged bridge
+name, tagged uplink member, and explicit WLAN device membership. Partial or
+ambiguous configurations are refused. Each VLAN needs a distinct native
+bridge; Bridge0 is prohibited as a tagged-network mapping. With VLAN mappings
+enabled, every WLAN needs an explicit controller bridge membership so an
+incomplete request cannot silently land on Home.
+
+The native bridge and AP slot must already exist. A slot already belonging to
+another bridge is refused, even when applying a change from tagged to untagged;
+move it deliberately during separate network maintenance. Newly added bridge
+membership has an inverse in the rollback journal. Confirmation checks actual
+bridge membership in addition to the SSID and AP state. This verifies the
+local binding, not end-to-end VLAN traffic or isolation.
+
+VLAN mappings cannot be used with `-wlan-test-only`. This feature has automated
+plan, rejection, inverse, and membership-health coverage; no live VLAN change
+has been made on the Wi-Fi-connected Hero DSL.
+
+## Optional controller LED actions
 
 `ukn -led-control` enables the controller's LED on/off requests independently
 of WLAN provisioning. It changes the device-wide LED shutdown setting using

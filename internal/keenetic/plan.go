@@ -39,26 +39,23 @@ func quoted(s string) (string, error) {
 	return `"` + s + `"`, nil
 }
 
-// BuildPlan translates AP radio/channel and WPA2 personal WLAN settings.
+// BuildPlan translates AP radio/channel and supported personal/open WLAN settings.
 // Slots are explicit: no existing interface is inferred from SSID or deleted.
 // Unsupported settings prevent application of the entire plan.
 func BuildPlan(text string, slots map[string]string) (Plan, error) {
+	return BuildPlanWithNetworks(text, slots, nil)
+}
+
+// BuildPlanWithNetworks maps VLAN IDs to operator-provisioned native bridges.
+// It never creates an uplink, DHCP service, bridge, or management network.
+func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan, error) {
 	cfg := translate.ParseCfg(text)
 	p := Plan{}
-	for key, value := range cfg {
-		if strings.HasPrefix(key, "vlan.") && strings.HasSuffix(key, ".id") && value != "" && value != "0" {
-			p.Unsupported = append(p.Unsupported, key)
-		}
-		// A tagged bridge is also a VLAN request, even when a controller
-		// omits the separate vlan section. Never silently attach it to Home.
-		if strings.HasPrefix(key, "bridge.") && strings.HasSuffix(key, ".devname") {
-			if dot := strings.LastIndexByte(value, '.'); dot >= 0 {
-				if id, err := strconv.Atoi(value[dot+1:]); err == nil && id != 0 {
-					p.Unsupported = append(p.Unsupported, key)
-				}
-			}
-		}
+	bridges, unsupported, err := resolveNetworks(cfg, networks)
+	if err != nil {
+		return p, err
 	}
+	p.Unsupported = append(p.Unsupported, unsupported...)
 	sort.Strings(p.Unsupported)
 	add := func(s string) { p.Commands = append(p.Commands, Command{Text: s}) }
 	owners := map[string]string{}
@@ -241,7 +238,11 @@ func BuildPlan(text string, slots map[string]string) (Plan, error) {
 			pmf = "pmf force"
 		}
 		add("interface " + target + " " + pmf)
-		add("interface Bridge0 include " + target)
+		bridge := bridges[id]
+		if bridge == "" {
+			bridge = "Bridge0"
+		}
+		add("interface " + bridge + " include " + target)
 		isolation := "no peer-isolation"
 		if cfg[prefix+"l2_isolation"] == "enabled" {
 			isolation = "peer-isolation"

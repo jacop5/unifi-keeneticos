@@ -44,7 +44,27 @@ func main() {
 	watchID := flag.String("rollback-id", "", "internal rollback journal identity")
 	planFile := flag.String("plan", "", "print a redacted plan for a saved UniFi system_cfg and exit")
 	slotsFile := flag.String("slots", "", "JSON mapping of UniFi WLAN indexes to Keenetic AP interface IDs")
+	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
 	flag.Parse()
+	networks := map[string]string{}
+	if *networksFile != "" {
+		if *wlanTestOnly {
+			log.Fatal("VLAN bridge mappings are not allowed in Wi-Fi test mode")
+		}
+		b, err := os.ReadFile(*networksFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.Unmarshal(b, &networks); err != nil {
+			log.Fatal(err)
+		}
+	}
+	buildPlan := func(text string, slots map[string]string) (keenetic.Plan, error) {
+		if *wlanTestOnly {
+			return keenetic.BuildWLANTestPlan(text, slots)
+		}
+		return keenetic.BuildPlanWithNetworks(text, slots, networks)
+	}
 	if *listModels {
 		for _, m := range models.All() {
 			fmt.Println(m)
@@ -76,10 +96,6 @@ func main() {
 			if err := json.Unmarshal(b, &slots); err != nil {
 				log.Fatal(err)
 			}
-		}
-		buildPlan := keenetic.BuildPlan
-		if *wlanTestOnly {
-			buildPlan = keenetic.BuildWLANTestPlan
 		}
 		plan, err := buildPlan(string(data), slots)
 		if err != nil {
@@ -236,10 +252,6 @@ func main() {
 			if x.S.CfgVersion != lastPlanned {
 				cfg, err := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
 				if err == nil {
-					buildPlan := keenetic.BuildPlan
-					if *wlanTestOnly {
-						buildPlan = keenetic.BuildWLANTestPlan
-					}
 					plan, err := buildPlan(string(cfg), slots)
 					if err != nil {
 						log.Printf("configuration plan: %v", err)
@@ -281,6 +293,13 @@ func main() {
 									return fmt.Errorf("no active WLANs after configuration")
 								}
 								if err := keenetic.VerifyWLANs(plan, status); err != nil {
+									return err
+								}
+								running, err := keenetic.Local(checkCtx, "show running-config")
+								if err != nil {
+									return err
+								}
+								if err := keenetic.VerifyBridgeMembership(plan, string(running)); err != nil {
 									return err
 								}
 								if err := exchange(checkCtx, client, x, path, &interval, actionHandler); err != nil {

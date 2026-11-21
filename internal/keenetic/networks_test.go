@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+package keenetic
+
+import (
+	"strings"
+	"testing"
+)
+
+const taggedWLAN = wlan + "wireless.1.devname=wifi0ap5\nvlan.1.id=77\nvlan.1.devname=eth0\nbridge.2.devname=br0.77\nbridge.2.port.1.devname=wifi0ap5\nbridge.2.port.2.devname=eth0.77\n"
+
+func TestExplicitVLANBridgePlanAndRollback(t *testing.T) {
+	p, err := BuildPlanWithNetworks(taggedWLAN, map[string]string{"1": "WifiMaster0/AccessPoint6"}, map[string]string{"77": "Bridge2"})
+	if err != nil || len(p.Unsupported) != 0 {
+		t.Fatalf("plan=%#v err=%v", p, err)
+	}
+	var include Command
+	for _, command := range p.Commands {
+		if strings.Contains(command.Text, " include ") {
+			include = command
+		}
+	}
+	if include.Text != "interface Bridge2 include WifiMaster0/AccessPoint6" {
+		t.Fatal(include)
+	}
+	if _, err := Preimage(Plan{Commands: []Command{include}}, "interface WifiMaster0/AccessPoint6\n    down\n!\n"); err == nil {
+		t.Fatal("missing native VLAN bridge accepted")
+	}
+	changes, err := Preimage(Plan{Commands: []Command{include}}, "interface Bridge2\n    up\n!\ninterface WifiMaster0/AccessPoint6\n    down\n!\n")
+	if err != nil || len(changes) != 1 || changes[0].Undo.Text != "interface Bridge2 no include WifiMaster0/AccessPoint6" {
+		t.Fatalf("changes=%#v err=%v", changes, err)
+	}
+	if _, err := Preimage(Plan{Commands: []Command{include}}, "interface Bridge2\n    up\n!\ninterface Bridge0\n    include TestAP\n!\ninterface WifiMaster0/AccessPoint6\n    rename TestAP\n    down\n!\n"); err == nil {
+		t.Fatal("moving an existing Home AP into a VLAN was allowed")
+	}
+}
+
+func TestVLANRemainsBlockedInConnectedWiFiTestMode(t *testing.T) {
+	p, err := BuildWLANTestPlan(strings.ReplaceAll(taggedWLAN, "Home WiFi", "UKN-Test-VLAN"), map[string]string{"1": "WifiMaster0/AccessPoint6"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Unsupported) == 0 {
+		t.Fatal("VLAN configuration bypassed the connected Wi-Fi test guard")
+	}
+}
+
+func TestVLANMappingRejectsPartialAndUnsafeNetworks(t *testing.T) {
+	for _, networks := range []map[string]string{{"77": "Bridge0"}, {"077": "Bridge2"}, {"4095": "Bridge2"}, {"77": "Bridge2; reboot"}, {"77": "Bridge2", "78": "Bridge2"}} {
+		if _, err := BuildPlanWithNetworks(taggedWLAN, nil, networks); err == nil {
+			t.Fatalf("unsafe mapping accepted: %v", networks)
+		}
+	}
+	for _, text := range []string{
+		strings.ReplaceAll(taggedWLAN, "vlan.1.id=77\n", ""),
+		strings.ReplaceAll(taggedWLAN, "bridge.2.devname=br0.77\n", ""),
+		strings.ReplaceAll(taggedWLAN, "bridge.2.port.1.devname=wifi0ap5\n", ""),
+		strings.ReplaceAll(taggedWLAN, "bridge.2.port.2.devname=eth0.77\n", "bridge.2.port.2.devname=eth0.78\n"),
+		taggedWLAN + "bridge.3.devname=br0\nbridge.3.port.1.devname=wifi0ap5\n",
+	} {
+		p, err := BuildPlanWithNetworks(text, map[string]string{"1": "WifiMaster0/AccessPoint6"}, map[string]string{"77": "Bridge2"})
+		if err == nil && len(p.Unsupported) == 0 {
+			t.Fatal("partial or ambiguous VLAN configuration accepted")
+		}
+	}
+}
+
+func TestVLANHealthChecksActualBridge(t *testing.T) {
+	p := Plan{Commands: []Command{{Text: "interface Bridge2 include WifiMaster0/AccessPoint6"}}}
+	good := "interface WifiMaster0/AccessPoint6\n    rename TestAP\n!\ninterface Bridge2\n    include TestAP\n!\n"
+	if err := VerifyBridgeMembership(p, good); err != nil {
+		t.Fatal(err)
+	}
+	for _, running := range []string{"", strings.ReplaceAll(good, "Bridge2", "Bridge0"), good + "interface Bridge0\n    include TestAP\n!\n"} {
+		if err := VerifyBridgeMembership(p, running); err == nil {
+			t.Fatal("missing or incorrect network binding passed health check")
+		}
+	}
+}

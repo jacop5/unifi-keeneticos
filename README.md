@@ -50,12 +50,13 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
 | Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |
-| VLAN provisioning, fast roaming, mesh, guest portal, scanning, QoS | Not ported; VLAN/fast-roaming configurations are explicitly rejected |
-
-Radio telemetry reports native channel widths without guessing antenna or transmit-power capabilities. Tagged bridge configurations are rejected even when the controller omits a separate VLAN declaration. These paths have automated coverage; the updated radio display still needs verification in the controller UI.
+| VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
+| VLAN/uplink creation, fast roaming, mesh, guest portal, scanning, QoS | Not ported; unmapped VLANs and fast-roaming configurations are explicitly rejected |
 | Controller LED on/off | Opt-in with `-led-control`; native commands tested on Hero DSL, encrypted dispatch covered by tests; controller UI round trip not yet verified |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power/country control, advanced management | Not supported by the Keenetic translator |
+
+Radio telemetry reports native channel widths without guessing antenna or transmit-power capabilities. UniFi's displayed widths still disagree with native measurements. VLAN configurations require explicit bridge mappings and complete membership information; they never fall back to Home. See [VLAN setup](docs/keenetic.md#vlan-wlan-binding).
 
 Unknown controller settings are not comprehensively classified. A successful adoption does not establish support for every control exposed by the selected UniFi model. This daemon never installs Ubiquiti firmware.
 

@@ -47,3 +47,54 @@ func VerifyWLANs(plan Plan, s *Snapshot) error {
 	}
 	return nil
 }
+
+// VerifyBridgeMembership checks the applied network binding, including native
+// aliases. An operational SSID alone does not prove VLAN separation.
+func VerifyBridgeMembership(plan Plan, running string) error {
+	aliases := map[string]string{}
+	members := map[string][]string{}
+	current := ""
+	for _, line := range strings.Split(running, "\n") {
+		line = strings.TrimRight(line, "\r")
+		if strings.HasPrefix(line, "interface ") {
+			current = strings.TrimPrefix(line, "interface ")
+			aliases[current] = current
+			continue
+		}
+		if line == "!" {
+			current = ""
+		}
+		if current == "" {
+			continue
+		}
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "rename ") {
+			aliases[strings.Trim(strings.TrimPrefix(line, "rename "), `"`)] = current
+		}
+		if strings.HasPrefix(line, "include ") {
+			members[current] = append(members[current], strings.TrimPrefix(line, "include "))
+		}
+	}
+	for _, command := range plan.Commands {
+		fields := strings.Fields(command.Text)
+		if len(fields) != 4 || fields[0] != "interface" || fields[2] != "include" {
+			continue
+		}
+		found := false
+		for bridge, ports := range members {
+			for _, port := range ports {
+				if aliases[port] != fields[3] {
+					continue
+				}
+				if bridge != fields[1] {
+					return fmt.Errorf("mapped AP belongs to an unexpected bridge")
+				}
+				found = true
+			}
+		}
+		if !found {
+			return fmt.Errorf("mapped AP missing from planned bridge")
+		}
+	}
+	return nil
+}
