@@ -198,6 +198,27 @@ CLI reference: [KeeneticOS 5.1 Titan command guide](https://storage.googleapis.c
 The planner uses documented `interface … channel`, `channel width`, `ssid`,
 `authentication wpa-psk`, and `encryption` commands. Interface slot mappings
 are explicit; the planner does not infer ownership from existing SSIDs.
+## Minimum RSSI
+
+The controller's `stamgr.N.radio` selects a band (`ng` or `na`), and
+`minrssi.status=true` with `minrssi.rssi` sets native `rssi-threshold` only
+on explicitly mapped AP slots on that band. Negative values are dBm; positive
+values use the upstream controller conversion (value minus 95). Zero or an
+explicit per-band disable clears the threshold. Global `stamgr.status=disabled`
+clears thresholds on all mapped APs, overriding stale per-band entries.
+Absent requests preserve native thresholds. Invalid ranges or ambiguous
+band entries are refused. Load balancing/max-client requests remain unsupported.
+
+The native AP setting controls client rejection/disconnection; the daemon
+does not run a separate timed client-kick loop. It records the old threshold
+for rollback and verifies the new value before confirming. Connected Wi-Fi
+test mode still excludes shared-radio commands and all non-test AP slots.
+
+On 2026-11-21, a -75 dBm command, native readback, forced failure, and exact
+configuration restoration passed on both Hero DSL AccessPoint5 slots while
+they remained disabled. Client enforcement and a controller UI round trip
+remain unverified. `-rollback-probe-mode rssi` runs that disabled-slot probe.
+
 ## Regulatory country changes
 
 The controller's numeric `radio.N.countrycode` is mapped through the upstream

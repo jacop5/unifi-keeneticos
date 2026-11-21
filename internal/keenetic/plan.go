@@ -57,6 +57,11 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		return p, err
 	}
 	p.Unsupported = append(p.Unsupported, unsupported...)
+	thresholds, unsupported, err := minimumRSSI(cfg)
+	if err != nil {
+		return p, err
+	}
+	p.Unsupported = append(p.Unsupported, unsupported...)
 	sort.Strings(p.Unsupported)
 	add := func(s string) { p.Commands = append(p.Commands, Command{Text: s}) }
 	owners := map[string]string{}
@@ -166,6 +171,13 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		if !valid {
 			return p, fmt.Errorf("invalid slot for WLAN %s", id)
+		}
+		band := "ng"
+		if parent == "WifiMaster1/" {
+			band = "na"
+		}
+		if threshold := thresholds[band]; threshold != "" {
+			add("interface " + target + " " + threshold)
 		}
 		acl, err := controllerACL(cfg, cfg[prefix+"devname"], target)
 		if err != nil {

@@ -158,6 +158,17 @@ func VerifyWLANSettings(plan Plan, running string) error {
 				return fmt.Errorf("native WLAN key presence does not match plan")
 			}
 		}
+		if strings.HasPrefix(setting, "rssi-threshold") {
+			actual := "no rssi-threshold"
+			for _, line := range lines {
+				if strings.HasPrefix(line, "rssi-threshold ") && line != "rssi-threshold 0" {
+					actual = line
+				}
+			}
+			if actual != fields[2] {
+				return fmt.Errorf("native minimum RSSI does not match plan")
+			}
+		}
 	}
 	return nil
 }
