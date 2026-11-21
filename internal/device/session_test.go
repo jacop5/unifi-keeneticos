@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Modified by unifi-keeneticos contributors, 2026-11-21:
+// add regression coverage for adopted hardware telemetry.
 
 package device
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 // Executed only when the dedicated test database volume is first created.
 db = db.getSiblingDB('admin');
 db.createUser({

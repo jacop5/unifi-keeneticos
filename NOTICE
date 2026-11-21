@@ -1,3 +1,24 @@
+unifi-keeneticos — KeeneticOS derivative
+Modified by the unifi-keeneticos contributors on 2026-11-21.
+SPDX-License-Identifier: GPL-2.0-or-later (see LICENSE)
+
+Derived from antoniocosta/unifi-openwrt and its contributors:
+https://github.com/antoniocosta/unifi-openwrt
+Starting upstream revision: a211831.
+
+This fork adds the KeeneticOS/Entware backend, ukn daemon, guarded WLAN
+provisioning and recovery, and an OrbStack test environment. The upstream
+protocol implementation, OpenWrt backend and model catalogue are retained.
+Original authors' rights and third-party notices are unchanged. The Go
+module path remains the upstream path for internal import compatibility;
+it does not identify this fork as an upstream release.
+
+Keenetic is a trademark of its owner. This fork is not affiliated with,
+endorsed by, or supported by Keenetic, Ubiquiti or the OpenWrt project.
+
+The upstream notice follows, retained verbatim:
+=============================================
+
 unifi-openwrt
 SPDX-License-Identifier: GPL-2.0-or-later (see LICENSE)
 

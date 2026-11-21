@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Modified by unifi-keeneticos contributors, 2026-11-21:
+// preserve backend hardware telemetry in adopted inform payloads.
 
 // Package device is the device side of the inform protocol: the state a
 // UniFi AP keeps (key, cipher, cfgversion, adopted), the payload it sends,

@@ -1,3 +1,4 @@
+# Modified by unifi-keeneticos contributors, 2026-11-21: ignore test DB secrets.
 # Build output
 dist/
 
