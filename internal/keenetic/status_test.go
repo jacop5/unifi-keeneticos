@@ -64,10 +64,10 @@ func TestParentFieldsWin(t *testing.T) {
 }
 
 func TestVAPClientJoin(t *testing.T) {
-	s := &Snapshot{Radios: []map[string]string{{"channel": "6"}, {"channel": "36"}}, VAPs: []map[string]string{{"id": "WifiMaster1/AccessPoint0", "ssid": "Example", "mac": "02:00:00:00:00:01"}}, Stations: []map[string]string{{"mac": "02:00:00:00:00:02", "ap": "WifiMaster1/AccessPoint0", "authenticated": "yes"}}}
+	s := &Snapshot{Radios: []map[string]string{{"channel": "6", "bandwidth": "40"}, {"channel": "36", "bandwidth": "80"}}, VAPs: []map[string]string{{"id": "WifiMaster1/AccessPoint0", "ssid": "Example", "mac": "02:00:00:00:00:01"}}, Stations: []map[string]string{{"mac": "02:00:00:00:00:02", "ap": "WifiMaster1/AccessPoint0", "authenticated": "yes"}}}
 	v := s.VAPFields()
 	sta := s.StationFields()
-	if len(v) != 1 || v[0]["num_sta"] != 1 || v[0]["channel"] != int64(36) || sta[0]["essid"] != "Example" || sta[0]["bssid"] != v[0]["bssid"] {
+	if len(v) != 1 || v[0]["num_sta"] != 1 || v[0]["channel"] != int64(36) || v[0]["bw"] != int64(80) || sta[0]["essid"] != "Example" || sta[0]["bssid"] != v[0]["bssid"] {
 		t.Fatalf("VAP=%#v stations=%#v", v, sta)
 	}
 }

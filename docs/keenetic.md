@@ -274,5 +274,10 @@ the original non-shutdown state was restored. Automated tests cover the
 encrypted controller reply through to the NDM command allowlist. A real
 controller UI LED round trip remains unverified. The updated telemetry daemon
 also exchanged informs successfully in log-only mode, but the controller
-continued to display configured widths of 20/40 MHz while native measurements
-were 40/80 MHz; do not treat the width display as verified.
+initially displayed configured widths of 20/40 MHz while native measurements
+were 40/80 MHz. This was subsequently fixed by reporting the native operating
+width in each `vap_table[].bw` entry, in addition to the radio measurements.
+On 2026-11-21, the UniFi OS test controller's device overview showed channel
+12 at 40 MHz and channel 36 at 80 MHz, matching native measurements, with
+the daemon still in log-only WLAN mode. Configured width preferences and
+operating measurements remain separate; no radio setting was changed.

@@ -213,9 +213,10 @@ func (s *Snapshot) VAPFields() []map[string]any {
 		if strings.HasPrefix(v["id"], "WifiMaster1/") {
 			band, name, index = "na", "wifi1", 1
 		}
-		channel := ""
+		channel, width := "", ""
 		if index < len(s.Radios) {
 			channel = s.Radios[index]["channel"]
+			width = s.Radios[index]["bandwidth"]
 		}
 		count := 0
 		for _, sta := range s.Stations {
@@ -232,7 +233,7 @@ func (s *Snapshot) VAPFields() []map[string]any {
 				rx += sta["rx_bytes"].(int64)
 			}
 		}
-		out = append(out, map[string]any{"name": v["id"], "radio": band, "radio_name": name, "essid": v["ssid"], "bssid": v["mac"], "channel": number(channel), "num_sta": count, "up": true, "is_guest": false, "state": "RUN", "usage": "user", "sta_table": clients, "tx_bytes": tx, "rx_bytes": rx})
+		out = append(out, map[string]any{"name": v["id"], "radio": band, "radio_name": name, "essid": v["ssid"], "bssid": v["mac"], "channel": number(channel), "bw": number(width), "num_sta": count, "up": true, "is_guest": false, "state": "RUN", "usage": "user", "sta_table": clients, "tx_bytes": tx, "rx_bytes": rx})
 	}
 	return out
 }
