@@ -198,6 +198,29 @@ CLI reference: [KeeneticOS 5.1 Titan command guide](https://storage.googleapis.c
 The planner uses documented `interface … channel`, `channel width`, `ssid`,
 `authentication wpa-psk`, and `encryption` commands. Interface slot mappings
 are explicit; the planner does not infer ownership from existing SSIDs.
+## Regulatory country changes
+
+The controller's numeric `radio.N.countrycode` is mapped through the upstream
+ISO table to native `interface WifiMasterN country-code XX`; a per-radio code
+takes precedence over `radio.countrycode`. Unknown codes prevent application.
+Country requests are completely excluded by `-wlan-test-only`.
+
+Changing a domain requires an explicit native country setting in running-config,
+an administrative-state preimage, and explicit desired channel and width.
+NDM documents no `no country-code` command, so an implicit firmware default is
+not guessed as an inverse. The transaction first pauses the radio and selects
+20 MHz/automatic channel, changes country, applies the requested channel/width,
+and finally applies the requested administrative state (or restores the old one).
+Recovery returns to the neutral state before restoring the old country and its
+channel/width. Confirmation requires matching native country readback.
+
+Offline tests cover code mapping, rejection, disabled-radio preservation, and
+recovery at every forward-command crash boundary under a model that rejects
+channels invalid in its current domain. This is not native hardware validation
+of a regulatory transition. No live country change has been attempted while
+the Hero carries the management Wi-Fi connection; wired management is required
+for that test.
+
 ## VLAN WLAN binding
 
 The Entware service exposes `APPLY`, `WLAN_TEST_ONLY`, `LED_CONTROL`, `SLOTS`,

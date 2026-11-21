@@ -324,6 +324,9 @@ func main() {
 								if err := keenetic.VerifyWLANSettings(plan, string(running)); err != nil {
 									return err
 								}
+								if err := keenetic.VerifyCountryCodes(plan, string(running)); err != nil {
+									return err
+								}
 								if err := exchange(checkCtx, client, x, path, &interval, actionHandler); err != nil {
 									return err
 								}

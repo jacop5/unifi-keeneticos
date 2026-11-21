@@ -81,6 +81,14 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		default:
 			return p, fmt.Errorf("unknown radio %q", phy)
 		}
+		if country, raw := translate.CountryCode(cfg[prefix+"countrycode"], cfg["radio.countrycode"]); raw != "" {
+			if country == "" {
+				p.Unsupported = append(p.Unsupported, prefix+"countrycode")
+			} else {
+				// Set the regulatory domain before channel/width changes.
+				add("interface " + master + " country-code " + country)
+			}
+		}
 		if status := cfg[prefix+"status"]; status != "" {
 			action := "up"
 			if status == "disabled" {

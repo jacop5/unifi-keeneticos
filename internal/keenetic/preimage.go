@@ -3,6 +3,7 @@ package keenetic
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -47,6 +48,7 @@ func Preimage(plan Plan, running string) ([]Change, error) {
 		}
 	}
 	var changes []Change
+	countryResume := map[string]string{}
 	seenACL := map[string]bool{}
 	for _, acl := range plan.AccessLists {
 		lines, exists := blocks[acl.Target]
@@ -78,7 +80,7 @@ func Preimage(plan Plan, running string) ([]Change, error) {
 			}
 		}
 	}
-	for _, c := range plan.Commands {
+	for commandIndex, c := range plan.Commands {
 		fields := strings.SplitN(c.Text, " ", 3)
 		if len(fields) != 3 || fields[0] != "interface" {
 			return nil, fmt.Errorf("unexpected planned command")
@@ -89,6 +91,86 @@ func Preimage(plan Plan, running string) ([]Change, error) {
 		}
 		setting := fields[2]
 		setting = strings.TrimPrefix(setting, "no ")
+		if strings.HasPrefix(setting, "country-code") {
+			if fields[2] != setting || !validCountrySetting(setting) || (fields[1] != "WifiMaster0" && fields[1] != "WifiMaster1") {
+				return nil, fmt.Errorf("invalid radio country command")
+			}
+			previous := ""
+			for _, line := range lines {
+				if strings.HasPrefix(line, "country-code ") {
+					if !validCountrySetting(line) {
+						return nil, fmt.Errorf("invalid native country preimage")
+					}
+					previous = line
+				}
+			}
+			// NDM has no 'no country-code'. Never guess a firmware default
+			// as an inverse for a shared-radio regulatory change.
+			if previous == "" {
+				return nil, fmt.Errorf("country change requires an explicit native country preimage")
+			}
+			if previous != setting {
+				if _, exists := countryResume[fields[1]]; exists {
+					return nil, fmt.Errorf("duplicate country change")
+				}
+				channel, width := false, false
+				prefix := "interface " + fields[1] + " "
+				for i, candidate := range plan.Commands {
+					if !strings.HasPrefix(candidate.Text, prefix) {
+						continue
+					}
+					s := strings.TrimPrefix(candidate.Text, prefix)
+					isWidth := strings.HasPrefix(s, "channel width ")
+					isChannel := s == "no channel" || (strings.HasPrefix(s, "channel ") && !isWidth)
+					if i < commandIndex && (isWidth || isChannel || strings.HasPrefix(s, "no channel")) {
+						return nil, fmt.Errorf("country must precede channel and width")
+					}
+					channel, width = channel || isChannel, width || isWidth
+				}
+				if !channel || !width {
+					return nil, fmt.Errorf("country changes require explicit channel and width requests")
+				}
+				state, oldChannel, oldWidth := "", "no channel", "no channel width"
+				for _, line := range lines {
+					switch {
+					case line == "up" || line == "down":
+						state = line
+					case strings.HasPrefix(line, "channel width "):
+						oldWidth = line
+					case strings.HasPrefix(line, "channel "):
+						oldChannel = line
+					}
+				}
+				if state == "" {
+					return nil, fmt.Errorf("country change requires native radio administrative state")
+				}
+				add := func(forward, undo string) {
+					changes = append(changes, Change{Forward: Command{Text: prefix + forward}, Undo: Command{Text: prefix + undo}})
+				}
+				if state == "up" {
+					add("down", "up")
+				}
+				if oldWidth != "channel width 20" {
+					add("channel width 20", oldWidth)
+				}
+				if oldChannel != "no channel" {
+					add("no channel", oldChannel)
+				}
+				changes = append(changes, Change{Forward: c, Undo: Command{Text: "interface " + fields[1] + " " + previous}})
+				countryResume[fields[1]] = state
+				// Later channel/width inverses return to the neutral state,
+				// then the country inverse runs, then old channel/width/state.
+				var neutral []string
+				for _, line := range lines {
+					if line == "up" || line == "down" || strings.HasPrefix(line, "channel ") || strings.HasPrefix(line, "country-code ") {
+						continue
+					}
+					neutral = append(neutral, line)
+				}
+				blocks[fields[1]] = append(neutral, "down", "channel width 20", setting)
+			}
+			continue
+		}
 		if strings.HasPrefix(setting, "include ") {
 			target := strings.TrimPrefix(setting, "include ")
 			if _, ok := blocks[target]; !ok {
@@ -111,6 +193,10 @@ func Preimage(plan Plan, running string) ([]Change, error) {
 			continue
 		}
 		if setting == "up" || setting == "down" {
+			if _, pending := countryResume[fields[1]]; pending {
+				countryResume[fields[1]] = setting
+				continue
+			}
 			previous := ""
 			for _, line := range lines {
 				if line == "up" || line == "down" {
@@ -151,6 +237,17 @@ func Preimage(plan Plan, running string) ([]Change, error) {
 			continue
 		}
 		changes = append(changes, Change{Forward: c, Undo: inverse})
+	}
+	var masters []string
+	for master := range countryResume {
+		masters = append(masters, master)
+	}
+	sort.Strings(masters)
+	for _, master := range masters {
+		// Keep the inverse down barrier even for a desired down state:
+		// startup recovery replays the complete journal, including when a
+		// crash happened before the first forward command.
+		changes = append(changes, Change{Forward: Command{Text: "interface " + master + " " + countryResume[master]}, Undo: Command{Text: "interface " + master + " down"}})
 	}
 	return changes, nil
 }

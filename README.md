@@ -51,12 +51,13 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
 | Per-WLAN MAC allow/deny lists | Implemented with registered Keenetic hosts; native list and rollback verified on an unused disabled Hero slot; client enforcement not yet verified |
 | Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
+| Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
 | VLAN/uplink creation, fast roaming, mesh, guest portal, scanning, QoS | Not ported; unmapped VLANs and fast-roaming configurations are explicitly rejected |
 | Controller LED on/off | Opt-in with `-led-control`; native commands tested on Hero DSL, encrypted dispatch covered by tests; controller UI round trip not yet verified |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
-| Enterprise/WEP security, transmit-power/country control, advanced management | Not supported by the Keenetic translator |
+| Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
 
 Radio telemetry reports native channel widths without guessing antenna or transmit-power capabilities. UniFi's device overview was verified live at 40 MHz on 2.4 GHz and 80 MHz on 5 GHz, matching the Hero's native measurements. VLAN configurations require explicit bridge mappings and complete membership information; they never fall back to Home. See [VLAN setup](docs/keenetic.md#vlan-wlan-binding).
 
