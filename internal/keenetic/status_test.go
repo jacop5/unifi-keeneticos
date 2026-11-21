@@ -1,0 +1,111 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+package keenetic
+
+import (
+	"context"
+	"fmt"
+	"testing"
+)
+
+func TestFullCollection(t *testing.T) {
+	responses := map[string]string{
+		"show version":               "hw_id: KN-1810\n",
+		"show system":                "hostname: Example\nuptime: 123\n",
+		"show interface Bridge0":     "id: Bridge0\naddress: 192.0.2.1\nmac: 02:00:00:00:00:01\nipv6:\n address: fe80::1\n",
+		"show interface WifiMaster0": "id: WifiMaster0\nchannel: 6\n",
+		"show interface WifiMaster1": "id: WifiMaster1\nchannel: 36\n",
+		"show associations":          "station:\n mac: 02:00:00:00:00:02\n authenticated: yes\n ap: WifiMaster0/AccessPoint0\n",
+		"show ip arp":                "Example 192.0.2.2 02:00:00:00:00:02 Home\n",
+		"show interface":             "Interface, name = \"AP\"\n id: WifiMaster0/AccessPoint0\n type: AccessPoint\n state: up\n ssid: Example\n",
+	}
+	run := func(_ context.Context, c string) ([]byte, error) {
+		v, ok := responses[c]
+		if !ok {
+			return nil, fmt.Errorf("unexpected query")
+		}
+		return []byte(v), nil
+	}
+	s, err := Collect(context.Background(), run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.VAPs) != 1 || s.Home["address"] != "192.0.2.1" || s.StationFields()[0]["ip"] != "192.0.2.2" {
+		t.Fatalf("%#v", s)
+	}
+	responses["show interface Bridge0"] = "mac: 02:00:00:00:00:01\naddress: fe80::1\n"
+	if _, err := Collect(context.Background(), run); err == nil {
+		t.Fatal("IPv6 accepted as IPv4 management address")
+	}
+}
+
+func TestNDMErrorCodes(t *testing.T) {
+	for _, s := range []string{"Command::Base error[7405600]: no such command", "Core error[0xcffd00d9]: failed"} {
+		if !ndmError.MatchString(s) {
+			t.Fatalf("missed %q", s)
+		}
+	}
+	if ndmError.MatchString("Network::Interface: setting applied.") {
+		t.Fatal("success classified as failure")
+	}
+}
+
+func TestARPTableNamesWithSpaces(t *testing.T) {
+	a := ParseARP("Name IP MAC Interface\nComputer with spaces 192.0.2.10 02:00:00:00:00:01 Home\n 192.0.2.11 02:00:00:00:00:02 Home\ninvalid 999.0.0.1 02:00:00:00:00:03 Home\n")
+	if len(a) != 2 || a["02:00:00:00:00:01"] != "192.0.2.10" || a["02:00:00:00:00:02"] != "192.0.2.11" {
+		t.Fatal(a)
+	}
+}
+
+func TestParentFieldsWin(t *testing.T) {
+	v := Values("address: 10.9.12.1\nlink: up\nipv6:\n address: fe80::1\nsummary:\n link: running\n")
+	if v["address"] != "10.9.12.1" || v["link"] != "up" {
+		t.Fatalf("nested fields replaced parent: %#v", v)
+	}
+}
+
+func TestVAPClientJoin(t *testing.T) {
+	s := &Snapshot{Radios: []map[string]string{{"channel": "6"}, {"channel": "36"}}, VAPs: []map[string]string{{"id": "WifiMaster1/AccessPoint0", "ssid": "Example", "mac": "02:00:00:00:00:01"}}, Stations: []map[string]string{{"mac": "02:00:00:00:00:02", "ap": "WifiMaster1/AccessPoint0", "authenticated": "yes"}}}
+	v := s.VAPFields()
+	sta := s.StationFields()
+	if len(v) != 1 || v[0]["num_sta"] != 1 || v[0]["channel"] != int64(36) || sta[0]["essid"] != "Example" || sta[0]["bssid"] != v[0]["bssid"] {
+		t.Fatalf("VAP=%#v stations=%#v", v, sta)
+	}
+}
+
+func TestHardwareTelemetry(t *testing.T) {
+	s := &Snapshot{System: map[string]string{"memtotal": "262144", "memfree": "65536", "uptime": "1234", "cpuload": "11"}}
+	f := s.Fields()
+	stats := f["sys_stats"].(map[string]any)
+	if stats["mem_total"] != int64(268435456) || stats["mem_used"] != int64(201326592) || f["uptime"] != int64(1234) {
+		t.Fatal(f)
+	}
+}
+
+func TestVAPContainsControllerClientRows(t *testing.T) {
+	s := &Snapshot{VAPs: []map[string]string{{"id": "WifiMaster0/AccessPoint0", "ssid": "Example", "mac": "02:00:00:00:00:01"}}, Stations: []map[string]string{{"ap": "WifiMaster0/AccessPoint0", "mac": "02:00:00:00:00:02", "authenticated": "yes", "txrate": "72.2", "rxrate": "65", "ht": "40", "mode": "11n", "txbytes": "100", "rxbytes": "200"}}}
+	v := s.VAPFields()[0]
+	clients := v["sta_table"].([]map[string]any)
+	if len(clients) != 1 || clients[0]["tx_rate"] != int64(72200) || clients[0]["chwidth"] != 1 || clients[0]["is_11n"] != true || v["tx_bytes"] != int64(100) {
+		t.Fatalf("%#v", v)
+	}
+}
+
+func TestControllerWLANIdentity(t *testing.T) {
+	s := &Snapshot{VAPs: []map[string]string{{"id": "WifiMaster0/AccessPoint6", "ssid": "UKN-Test-Hero"}}, Stations: []map[string]string{{"mac": "02:00:00:00:00:01", "ap": "WifiMaster0/AccessPoint6", "authenticated": "yes"}}}
+	f := s.FieldsForConfig("wireless.1.ssid=UKN-Test-Hero\nwireless.1.parent=wifi0\nwireless.1.id=2\nwireless.1.devname=ath0\n")
+	v := f["vap_table"].([]map[string]any)[0]
+	if v["id"] != "2" || v["name"] != "ath0" || f["num_sta"] != 1 || f["sta_table"].([]map[string]any)[0]["vap"] != "ath0" {
+		t.Fatal(f)
+	}
+}
+
+func TestStations(t *testing.T) {
+	s := &Snapshot{Stations: Records("\x1b[K\r\n station: \r\n mac: 02:00:00:00:00:01\r\n ap: WifiMaster1/AccessPoint0\r\n authenticated: yes\r\n rssi: -63\r\n txrate: 702\r\n rxrate: 78\r\n txbytes: 4294967297\r\n station:\r\n mac: 02:00:00:00:00:02\r\n authenticated: no\r\n", "station")}
+	if len(s.Stations) != 2 {
+		t.Fatalf("records: %#v", s.Stations)
+	}
+	f := s.StationFields()
+	if len(f) != 1 || f[0]["tx_rate"] != int64(702000) || f[0]["signal"] != int64(-63) || f[0]["tx_bytes"] != int64(4294967297) || f[0]["radio"] != "na" {
+		t.Fatalf("fields: %#v", f)
+	}
+}

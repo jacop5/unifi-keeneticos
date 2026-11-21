@@ -122,8 +122,10 @@ func (x *Session) Payload(now time.Time) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	var extra map[string]any
 	if x.Extra != nil {
-		for k, v := range x.Extra() {
+		extra = x.Extra()
+		for k, v := range extra {
 			m[k] = v
 		}
 	}
@@ -172,6 +174,13 @@ func (x *Session) Payload(now time.Time) ([]byte, error) {
 			"mem_total": 129130496, "mem_used": 64565248, "mem_buffer": 4194304,
 		}
 		m["radio_table_stats"] = radioStats(d.Radios)
+		// A hardware backend's measurements take precedence over the
+		// development profile's adopted-state placeholders.
+		for _, key := range []string{"sys_stats", "radio_table_stats"} {
+			if value, ok := extra[key]; ok {
+				m[key] = value
+			}
+		}
 	}
 	return json.Marshal(m)
 }

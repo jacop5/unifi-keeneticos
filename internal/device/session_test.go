@@ -15,6 +15,28 @@ import (
 
 const newKey = "a066a066a066a066a066a066a066a066"
 
+func TestAdoptedHardwareTelemetryWins(t *testing.T) {
+	x := newSession(t)
+	x.S.Adopted = true
+	x.Extra = func() map[string]any {
+		return map[string]any{"sys_stats": map[string]any{"mem_total": 262144000}, "radio_table_stats": []map[string]any{{"num_sta": 17}}}
+	}
+	b, err := x.Payload(time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["sys_stats"].(map[string]any)["mem_total"] != float64(262144000) {
+		t.Fatal(got["sys_stats"])
+	}
+	if got["radio_table_stats"].([]any)[0].(map[string]any)["num_sta"] != float64(17) {
+		t.Fatal(got["radio_table_stats"])
+	}
+}
+
 func newSession(t *testing.T) *Session {
 	return &Session{
 		S: NewState("http://192.168.1.1:8080/inform"),

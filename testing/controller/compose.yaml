@@ -1,0 +1,40 @@
+name: unifi-keenetic-test
+services:
+  db:
+    image: mongo:7.0@sha256:41e8195b2791692695e1dc9bd21cd51d0a3af05fff8ace9304a5c1acf94f1ae1
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD}
+      MONGO_USER: unifi
+      MONGO_PASS: ${DB_PASSWORD:?set DB_PASSWORD}
+    volumes:
+      - database:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+  controller:
+    image: lscr.io/linuxserver/unifi-network-application@sha256:053a608b25f578bb92b7b4f59e3835f6cc6dd0c7500c30b24ac0e27e1742ab20
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Europe/Rome
+      MONGO_HOST: db
+      MONGO_PORT: "27017"
+      MONGO_USER: unifi
+      MONGO_PASS: ${DB_PASSWORD:?set DB_PASSWORD}
+      MONGO_DBNAME: unifi
+      MONGO_AUTHSOURCE: admin
+      MEM_LIMIT: "1024"
+      MEM_STARTUP: "256"
+    volumes:
+      - controller:/config
+    ports:
+      - "8443:8443"
+      - "8080:8080"
+      - "3478:3478/udp"
+      - "10001:10001/udp"
+volumes:
+  database:
+  controller:

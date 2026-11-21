@@ -6,3 +6,4 @@ dist/
 *.unf
 .secrets
 *.pass
+testing/controller/.env

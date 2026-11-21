@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+package keenetic
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+)
+
+// ApplyPlan journals the preimage before applying. The caller's health check
+// must establish Wi-Fi operation and controller communication after changes.
+// A journal surviving process termination is recovered at daemon startup.
+func ApplyPlan(ctx context.Context, run Runner, plan Plan, journal string, health func(context.Context) error) error {
+	return ApplyPlanWatched(ctx, run, plan, journal, health, nil)
+}
+
+func ApplyPlanWatched(ctx context.Context, run Runner, plan Plan, journal string, health func(context.Context) error, arm func(string) error) error {
+	if health == nil {
+		return fmt.Errorf("post-change health check is required")
+	}
+	b, err := run(ctx, "show running-config")
+	if err != nil {
+		return err
+	}
+	changes, err := Preimage(plan, string(b))
+	if err != nil {
+		return err
+	}
+	if len(changes) == 0 {
+		return nil
+	}
+	if err := SaveUndo(journal, changes); err != nil {
+		return err
+	}
+	if arm != nil {
+		if err := arm(journal); err != nil {
+			return errors.Join(fmt.Errorf("could not arm rollback watchdog"), ClearUndo(journal))
+		}
+	}
+	tx, err := Begin(ctx, run, changes, 60*time.Second)
+	if err != nil {
+		// Retry from the persisted journal, including inverses that might have
+		// failed during the transaction's immediate rollback.
+		recovery, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return errors.Join(err, RecoverUndo(recovery, journal, run))
+	}
+	if err := health(ctx); err != nil {
+		rollbackErr := tx.Rollback()
+		if rollbackErr == nil {
+			rollbackErr = ClearUndo(journal)
+		}
+		return errors.Join(fmt.Errorf("post-change health check failed"), rollbackErr)
+	}
+	if err := tx.Confirm(); err != nil {
+		return err
+	}
+	return ClearUndo(journal)
+}

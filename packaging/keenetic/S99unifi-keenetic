@@ -1,0 +1,29 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -eu
+PATH=/opt/sbin:/opt/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+ENABLED=0
+INFORM_URL=''
+SSH_LISTEN=':2222'
+MODEL='U7PG2'
+[ ! -r /opt/etc/unifi-keenetic.conf ] || . /opt/etc/unifi-keenetic.conf
+daemon=/opt/sbin/ukn
+pid=/opt/var/run/unifi-keenetic.pid
+case "${1:-}" in
+ start)
+  [ "$ENABLED" = 1 ] || { printf '%s\n' 'unifi-keenetic is disabled'; exit 0; }
+  [ -n "$INFORM_URL" ] || { printf '%s\n' 'INFORM_URL is required' >&2; exit 1; }
+  mkdir -p /opt/var/run /opt/var/lib/unifi-keenetic
+  chmod 700 /opt/var/lib/unifi-keenetic
+  start-stop-daemon -S -b -m -p "$pid" -x "$daemon" -- -url "$INFORM_URL" -ssh-listen "$SSH_LISTEN" -model "$MODEL"
+  ;;
+ stop)
+  start-stop-daemon -K -p "$pid" -x "$daemon" -s TERM || true
+  ;;
+ restart)
+  "$0" stop
+  "$0" start
+  ;;
+ *) printf 'Usage: %s {start|stop|restart}\n' "$0" >&2; exit 1 ;;
+esac
