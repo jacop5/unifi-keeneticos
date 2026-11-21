@@ -38,6 +38,7 @@ func main() {
 	probeMode := flag.String("rollback-probe-mode", "ssid", "disabled-slot rollback probe: ssid or owe")
 	crashProbe := flag.Bool("crash-probe", false, "with -rollback-probe, exit before confirmation to test detached recovery")
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
+	ledControl := flag.Bool("led-control", false, "allow controller LED on/off commands independently of WLAN apply; no reboot or locate")
 	wlanTestOnly := flag.Bool("wlan-test-only", false, "restrict planning to UKN-Test SSIDs on non-primary slots; exclude all radio changes")
 	watchPath := flag.String("rollback-watch", "", "internal rollback watchdog journal")
 	watchID := flag.String("rollback-id", "", "internal rollback journal identity")
@@ -202,6 +203,14 @@ func main() {
 		defer adopt.Close()
 	}
 	client := &http.Client{Timeout: 15 * time.Second}
+	var actionHandler func(context.Context, string) error
+	if *ledControl {
+		actionHandler = func(ctx context.Context, action string) error {
+			c, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			return keenetic.LEDAction(c, keenetic.Local, action)
+		}
+	}
 	interval := 10 * time.Second
 	for ctx.Err() == nil {
 		s, err = collect()
@@ -221,7 +230,7 @@ func main() {
 				cfg, _ := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
 				return s.FieldsForConfig(string(cfg))
 			}
-			if err := exchange(ctx, client, x, path, &interval); err != nil {
+			if err := exchange(ctx, client, x, path, &interval, actionHandler); err != nil {
 				log.Printf("inform: %v", err)
 			}
 			if x.S.CfgVersion != lastPlanned {
@@ -274,7 +283,7 @@ func main() {
 								if err := keenetic.VerifyWLANs(plan, status); err != nil {
 									return err
 								}
-								if err := exchange(checkCtx, client, x, path, &interval); err != nil {
+								if err := exchange(checkCtx, client, x, path, &interval, actionHandler); err != nil {
 									return err
 								}
 								if !x.S.Adopted {
@@ -312,7 +321,7 @@ func main() {
 	}
 }
 
-func exchange(ctx context.Context, c *http.Client, x *device.Session, path string, interval *time.Duration) error {
+func exchange(ctx context.Context, c *http.Client, x *device.Session, path string, interval *time.Duration, actionHandler func(context.Context, string) error) error {
 	plain, err := x.Payload(time.Now())
 	if err != nil {
 		return err
@@ -359,7 +368,13 @@ func exchange(ctx context.Context, c *http.Client, x *device.Session, path strin
 		log.Print(e)
 	}
 	for _, action := range outcome.Actions {
-		log.Printf("controller action not yet implemented on Keenetic: %s", action)
+		if actionHandler == nil {
+			log.Printf("controller action disabled on Keenetic: %s", action)
+		} else if err := actionHandler(ctx, action); err != nil {
+			log.Printf("controller action %s: %v", action, err)
+		} else {
+			log.Printf("controller action completed: %s", action)
+		}
 	}
 	if outcome.Interval > 0 {
 		*interval = outcome.Interval

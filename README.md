@@ -53,7 +53,8 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | VLAN provisioning, fast roaming, mesh, guest portal, scanning, QoS | Not ported; VLAN/fast-roaming configurations are explicitly rejected |
 
 Radio telemetry reports native channel widths without guessing antenna or transmit-power capabilities. Tagged bridge configurations are rejected even when the controller omits a separate VLAN declaration. These paths have automated coverage; the updated radio display still needs verification in the controller UI.
-| Client block/kick, locate/LED/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
+| Controller LED on/off | Opt-in with `-led-control`; native commands tested on Hero DSL, encrypted dispatch covered by tests; controller UI round trip not yet verified |
+| Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power/country control, advanced management | Not supported by the Keenetic translator |
 
 Unknown controller settings are not comprehensively classified. A successful adoption does not establish support for every control exposed by the selected UniFi model. This daemon never installs Ubiquiti firmware.

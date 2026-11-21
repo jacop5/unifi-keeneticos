@@ -167,3 +167,19 @@ CLI reference: [KeeneticOS 5.1 Titan command guide](https://storage.googleapis.c
 The planner uses documented `interface … channel`, `channel width`, `ssid`,
 `authentication wpa-psk`, and `encryption` commands. Interface slot mappings
 are explicit; the planner does not infer ownership from existing SSIDs.
+# Optional controller LED actions
+
+`ukn -led-control` enables the controller's LED on/off requests independently
+of WLAN provisioning. It changes the device-wide LED shutdown setting using
+`system led power shutdown all` and `system no led power shutdown`; it does
+not save startup-config. Leave this flag absent for a fully log-only daemon.
+Existing LED schedules still apply. Locate/blink, reboot, and client actions
+remain rejected.
+
+On 2026-11-21, both native LED commands were exercised on the Hero DSL and
+the original non-shutdown state was restored. Automated tests cover the
+encrypted controller reply through to the NDM command allowlist. A real
+controller UI LED round trip remains unverified. The updated telemetry daemon
+also exchanged informs successfully in log-only mode, but the controller
+continued to display configured widths of 20/40 MHz while native measurements
+were 40/80 MHz; do not treat the width display as verified.

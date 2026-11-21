@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/antoniocosta/unifi-openwrt/internal/device"
 	"github.com/antoniocosta/unifi-openwrt/internal/inform"
+	"github.com/antoniocosta/unifi-openwrt/internal/keenetic"
 	"io"
 	"net"
 	"net/http"
@@ -15,6 +16,44 @@ import (
 	"testing"
 	"time"
 )
+
+func TestEncryptedControllerLEDDispatch(t *testing.T) {
+	mac, _ := net.ParseMAC("02:00:00:00:00:01")
+	request := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request++
+		value := "false"
+		if request == 2 {
+			value = "true"
+		}
+		reply, _ := json.Marshal(map[string]string{"_type": "setparam", "mgmt_cfg": "led_enabled=" + value + "\n"})
+		packet, err := inform.Encode(mac, inform.DefaultKeyHex, inform.CBC, reply, nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		w.Write(packet)
+	}))
+	defer server.Close()
+	dir := t.TempDir()
+	x := &device.Session{S: device.NewState(server.URL), StateDir: dir, Dev: inform.Device{MAC: mac}, Boot: time.Now()}
+	var commands []string
+	handler := func(ctx context.Context, action string) error {
+		return keenetic.LEDAction(ctx, func(_ context.Context, command string) ([]byte, error) {
+			commands = append(commands, command)
+			return nil, nil
+		}, action)
+	}
+	interval := time.Second
+	for i := 0; i < 2; i++ {
+		if err := exchange(context.Background(), server.Client(), x, filepath.Join(dir, "state.json"), &interval, handler); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(commands) != 2 || commands[0] != "system led power shutdown all" || commands[1] != "system no led power shutdown" {
+		t.Fatal(commands)
+	}
+}
 
 func TestControllerProvisioningPersistsAndSwitchesCipher(t *testing.T) {
 	mac, _ := net.ParseMAC("02:00:00:00:00:01")
@@ -56,7 +95,7 @@ func TestControllerProvisioningPersistsAndSwitchesCipher(t *testing.T) {
 	path := filepath.Join(dir, "state.json")
 	x := &device.Session{S: device.NewState(server.URL + "/inform"), StateDir: dir, Dev: inform.Device{MAC: mac, IP: "192.0.2.1"}, Boot: time.Now()}
 	interval := 10 * time.Second
-	if err := exchange(context.Background(), server.Client(), x, path, &interval); err != nil {
+	if err := exchange(context.Background(), server.Client(), x, path, &interval, nil); err != nil {
 		t.Fatal(err)
 	}
 	saved, found, err := device.Load(path)
@@ -68,7 +107,7 @@ func TestControllerProvisioningPersistsAndSwitchesCipher(t *testing.T) {
 		t.Fatal("configuration not persisted", err)
 	}
 	x.S = saved
-	if err := exchange(context.Background(), server.Client(), x, path, &interval); err != nil {
+	if err := exchange(context.Background(), server.Client(), x, path, &interval, nil); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 2 {
@@ -96,7 +135,7 @@ func TestEncryptedControllerExchange(t *testing.T) {
 	defer server.Close()
 	x := &device.Session{S: device.NewState(server.URL + "/inform"), Dev: inform.Device{MAC: mac, IP: "192.0.2.1"}, Boot: time.Now()}
 	interval := 10 * time.Second
-	if err := exchange(context.Background(), server.Client(), x, filepath.Join(t.TempDir(), "state.json"), &interval); err != nil {
+	if err := exchange(context.Background(), server.Client(), x, filepath.Join(t.TempDir(), "state.json"), &interval, nil); err != nil {
 		t.Fatal(err)
 	}
 	if interval != 5*time.Second {
