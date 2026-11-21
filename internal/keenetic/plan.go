@@ -27,6 +27,7 @@ type Plan struct {
 	Commands    []Command
 	Unsupported []string
 	AccessLists []AccessList
+	Schedules   []BroadcastSchedule // drafts; application remains blocked
 }
 
 // quoted uses NDM's documented double-quote syntax. NDM does not document
@@ -171,6 +172,14 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		if !valid {
 			return p, fmt.Errorf("invalid slot for WLAN %s", id)
+		}
+		schedule, err := compileSchedule(cfg, prefix, target)
+		if err != nil {
+			return p, err
+		}
+		if schedule != nil {
+			p.Schedules = append(p.Schedules, *schedule)
+			p.Unsupported = append(p.Unsupported, prefix+"schedule-binding")
 		}
 		band := "ng"
 		if parent == "WifiMaster1/" {

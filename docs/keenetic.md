@@ -198,6 +198,33 @@ CLI reference: [KeeneticOS 5.1 Titan command guide](https://storage.googleapis.c
 The planner uses documented `interface … channel`, `channel width`, `ssid`,
 `authentication wpa-psk`, and `encryption` commands. Interface slot mappings
 are explicit; the planner does not infer ownership from existing SSIDs.
+## WLAN schedule development
+
+Schedule-enabled WLAN requests are explicitly rejected during application
+until native schedule binding and owned-object recovery are implemented.
+They must not silently become always-on WLANs. A redacted `-plan` preview
+includes the native schedule draft and its blocking reason.
+
+The compiler translates `wireless.N.schedule_*` into native weekly
+`schedule NAME action start|stop MIN HOUR DOW` actions, with Sunday numbered
+zero. Overlapping windows are merged before transitions are generated;
+matching times on multiple days share one native action. Overnight windows
+carry into the following day, including Saturday into Sunday. `2400` is valid
+only as an end time. Equal start/end times are empty windows; a full day is
+`0000-2400`. The inverted form broadcasts only inside the windows; the normal
+form disables broadcasting inside them. Invalid times/days/indexes are refused.
+
+Compilation and weekly-state evaluation have automated coverage. Native
+creation, grouped weekday action syntax, action removal, and deletion were
+checked using an unbound test schedule on Hero DSL; no AP was bound to it.
+The test object was removed afterwards. This does not establish operational
+WLAN scheduling or crash-safe binding/recovery, which remain unfinished.
+
+The current live topology is Mac over Wi-Fi → Hero DSL in router mode
+(NAT and DHCP) → Huawei 5G gateway on its own LAN. No router/AP mode change
+has been made. AP-mode operation remains unverified; changing mode requires
+a separate wired maintenance test and rediscovery of the management address.
+
 ## Minimum RSSI
 
 The controller's `stamgr.N.radio` selects a band (`ng` or `na`), and

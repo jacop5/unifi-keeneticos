@@ -111,6 +111,12 @@ func main() {
 		for _, acl := range plan.AccessLists {
 			fmt.Printf("MAC ACL: %s policy=%s clients=%v (AP pauses during replacement)\n", acl.Target, acl.Policy, acl.MACs)
 		}
+		for _, schedule := range plan.Schedules {
+			fmt.Printf("schedule draft (not applied): %s for %s\n", schedule.Name, schedule.Target)
+			for _, action := range schedule.Actions {
+				fmt.Printf("  %s\n", action)
+			}
+		}
 		return
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

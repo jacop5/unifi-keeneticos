@@ -34,6 +34,9 @@ func Preimage(plan Plan, running string) ([]Change, error) {
 	if len(plan.Unsupported) > 0 {
 		return nil, fmt.Errorf("plan contains unsupported settings")
 	}
+	if len(plan.Schedules) > 0 {
+		return nil, fmt.Errorf("native schedule binding is not implemented")
+	}
 	blocks := interfaceBlocks(running)
 	known := map[string]bool{}
 	for _, line := range strings.Split(running, "\n") {
