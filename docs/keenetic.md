@@ -72,7 +72,12 @@ unavailable because macOS denied BPF access, so a second TLS request used a
 socket with Darwin `IP_BOUND_IF` set to the Wi-Fi interface and checked by
 `getsockopt`; it also returned HTTP 200 with certificate verification enabled.
 macOS's inconsistent SSID status text was not counted as association evidence.
-This verifies the 5 GHz WPA2 client path; a 2.4 GHz client was not tested here.
+A separate controller band-selection test limited the profile to 2.4 GHz.
+Its checked plan enabled only `WifiMaster0/AccessPoint6` and disabled the
+5 GHz test AP. Native association confirmed an authenticated client on the
+2.4 GHz test AP, with a Titan-issued IPv4 lease; a certificate-verified HTTPS
+request using `IP_BOUND_IF` also returned HTTP 200. Both WPA2 client paths
+therefore passed.
 
 The Mac's new test preference was removed afterwards, its original Wi-Fi
 power-on state restored, and Ethernet remained active. Final comparisons
@@ -81,7 +86,12 @@ After excluding only test AP6 blocks, their intended bridge membership,
 terminal escape formatting and generated comments, all other native settings
 also matched baseline. No routing, NAT, DHCP-server or startup configuration
 was changed. The test SSID remains enabled on both AP6 slots; the agent is
-left log-only. Client automatic reconnection after pause was not tested.
+left log-only. A subsequent 2.4 GHz pause/resume test passed guarded
+application and controller confirmation in both directions. The Mac selected
+another saved WLAN during the pause and did not authenticate on test AP6
+after resume. Its later HTTPS success was therefore excluded as evidence of
+automatic test-SSID reconnection; that behavior remains unverified. No saved
+user WLAN preference was changed to force reconnection.
 
 ## Hero DSL live controller test (2026-11-21)
 
