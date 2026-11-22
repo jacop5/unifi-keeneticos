@@ -60,7 +60,7 @@ func probeActiveSchedule(ctx context.Context, id, stateDir string, start bool) e
 	if strings.HasPrefix(id, "WifiMaster1/") {
 		parent = "wifi1"
 	}
-	cfg := "wireless.1.ssid=UKN-Test-Timed-Probe\nwireless.1.parent=" + parent + "\nwireless.1.usage=user\nwireless.1.status=disabled\naaa.1.ssid=UKN-Test-Timed-Probe\naaa.1.wpa=2\naaa.1.wpa.psk=" + hex.EncodeToString(random[:]) + "\n"
+	cfg := "wireless.1.ssid=UKN-Test-Timed-Probe\nwireless.1.parent=" + parent + "\nwireless.1.usage=user\nwireless.1.status=enabled\naaa.1.ssid=UKN-Test-Timed-Probe\naaa.1.wpa=2\naaa.1.wpa.psk=" + hex.EncodeToString(random[:]) + "\n"
 	p, err := keenetic.BuildWLANTestPlan(cfg, map[string]string{"1": id})
 	if err != nil {
 		return err
@@ -72,22 +72,14 @@ func probeActiveSchedule(ctx context.Context, id, stateDir string, start bool) e
 		}
 	}
 	p.Commands = commands
-	changes, err := keenetic.Preimage(p, before)
-	if err != nil {
-		return err
-	}
 	action := func(at time.Time, start bool) keenetic.ScheduleAction {
 		return keenetic.ScheduleAction{Start: start, Hour: at.Hour(), Minute: at.Minute(), Days: []int{int(at.Weekday())}}
 	}
 	s := keenetic.BroadcastSchedule{Name: name, Target: id,
 		Actions: []keenetic.ScheduleAction{action(civil.Add(-time.Minute), !start), action(civil.Add(time.Minute), start)}}
-	transition, err := keenetic.PrepareScheduleTransition(id, &s, true, before)
-	if err != nil {
-		return err
-	}
-	changes = append(changes, transition...)
+	p.Schedules = []keenetic.BroadcastSchedule{s}
 	verified := false
-	err = keenetic.ApplyChangesWatched(ctx, keenetic.Local, changes, filepath.Join(stateDir, "rollback-probe.json"), func(ctx context.Context) error {
+	err = keenetic.ApplyPlanWatched(ctx, keenetic.Local, p, filepath.Join(stateDir, "rollback-probe.json"), func(ctx context.Context) error {
 		running, err := read("show running-config")
 		if err != nil {
 			return err
@@ -96,6 +88,12 @@ func probeActiveSchedule(ctx context.Context, id, stateDir string, start bool) e
 			return err
 		}
 		if err := keenetic.VerifyScheduleBinding(s, running); err != nil {
+			return err
+		}
+		if err := keenetic.VerifyScheduleSettings(p, running); err != nil {
+			return err
+		}
+		if _, err := keenetic.CollectVerifiedWLANs(ctx, keenetic.Local, p); err != nil {
 			return err
 		}
 		initial, final := "up", "down"
@@ -130,6 +128,9 @@ func probeActiveSchedule(ctx context.Context, id, stateDir string, start bool) e
 					now, err := keenetic.RouterCivilTime(clock)
 					if err != nil || s.ActiveAt(now) != start {
 						return fmt.Errorf("AP changed state before native schedule boundary: %v", err)
+					}
+					if _, err := keenetic.CollectVerifiedWLANs(ctx, keenetic.Local, p); err != nil {
+						return err
 					}
 					verified = true
 					return errors.New("intentional active schedule rollback")

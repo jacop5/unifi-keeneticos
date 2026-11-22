@@ -28,14 +28,18 @@ func interfaceBlocks(running string) map[string][]string {
 	return blocks
 }
 
-// Preimage attaches inverses using only existing interface blocks. It never
-// restores an entire router configuration over unrelated WAN or VPN settings.
+// Preimage attaches inverses using existing interfaces and owned schedules.
+// It never restores a whole router configuration over unrelated WAN/VPN settings.
 func Preimage(plan Plan, running string) ([]Change, error) {
+	return scheduledPreimage(plan, running)
+}
+
+func preimageSettings(plan Plan, running string) ([]Change, error) {
 	if len(plan.Unsupported) > 0 {
 		return nil, fmt.Errorf("plan contains unsupported settings")
 	}
 	if len(plan.Schedules) > 0 {
-		return nil, fmt.Errorf("native schedule binding is not implemented")
+		return nil, fmt.Errorf("schedule lifecycle must be prepared before settings")
 	}
 	blocks := interfaceBlocks(running)
 	known := map[string]bool{}

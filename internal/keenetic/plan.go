@@ -30,7 +30,7 @@ type Plan struct {
 	Commands    []Command
 	Unsupported []string
 	AccessLists []AccessList
-	Schedules   []BroadcastSchedule // drafts; application remains blocked
+	Schedules   []BroadcastSchedule
 }
 
 // quoted uses NDM's documented double-quote syntax. NDM does not document
@@ -70,6 +70,9 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 	add := func(s string) { p.Commands = append(p.Commands, Command{Text: s}) }
 	owners := map[string]string{}
 	for id, target := range slots {
+		if !regexpAP.MatchString(target) {
+			return p, fmt.Errorf("invalid mapped AP slot")
+		}
 		if prior, exists := owners[target]; exists {
 			return p, fmt.Errorf("WLANs %s and %s share a slot", prior, id)
 		}
@@ -182,7 +185,6 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		if schedule != nil {
 			p.Schedules = append(p.Schedules, *schedule)
-			p.Unsupported = append(p.Unsupported, prefix+"schedule-binding")
 		}
 		band := "ng"
 		if parent == "WifiMaster1/" {
@@ -301,6 +303,16 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 			action = "down"
 		}
 		add("interface " + target + " " + action)
+	}
+	var missing []string
+	for id, target := range slots {
+		if cfg["wireless."+id+".ssid"] == "" {
+			missing = append(missing, target)
+		}
+	}
+	sort.Strings(missing)
+	for _, target := range missing {
+		add("interface " + target + " down")
 	}
 	return p, nil
 }

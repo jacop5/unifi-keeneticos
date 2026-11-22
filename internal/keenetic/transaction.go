@@ -67,6 +67,10 @@ func (t *Transaction) rollbackLocked() error {
 	for i := t.applied - 1; i >= 0; i-- {
 		if err := runUndo(ctx, t.run, t.changes[i].Undo, guardCache); err != nil {
 			errs = append(errs, fmt.Errorf("rollback command %d failed", i+1))
+			// Do not cross a failed security/resource inverse and re-enable
+			// an AP with partially restored settings. The durable journal
+			// remains for a complete ordered recovery attempt.
+			break
 		}
 	}
 	t.rollbackErr = errors.Join(errs...)

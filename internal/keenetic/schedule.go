@@ -13,8 +13,7 @@ import (
 
 const weekMinutes = 7 * 24 * 60
 
-// BroadcastSchedule is a compiled native schedule draft. Binding and owned
-// resource recovery must be implemented before it can be applied to an AP.
+// BroadcastSchedule is a compiled native weekly schedule for an explicit AP.
 type BroadcastSchedule struct {
 	Name, Target string
 	Actions      []ScheduleAction

@@ -51,7 +51,7 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
 | Per-WLAN MAC allow/deny lists | Implemented with registered Keenetic hosts; native list and rollback verified on an unused disabled Hero slot; client enforcement not yet verified |
 | Minimum RSSI | Per-band requests map only to owned AP slots; native threshold/rollback verified on disabled Hero slots on both bands; client enforcement not yet verified |
-| WLAN schedules | Weekly compiler, resource/binding recovery, and lifecycle planner implemented; normal application remains blocked pending integration and end-to-end verification |
+| WLAN schedules | Integrated native weekly timers, coupled WLAN recovery, pause/removal handling, and schedule-aware health checks; native timed probes tested, controller schedule roundtrip pending |
 | Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
 | Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |

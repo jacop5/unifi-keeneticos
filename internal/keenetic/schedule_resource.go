@@ -131,7 +131,7 @@ func ownedScheduleActions(s BroadcastSchedule, lines []string) (map[string]bool,
 }
 
 // PrepareUnboundSchedule manages only an owned, unreferenced native resource.
-// AP binding remains a separate (not yet implemented) transaction phase.
+// AP binding is a separate phase of the coupled WLAN transaction.
 func PrepareUnboundSchedule(s BroadcastSchedule, running string) ([]Change, error) {
 	if err := validateSchedule(s); err != nil {
 		return nil, err

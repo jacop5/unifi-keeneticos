@@ -27,6 +27,15 @@ func ApplyPlanWatched(ctx context.Context, run Runner, plan Plan, journal string
 	if err != nil {
 		return err
 	}
+	if len(enabledSchedules(plan)) > 0 {
+		clock, err := run(ctx, "show clock date")
+		if err != nil {
+			return err
+		}
+		if _, err := RouterCivilTime(string(clock)); err != nil {
+			return err
+		}
+	}
 	return ApplyChangesWatched(ctx, run, changes, journal, health, arm)
 }
 

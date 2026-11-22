@@ -72,7 +72,7 @@ func TestScheduleAllDayAndEmptyWindows(t *testing.T) {
 	}
 }
 
-func TestScheduleRejectsMalformedWindowsAndCannotApplyDraft(t *testing.T) {
+func TestScheduleRejectsMalformedWindowsAndRequiresMappedState(t *testing.T) {
 	for _, window := range []string{"2900-3000", "2400-0100", "0800-2460", "0800-0900; reboot", "0800-"} {
 		_, err := compileSchedule(translate.ParseCfg("wireless.1.schedule_enabled=enabled\nwireless.1.schedule_mon.0="+window+"\n"), "wireless.1.", "WifiMaster0/AccessPoint5")
 		if err == nil {
@@ -81,11 +81,11 @@ func TestScheduleRejectsMalformedWindowsAndCannotApplyDraft(t *testing.T) {
 	}
 	cfg := strings.ReplaceAll(wlan, "Home WiFi", "UKN-Test-Schedule") + "wireless.1.schedule_enabled=enabled\nwireless.1.schedule_mon.0=0800-0900\n"
 	p, err := BuildWLANTestPlan(cfg, map[string]string{"1": "WifiMaster0/AccessPoint5"})
-	if err != nil || len(p.Schedules) != 1 || len(p.Unsupported) == 0 {
-		t.Fatalf("draft schedule was not classified: %v %v", p, err)
+	if err != nil || len(p.Schedules) != 1 || len(p.Unsupported) != 0 {
+		t.Fatalf("schedule was not compiled: %v %v", p, err)
 	}
 	if _, err := Preimage(Plan{Schedules: p.Schedules}, ""); err == nil {
-		t.Fatal("draft schedule allowed to apply without a native binding backend")
+		t.Fatal("schedule allowed to apply without an explicitly mapped WLAN state")
 	}
 	for _, action := range p.Schedules[0].Actions {
 		if strings.Contains(fmt.Sprint(action), ";") {

@@ -31,18 +31,20 @@ func RouterCivilTime(text string) (time.Time, error) {
 	return civil, nil
 }
 
-// PrepareScheduleTransition prepares the schedule portion of a future WLAN
+// PrepareScheduleTransition prepares the schedule portion of a WLAN
 // transaction. Callers must supply validated WLAN settings and separately
 // verify operational state against router-local civil time. Administrative
 // enablement is independent of scheduled operational
 // state: an off-window AP must stay administratively up for a future start.
-// Normal provisioning remains gated until this lifecycle is coupled
-// to security changes and end-to-end verification.
 //
 // A paused WLAN is unbound before it is disabled. Disabled/removed schedules
 // leave their owned resource dormant, avoiding deletion of a potentially shared
 // object and allowing reuse. Foreign bindings or references are never replaced.
 func PrepareScheduleTransition(target string, desired *BroadcastSchedule, enabled bool, running string) ([]Change, error) {
+	return prepareScheduleTransition(target, desired, enabled, running, false)
+}
+
+func prepareScheduleTransition(target string, desired *BroadcastSchedule, enabled bool, running string, force bool) ([]Change, error) {
 	if !regexpAP.MatchString(target) {
 		return nil, fmt.Errorf("invalid schedule transition target")
 	}
@@ -106,7 +108,7 @@ func PrepareScheduleTransition(target string, desired *BroadcastSchedule, enable
 			}
 		}
 	}
-	if len(resourceChanges) == 0 && oldBinding == newBinding && oldState == newState {
+	if !force && len(resourceChanges) == 0 && oldBinding == newBinding && oldState == newState {
 		return nil, nil
 	}
 	var changes []Change

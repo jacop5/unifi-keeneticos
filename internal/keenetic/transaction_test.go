@@ -4,6 +4,7 @@ package keenetic
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -24,6 +25,39 @@ func TestFailedApplyReversesPartialCommand(t *testing.T) {
 	}
 	if !reflect.DeepEqual(commands, []string{"set1", "set2", "undo2", "undo1"}) {
 		t.Fatal(commands)
+	}
+}
+
+func TestRollbackFailureCannotCrossSecurityBarrier(t *testing.T) {
+	changes := []Change{
+		{Forward: Command{Text: "quiesce"}, Undo: Command{Text: "restore-up"}},
+		{Forward: Command{Text: "change-key"}, Undo: Command{Text: "restore-key", Secret: true}},
+		{Forward: Command{Text: "enable"}, Undo: Command{Text: "down"}},
+	}
+	journal := filepath.Join(t.TempDir(), "rollback.json")
+	if err := SaveUndo(journal, changes); err != nil {
+		t.Fatal(err)
+	}
+	fail := true
+	var commands []string
+	run := func(_ context.Context, command string) ([]byte, error) {
+		commands = append(commands, command)
+		if command == "restore-key" && fail {
+			return nil, errors.New("native security restore failed")
+		}
+		return nil, nil
+	}
+	tx, err := Begin(context.Background(), run, changes, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commands = nil
+	if err := tx.Rollback(); err == nil || !reflect.DeepEqual(commands, []string{"down", "restore-key"}) {
+		t.Fatal("failed security recovery crossed the enablement barrier")
+	}
+	fail, commands = false, nil
+	if err := RecoverUndo(context.Background(), journal, run); err != nil || !reflect.DeepEqual(commands, []string{"down", "restore-key", "restore-up"}) {
+		t.Fatal("ordered durable recovery could not complete")
 	}
 }
 func TestConfirmedTransactionDoesNotRollback(t *testing.T) {

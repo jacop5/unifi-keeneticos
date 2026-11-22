@@ -112,7 +112,7 @@ func main() {
 			fmt.Printf("MAC ACL: %s policy=%s clients=%v (AP pauses during replacement)\n", acl.Target, acl.Policy, acl.MACs)
 		}
 		for _, schedule := range plan.Schedules {
-			fmt.Printf("schedule draft (not applied): %s for %s\n", schedule.Name, schedule.Target)
+			fmt.Printf("native schedule: %s for %s\n", schedule.Name, schedule.Target)
 			for _, action := range schedule.Actions {
 				fmt.Printf("  %s\n", action)
 			}
@@ -269,6 +269,7 @@ func main() {
 				log.Printf("inform: %v", err)
 			}
 			if x.S.CfgVersion != lastPlanned {
+				plannedVersion := x.S.CfgVersion
 				cfg, err := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
 				if err == nil {
 					plan, err := buildPlan(string(cfg), slots)
@@ -307,14 +308,8 @@ func main() {
 									return checkCtx.Err()
 								case <-timer.C:
 								}
-								status, err := keenetic.Collect(checkCtx, keenetic.Local)
+								_, err := keenetic.CollectVerifiedWLANs(checkCtx, keenetic.Local, plan)
 								if err != nil {
-									return err
-								}
-								if len(status.VAPs) == 0 {
-									return fmt.Errorf("no active WLANs after configuration")
-								}
-								if err := keenetic.VerifyWLANs(plan, status); err != nil {
 									return err
 								}
 								running, err := keenetic.Local(checkCtx, "show running-config")
@@ -333,11 +328,17 @@ func main() {
 								if err := keenetic.VerifyCountryCodes(plan, string(running)); err != nil {
 									return err
 								}
+								if err := keenetic.VerifyScheduleSettings(plan, string(running)); err != nil {
+									return err
+								}
 								if err := exchange(checkCtx, client, x, path, &interval, actionHandler); err != nil {
 									return err
 								}
 								if !x.S.Adopted {
 									return fmt.Errorf("controller removed adoption during health check")
+								}
+								if x.S.CfgVersion != plannedVersion {
+									return fmt.Errorf("controller configuration changed during provisioning")
 								}
 								return nil
 							}, armWatchdog)
@@ -348,7 +349,7 @@ func main() {
 								log.Print("configuration applied and confirmed")
 							}
 						}
-						lastPlanned = x.S.CfgVersion
+						lastPlanned = plannedVersion
 					}
 				}
 			}

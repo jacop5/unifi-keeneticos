@@ -200,10 +200,12 @@ The planner uses documented `interface … channel`, `channel width`, `ssid`,
 are explicit; the planner does not infer ownership from existing SSIDs.
 ## WLAN schedule development
 
-Schedule-enabled WLAN requests are explicitly rejected during normal
-application until the lifecycle is integrated with WLAN security and health checks.
-They must not silently become always-on WLANs. A redacted `-plan` preview
-includes the native schedule draft and its blocking reason.
+Schedule-enabled WLAN requests use native weekly timers in the normal guarded
+application path. Schedule changes and WLAN security/bridge changes share one
+journal and quiesce barriers. A redacted `-plan` preview includes the compiled
+native schedule. Unsupported settings still reject the entire plan; scheduled
+WLANs must not silently become always-on WLANs. Native probe results below are
+separate from an end-to-end controller schedule roundtrip, which remains unverified.
 
 The compiler translates `wireless.N.schedule_*` into native weekly
 `schedule NAME action start|stop MIN HOUR DOW` actions, with Sunday numbered
@@ -253,9 +255,8 @@ It verifies the native binding and disabled status, then deliberately rolls
 back. Recovery detaches the AP before the guarded resource inverses run; a
 journal written before any forward command is also recoverable. Tests exercise
 every forward boundary and reject serving, primary, reserved, or enabled slots.
-This probe does not enable normal schedule provisioning. Active transitions,
-schedule replacement/removal, paused-WLAN behavior, and router-local clock
-verification still need the production transaction lifecycle.
+This development probe accepts only stopped schedules. Normal provisioning
+uses the coupled lifecycle and health checks described below.
 
 On 2026-11-22 the stopped-binding probe passed on both Hero DSL 5.1.5 bands
 (`WifiMaster0/AccessPoint5` and `WifiMaster1/AccessPoint5`), including exact
@@ -276,13 +277,30 @@ remain as dormant owned resources; they are not deleted or left attached.
 Unchanged transitions generate no commands. Foreign bindings and schedules
 shared with another service are refused. Tests recover each forward-command
 boundary for creation, replacement, pause, and both removal scenarios and verify exact preimage recovery.
-This helper is not yet wired into normal provisioning: security/bridge changes
-must share the same quiesce barriers, and health checks must evaluate the latest
-native clock rather than assuming every enabled WLAN should currently be up.
+Normal provisioning now couples this lifecycle to security/bridge changes:
+all affected APs are detached and quiesced before changing any timer or WLAN
+setting, and binding/enablement happens last. Recovery reverses that order,
+restoring timer actions and credentials before original bindings/enablement.
+Tests cover every crash boundary for creation, timer replacement with security
+changes, and security changes with an unchanged timer. Immediate rollback stops
+at its first failed inverse so it cannot re-enable an incompletely restored AP;
+the retained journal supports an ordered retry.
 
 `RouterCivilTime` validates native `show clock date` fields, calendar dates and
 weekday agreement, rejecting unset clocks. It carries the router-local calendar
 without converting it through the agent's timezone or the Mac's clock.
+Enabled schedules require a valid native clock before any mutation. Pausing a
+WLAN does not depend on a valid clock. Health checks bracket status collection
+with native clock reads and retry if a timer boundary was crossed. They check
+the scheduled operational state separately from administrative enablement,
+verify binding/action readback, and reject residual bindings on paused or
+unscheduled WLANs. A legitimate off window may leave no active mapped APs;
+controller communication must still pass. Full-mode planning now disables
+explicitly mapped WLANs missing from controller configuration, as test mode
+already did, so deletion cannot leave a bound timer behind.
+If the health-check inform receives a newer controller configuration, the
+current transaction rolls back and the newer version is planned next; it is
+not accidentally marked as already applied.
 
 The experimental `schedule-active` and `schedule-start` rollback probes create
 an isolated `UKN-Test-Timed-Probe` AP with a random WPA2 password. They require
@@ -302,6 +320,16 @@ override administrative disablement. Keeping scheduled WLANs administratively
 up fixed the test; the native engine then gated operational down/up state at
 the expected router-local minute. This result is currently limited to the
 2.4 GHz test slot; it does not prove normal controller schedule provisioning.
+
+The integrated `ApplyPlanWatched` path subsequently passed both native timed
+start and stop probes on `WifiMaster1/AccessPoint5` (5 GHz), including security
+readback, native binding/administrative-state verification, clock-bracketed
+operational collection before and after the transition, and exact forced
+rollback. Primary radio/AP and both test-slot configuration blocks matched
+the baseline afterwards; the journal and temporary schedule were removed,
+and controller informs continued from the separate log-only daemon. The live
+daemon has not yet been switched to this new build or enabled for schedule
+provisioning. A controller-generated schedule roundtrip remains to be tested.
 
 ```sh
 ukn -rollback-probe WifiMaster0/AccessPoint5 \
