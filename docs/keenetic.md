@@ -245,10 +245,30 @@ readback before their marker/actions are added. Serving radio/primary AP
 configuration hashes matched the baseline and controller informs continued.
 No AP was bound to any of these test schedules.
 
+A separate `-rollback-probe-mode schedule-binding` development probe binds a
+new owned schedule to an unused, disabled AP1–AP6 with no SSID and no existing
+schedule. It accepts only stop actions, so the schedule cannot enable the AP.
+It verifies the native binding and disabled status, then deliberately rolls
+back. Recovery detaches the AP before the guarded resource inverses run; a
+journal written before any forward command is also recoverable. Tests exercise
+every forward boundary and reject serving, primary, reserved, or enabled slots.
+This probe does not enable normal schedule provisioning. Active transitions,
+schedule replacement/removal, paused-WLAN behavior, and router-local clock
+verification still need the production transaction lifecycle.
+
+On 2026-11-22 the stopped-binding probe passed on both Hero DSL 5.1.5 bands
+(`WifiMaster0/AccessPoint5` and `WifiMaster1/AccessPoint5`), including exact
+interface restoration after forced rollback. A deliberate process crash on the
+2.4 GHz slot also recovered through the detached watchdog: binding, resource,
+and journal were removed. The primary radio/AP blocks and both test-slot
+blocks matched the saved preimage byte for byte; controller informs continued.
+These results cover disabled binding and recovery, not active timed broadcasts.
+
 ```sh
 ukn -rollback-probe WifiMaster0/AccessPoint5 \
   -rollback-probe-mode schedule -state /tmp/ukn-schedule-resource-state
 # Add -crash-probe to test detached recovery; wait for watchdog cleanup.
+# Use -rollback-probe-mode schedule-binding for the constant-off binding test.
 ```
 
 The current live topology is Mac over Wi-Fi → Hero DSL in router mode

@@ -35,7 +35,7 @@ func main() {
 	probe := flag.Bool("probe", false, "collect router status and exit without contacting a controller")
 	terminalProbe := flag.Bool("terminal-probe", false, "test read-only NDM terminal execution and exit")
 	rollbackProbe := flag.String("rollback-probe", "", "test rollback on an unused disabled AP slot, then exit")
-	probeMode := flag.String("rollback-probe-mode", "ssid", "disabled-slot rollback probe: ssid, owe, acl, wpa3, transition, rssi or schedule")
+	probeMode := flag.String("rollback-probe-mode", "ssid", "disabled-slot rollback probe: ssid, owe, acl, wpa3, transition, rssi, schedule or schedule-binding")
 	crashProbe := flag.Bool("crash-probe", false, "with -rollback-probe, exit before confirmation to test detached recovery")
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
 	ledControl := flag.Bool("led-control", false, "allow controller LED on/off commands independently of WLAN apply; no reboot or locate")
