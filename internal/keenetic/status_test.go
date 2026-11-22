@@ -92,7 +92,7 @@ func TestHardwareTelemetry(t *testing.T) {
 }
 
 func TestMeasuredRadioTelemetry(t *testing.T) {
-	s := &Snapshot{Radios: []map[string]string{{"id": "WifiMaster0", "channel": "12", "bandwidth": "40"}, {"id": "WifiMaster1", "channel": "36", "bandwidth": "80"}}, Stations: []map[string]string{{"ap": "WifiMaster1/AccessPoint6", "authenticated": "yes"}, {"ap": "WifiMaster1/AccessPoint6", "authenticated": "no"}}}
+	s := &Snapshot{Radios: []map[string]string{{"id": "WifiMaster0", "channel": "12", "bandwidth": "40"}, {"id": "WifiMaster1", "channel": "36", "bandwidth": "80"}}, Stations: []map[string]string{{"mac": "02:00:00:00:00:01", "ap": "WifiMaster1/AccessPoint6", "authenticated": "yes"}, {"ap": "WifiMaster1/AccessPoint6", "authenticated": "no"}}}
 	f := s.Fields()
 	radios := f["radio_table"].([]map[string]any)
 	stats := f["radio_table_stats"].([]map[string]any)

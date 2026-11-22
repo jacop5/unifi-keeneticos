@@ -127,6 +127,16 @@ remaining live-test gap without adding router configuration changes.
 
 ### Client power management and rate validation
 
+Device, radio and WLAN counts now share station identity validation. Only
+authenticated six-byte unicast MACs on known `WifiMaster0/1` AP slots are
+reported; zero/malformed MACs and unknown APs are excluded. Duplicate records
+for the same MAC/AP contribute one client and one set of byte counters.
+When a sample reports one MAC on different APs, that ambiguous client is
+omitted until a later sample resolves it, so a roaming boundary may briefly
+reduce the reported count. No arbitrary band is selected. Regression tests
+cover counts, byte totals, canonical MAC formatting and reappearance after
+ambiguity resolves. This filtering change has not yet been deployed live.
+
 Client rows now include the native `psm` measurement as `state_pwrmgt` when
 NDM explicitly reports `yes` or `no`, and publish HT state from the measured
 client mode. Missing or unknown power-saving values are omitted. Rate

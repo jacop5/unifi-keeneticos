@@ -172,10 +172,7 @@ func ParseARP(text string) map[string]string {
 // StationFields converts NDM rates (Mbps) to the inform protocol's Kbps.
 func (s *Snapshot) StationFields() []map[string]any {
 	out := []map[string]any{}
-	for _, r := range s.Stations {
-		if r["mac"] == "" || r["authenticated"] != "yes" {
-			continue
-		}
+	for _, r := range s.stationRecords() {
 		band := "ng"
 		name := "wifi0"
 		if strings.HasPrefix(r["ap"], "WifiMaster1/") {
@@ -241,7 +238,7 @@ func (s *Snapshot) VAPFields() []map[string]any {
 			width = s.Radios[index]["bandwidth"]
 		}
 		count := 0
-		for _, sta := range s.Stations {
+		for _, sta := range s.stationRecords() {
 			if sta["ap"] == v["id"] && sta["authenticated"] == "yes" {
 				count++
 			}
@@ -272,7 +269,7 @@ func (s *Snapshot) Fields() map[string]any {
 			band, name = "na", "wifi1"
 		}
 		count := 0
-		for _, sta := range s.Stations {
+		for _, sta := range s.stationRecords() {
 			if strings.HasPrefix(sta["ap"], r["id"]+"/") && sta["authenticated"] == "yes" {
 				count++
 			}
