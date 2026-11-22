@@ -17,7 +17,7 @@ import (
 // ProbeRollback uses an unused, administratively disabled AP slot. It never
 // enables the interface or changes a serving WLAN's credentials.
 func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode string) error {
-	if mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "schedule" && mode != "schedule-binding" {
+	if mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "schedule" && mode != "schedule-binding" && mode != "schedule-active" && mode != "schedule-start" {
 		return fmt.Errorf("unknown rollback probe mode")
 	}
 	if !regexp.MustCompile(`^WifiMaster[01]/AccessPoint[1-6]$`).MatchString(id) {
@@ -64,6 +64,12 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	}
 	if mode == "schedule" || mode == "schedule-binding" {
 		return probeScheduleResource(ctx, id, stateDir, crash, mode == "schedule-binding")
+	}
+	if mode == "schedule-active" || mode == "schedule-start" {
+		if crash {
+			return fmt.Errorf("active schedule probe does not support crash injection")
+		}
+		return probeActiveSchedule(ctx, id, stateDir, mode == "schedule-start")
 	}
 	journal := filepath.Join(stateDir, "rollback-probe.json")
 	plan := keenetic.Plan{Commands: []keenetic.Command{{Text: "interface " + id + " ssid ukn-rollback-probe"}}}

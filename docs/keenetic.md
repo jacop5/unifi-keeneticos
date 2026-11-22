@@ -200,8 +200,8 @@ The planner uses documented `interface … channel`, `channel width`, `ssid`,
 are explicit; the planner does not infer ownership from existing SSIDs.
 ## WLAN schedule development
 
-Schedule-enabled WLAN requests are explicitly rejected during application
-until native AP binding and its combined recovery are implemented.
+Schedule-enabled WLAN requests are explicitly rejected during normal
+application until the lifecycle is integrated with WLAN security and health checks.
 They must not silently become always-on WLANs. A redacted `-plan` preview
 includes the native schedule draft and its blocking reason.
 
@@ -217,8 +217,9 @@ form disables broadcasting inside them. Invalid times/days/indexes are refused.
 Compilation and weekly-state evaluation have automated coverage. Native
 creation, grouped weekday action syntax, action removal, and deletion were
 checked using an unbound test schedule on Hero DSL; no AP was bound to it.
-The test object was removed afterwards. This does not establish operational
-WLAN scheduling or crash-safe AP binding, which remain unfinished.
+The test object was removed afterwards. Later binding and transition probes
+are described below; these initial resource-only checks did not establish
+operational WLAN scheduling.
 
 Unbound schedule resources now have a separate transaction layer. Names are
 derived from the explicit AP target, existing objects require the exact
@@ -263,6 +264,44 @@ interface restoration after forced rollback. A deliberate process crash on the
 and journal were removed. The primary radio/AP blocks and both test-slot
 blocks matched the saved preimage byte for byte; controller informs continued.
 These results cover disabled binding and recovery, not active timed broadcasts.
+
+`PrepareScheduleTransition` now prepares creation, replacement, pause, schedule
+removal, and WLAN removal. It detaches an
+old owned binding before quiescing the AP, updates only an unreferenced owned
+resource, then binds and administratively enables the AP. The schedule gates
+its operational state independently; leaving an off-window AP administratively
+down would prevent its next scheduled start. Paused/deleted
+WLANs lose their binding so an old timer cannot restart them. Removed schedules
+remain as dormant owned resources; they are not deleted or left attached.
+Unchanged transitions generate no commands. Foreign bindings and schedules
+shared with another service are refused. Tests recover each forward-command
+boundary for creation, replacement, pause, and both removal scenarios and verify exact preimage recovery.
+This helper is not yet wired into normal provisioning: security/bridge changes
+must share the same quiesce barriers, and health checks must evaluate the latest
+native clock rather than assuming every enabled WLAN should currently be up.
+
+`RouterCivilTime` validates native `show clock date` fields, calendar dates and
+weekday agreement, rejecting unset clocks. It carries the router-local calendar
+without converting it through the agent's timezone or the Mac's clock.
+
+The experimental `schedule-active` and `schedule-start` rollback probes create
+an isolated `UKN-Test-Timed-Probe` AP with a random WPA2 password. They require
+an unused, unaliased, unbridged, down/no-SSID slot and a new schedule resource.
+They apply no bridge or shared-radio commands. The native clock must show
+seconds 20–40 at entry, leaving time to observe the next-minute transition
+within the watchdog deadline. `schedule-active` observes a native timed stop;
+`schedule-start` observes a native timed start. Both force rollback afterwards
+and require exact interface restoration and resource removal. They do not
+support crash injection and do not verify client authentication or traffic.
+
+On 2026-11-22, Hero DSL 5.1.5 `WifiMaster0/AccessPoint5` passed the native timed
+stop and timed start probes, with WPA2 configuration readback and exact slot
+restoration after each successful test. An initial start probe correctly rolled
+back when the AP was left administratively down: a native schedule does not
+override administrative disablement. Keeping scheduled WLANs administratively
+up fixed the test; the native engine then gated operational down/up state at
+the expected router-local minute. This result is currently limited to the
+2.4 GHz test slot; it does not prove normal controller schedule provisioning.
 
 ```sh
 ukn -rollback-probe WifiMaster0/AccessPoint5 \

@@ -36,9 +36,10 @@ func TestApplyHealthFailureRestoresPreimage(t *testing.T) {
 		}
 		return nil, nil
 	}
-	err := ApplyPlan(context.Background(), run, Plan{Commands: []Command{{Text: "interface WifiMaster0 channel 6"}}}, path, func(context.Context) error { return errors.New("controller unreachable") })
-	if err == nil {
-		t.Fatal("expected health failure")
+	healthErr := errors.New("controller unreachable")
+	err := ApplyPlan(context.Background(), run, Plan{Commands: []Command{{Text: "interface WifiMaster0 channel 6"}}}, path, func(context.Context) error { return healthErr })
+	if !errors.Is(err, healthErr) {
+		t.Fatal("health failure cause was lost")
 	}
 	if len(calls) != 3 || calls[2] != "interface WifiMaster0 channel 11" {
 		t.Fatal(calls)

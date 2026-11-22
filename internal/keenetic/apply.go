@@ -60,7 +60,7 @@ func ApplyChangesWatched(ctx context.Context, run Runner, changes []Change, jour
 		if rollbackErr == nil {
 			rollbackErr = ClearUndo(journal)
 		}
-		return errors.Join(fmt.Errorf("post-change health check failed"), rollbackErr)
+		return errors.Join(fmt.Errorf("post-change health check failed: %w", err), rollbackErr)
 	}
 	if err := tx.Confirm(); err != nil {
 		return err
