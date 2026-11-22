@@ -57,7 +57,7 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
 | VLAN/uplink creation, fast roaming, mesh, guest portal, scanning, QoS | Not ported; unmapped VLANs and fast-roaming configurations are explicitly rejected |
-| Controller LED on/off | Opt-in with `-led-control`; native commands tested on Hero DSL, encrypted dispatch covered by tests; controller UI round trip not yet verified |
+| Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
 

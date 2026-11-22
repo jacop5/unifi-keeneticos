@@ -257,7 +257,9 @@ func (x *Session) Handle(js []byte, now time.Time) (Outcome, error) {
 	case "upgrade":
 		x.upgrade(r.Version, r.URL, now, &o)
 	case "reboot":
-		x.Boot = now
+		if !x.PhysicalDevice {
+			x.Boot = now
+		}
 		o.Immediate = true
 		o.Actions = append(o.Actions, "reboot")
 		o.Events = append(o.Events, "reboot requested")

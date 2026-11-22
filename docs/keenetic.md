@@ -519,6 +519,10 @@ Reboot/restart requests reach the backend action
 allowlist, where they remain unsupported; they cannot be enabled by
 `-led-control`. This behavior has automated coverage. No live firmware or
 reboot test was performed on the Wi-Fi-connected Hero.
+Regression tests cover top-level `reboot` and both `cmd reboot`/`cmd restart`:
+all preserve the physical session's boot clock while the upstream emulator
+continues simulating its reboot. The top-level path previously missed that
+guard; it is now fixed. No native reboot command is enabled by this change.
 
 ## Optional controller LED actions
 
@@ -531,12 +535,21 @@ remain rejected.
 
 On 2026-11-21, both native LED commands were exercised on the Hero DSL and
 the original non-shutdown state was restored. Automated tests cover the
-encrypted controller reply through to the NDM command allowlist. A real
-controller UI LED round trip remains unverified. The updated telemetry daemon
+encrypted controller reply through to the NDM command allowlist. The updated telemetry daemon
 also exchanged informs successfully in log-only mode, but the controller
 initially displayed configured widths of 20/40 MHz while native measurements
 were 40/80 MHz. This was subsequently fixed by reporting the native operating
 width in each `vap_table[].bw` entry, in addition to the radio measurements.
+
+On 2026-11-22 a real Network 10.5.67 controller API override was tested with
+WLAN application disabled and `-led-control` temporarily enabled. Override
+`off` produced `led:off` and native `led power shutdown all`; override `on`
+produced `led:on` and removed that shutdown setting. The original controller
+override (`default`) was restored and the controller still reported connected.
+Native configuration settings matched their baseline after excluding generated
+comment metadata. This verifies the controller/inform/native configuration
+roundtrip, not a visual observation of the physical lights. The corrected
+daemon was returned to fully log-only mode with LED control absent.
 On 2026-11-21, the UniFi OS test controller's device overview showed channel
 12 at 40 MHz and channel 36 at 80 MHz, matching native measurements, with
 the daemon still in log-only WLAN mode. Configured width preferences and
