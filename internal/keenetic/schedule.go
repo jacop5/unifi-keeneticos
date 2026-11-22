@@ -91,11 +91,14 @@ func compileSchedule(cfg translate.Cfg, prefix, target string) (*BroadcastSchedu
 	if !regexpAP.MatchString(target) {
 		return nil, fmt.Errorf("invalid scheduled AP target")
 	}
-	onDuring := false
+	// Controller wire format: normal windows are allowed airtime. With
+	// schedule_invert=enabled the windows are blackout periods instead.
+	// All-day blackout on legacy devices is enabled with no allowed windows.
+	onDuring := true
 	switch cfg[prefix+"schedule_invert"] {
 	case "", "disabled":
 	case "enabled":
-		onDuring = true
+		onDuring = false
 	default:
 		return nil, fmt.Errorf("unknown WLAN schedule direction")
 	}
@@ -124,6 +127,12 @@ func compileSchedule(cfg translate.Cfg, prefix, target string) (*BroadcastSchedu
 		end, err := scheduleMinute(value[5:], true)
 		if err != nil {
 			return nil, err
+		}
+		// The controller emits 2359 as its end-of-day sentinel, including
+		// full-day complements of blackout windows. Do not invent a daily
+		// one-minute outage at 23:59 when compiling those allowed windows.
+		if value[5:] == "2359" {
+			end = 1440
 		}
 		length := end - start
 		if length < 0 {

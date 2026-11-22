@@ -54,6 +54,10 @@ func BuildPlan(text string, slots map[string]string) (Plan, error) {
 // BuildPlanWithNetworks maps VLAN IDs to operator-provisioned native bridges.
 // It never creates an uplink, DHCP service, bridge, or management network.
 func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan, error) {
+	text, err := normalizeScheduleWindows(text)
+	if err != nil {
+		return Plan{}, err
+	}
 	cfg := translate.ParseCfg(text)
 	p := Plan{}
 	bridges, unsupported, err := resolveNetworks(cfg, networks)

@@ -14,6 +14,10 @@ import (
 // non-primary AP slots. Radio-wide and unrelated WLAN settings never enter
 // the planner. Only separately named UKN-Test SSIDs can be provisioned.
 func BuildWLANTestPlan(text string, slots map[string]string) (Plan, error) {
+	text, err := normalizeScheduleWindows(text)
+	if err != nil {
+		return Plan{}, err
+	}
 	if len(slots) == 0 {
 		return Plan{}, fmt.Errorf("test mode requires explicit non-primary slots")
 	}

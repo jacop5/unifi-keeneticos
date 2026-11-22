@@ -13,7 +13,7 @@ import (
 func draftSchedule(t *testing.T, windows string, onDuring bool) *BroadcastSchedule {
 	t.Helper()
 	cfg := "wireless.1.schedule_enabled=enabled\n" + windows
-	if onDuring {
+	if !onDuring {
 		cfg += "wireless.1.schedule_invert=enabled\n"
 	}
 	s, err := compileSchedule(translate.ParseCfg(cfg), "wireless.1.", "WifiMaster0/AccessPoint5")

@@ -205,16 +205,26 @@ application path. Schedule changes and WLAN security/bridge changes share one
 journal and quiesce barriers. A redacted `-plan` preview includes the compiled
 native schedule. Unsupported settings still reject the entire plan; scheduled
 WLANs must not silently become always-on WLANs. Native probe results below are
-separate from an end-to-end controller schedule roundtrip, which remains unverified.
+separate from the real controller roundtrip results recorded below.
 
 The compiler translates `wireless.N.schedule_*` into native weekly
 `schedule NAME action start|stop MIN HOUR DOW` actions, with Sunday numbered
 zero. Overlapping windows are merged before transitions are generated;
 matching times on multiple days share one native action. Overnight windows
 carry into the following day, including Saturday into Sunday. `2400` is valid
-only as an end time. Equal start/end times are empty windows; a full day is
-`0000-2400`. The inverted form broadcasts only inside the windows; the normal
-form disables broadcasting inside them. Invalid times/days/indexes are refused.
+only as an end time. The controller's `2359` end-of-day sentinel also means
+midnight, so `0000-2359` covers a full day without an invented one-minute gap.
+Other equal start/end times are empty windows. Normal windows allow airtime;
+`schedule_invert=enabled` makes them blackout windows instead. An enabled
+non-inverted schedule with no windows is a valid full-week blackout, not an
+always-on WLAN. Invalid times/days/indexes are refused.
+
+Legacy controllers may repeat unindexed keys such as
+`wireless.1.schedule_sun=0000-1100` and
+`wireless.1.schedule_sun=1200-2359`. Both full and test-mode planning normalize
+these windows before map parsing can discard duplicates. Indexed windows are
+also supported; mixed indexed/unindexed encodings for one day, duplicate
+indexed keys, and more than 32 legacy windows per day are rejected.
 
 Compilation and weekly-state evaluation have automated coverage. Native
 creation, grouped weekday action syntax, action removal, and deletion were
@@ -327,9 +337,39 @@ readback, native binding/administrative-state verification, clock-bracketed
 operational collection before and after the transition, and exact forced
 rollback. Primary radio/AP and both test-slot configuration blocks matched
 the baseline afterwards; the journal and temporary schedule were removed,
-and controller informs continued from the separate log-only daemon. The live
-daemon has not yet been switched to this new build or enabled for schedule
-provisioning. A controller-generated schedule roundtrip remains to be tested.
+and controller informs continued from the separate log-only daemon. At that
+stage the live daemon had not yet been switched to the new schedule build.
+
+The subsequent real Network 10.5.67 controller test exposed two compiler bugs:
+the controller emitted repeated unindexed allowed-window keys, and the initial
+implementation interpreted the invert flag backwards. The corrected backend
+preserves every repeated window and treats normal windows as allowed airtime.
+The controller's full-week blackout is enabled with no allowed windows; it now
+compiles to a constant native stop. The controller generator also uses `2359`
+as an end-of-day sentinel, now handled without a one-minute nightly outage.
+Tests include the captured legacy encoding, full blackouts, indexed inversion,
+daily boundaries, and ambiguous/excessive window rejection.
+
+On 2026-11-22 the corrected daemon applied the controller's full-week blackout
+to `UKN-Test-Hero` on both AP6 bands and confirmed native readback/controller
+health. Both test APs were operationally down while the primary AP0 remained
+up. A real controller one-minute Sunday blackout then generated allowed
+windows `0000-1057` and `1058-2359`, plus full-day windows on the other days.
+Native observations showed both AP6 bands up before 10:57 router-local time,
+down throughout the 10:57–10:58 blackout, and automatically up again at 10:58.
+The Mac's association was verified on primary `WifiMaster0/AccessPoint0` before
+testing; no shared-radio or primary-WLAN settings were included in application.
+Controller pause then removed both native schedule bindings and disabled both
+test APs; controller resume reattached the timers and brought the test APs up.
+Restoring the original schedule-free profile removed the bindings again and
+passed guarded confirmation. An API comparison found no unrelated WLAN field
+changes. The now-unbound, backend-owned test schedule resources were explicitly
+removed after stopping the applying daemon. The corrected build was restarted
+in log-only mode with version-only upgrade reporting still enabled. Client
+reconnection after a timed outage was not exercised by this test.
+Final native radio, primary/test AP, and home-bridge configuration blocks
+matched the pre-test baseline byte for byte, and controller informs resumed
+from the corrected log-only build.
 
 ```sh
 ukn -rollback-probe WifiMaster0/AccessPoint5 \
