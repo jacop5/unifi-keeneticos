@@ -109,6 +109,22 @@ active connection and rates without a hostname. This verifies collection and
 the missing-name path, not successful named-client display. Controller ingestion
 of an enriched name remains unverified. No DHCP configuration was changed.
 
+Static inspection of the running Network 10.5.67 archive confirms that the
+AP ingestion path reads `hostname` from each nested VAP `sta_table` row,
+strips angle brackets at its edges and passes the station record onward.
+The inspected `ace.jar` SHA-256 matched the running container:
+`7b8decf39bb8787c29367901aff2a28fedff1571ecde5f9203be5ac61e04202d`.
+Its `BOOT-INF/lib/internal-dependencies.jar` has SHA-256
+`56507c3484f9babca9d735b9a295606230cc9c89e2ee22bf7926712bd6f9a83c`.
+The relevant method is `com.ubnt.service.devmgr.lkbpVPeTHxBmpCSG.bUGnmQhkcUmRE`
+with parameters `bdywDXYBDX`, `List<pfELyUmQb>`, and `UNVkydNllUeGK`;
+bytecode offsets 333–411 traverse stations and read the name. This is a
+static read-path observation, not proof of database persistence or GUI display.
+A local encrypted-controller regression verifies that the enriched name
+survives CBC/GCM transport into the nested station row with its controller
+WLAN identity, while absent names remain absent. These checks narrow the
+remaining live-test gap without adding router configuration changes.
+
 ### Client power management and rate validation
 
 Client rows now include the native `psm` measurement as `state_pwrmgt` when

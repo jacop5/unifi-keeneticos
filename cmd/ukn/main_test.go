@@ -215,3 +215,65 @@ func TestEncryptedControllerExchange(t *testing.T) {
 		t.Fatalf("interval=%s", interval)
 	}
 }
+
+func TestEncryptedHostnameReachesNestedControllerStationRows(t *testing.T) {
+	for _, gcm := range []bool{false, true} {
+		for _, named := range []bool{false, true} {
+			t.Run(fmt.Sprintf("gcm=%t/named=%t", gcm, named), func(t *testing.T) {
+				mac, _ := net.ParseMAC("02:00:00:00:00:01")
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					_, plain, err := inform.Decode(body, inform.DefaultKeyHex)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					var payload map[string]any
+					if err := json.Unmarshal(plain, &payload); err != nil {
+						t.Error(err)
+						return
+					}
+					vaps, ok := payload["vap_table"].([]any)
+					if !ok || len(vaps) != 1 {
+						t.Error("missing VAP rows")
+						return
+					}
+					vap := vaps[0].(map[string]any)
+					if vap["name"] != "ath0" || vap["id"] != "test-wlan-id" {
+						t.Error("controller WLAN identity lost")
+					}
+					rows, ok := vap["sta_table"].([]any)
+					if !ok || len(rows) != 1 {
+						t.Error("missing nested station")
+						return
+					}
+					row := rows[0].(map[string]any)
+					name, present := row["hostname"]
+					if present != named || (named && name != "Example-Client") {
+						t.Error("nested hostname missing or fabricated")
+					}
+					w.WriteHeader(http.StatusOK)
+				}))
+				defer server.Close()
+				s := &keenetic.Snapshot{VAPs: []map[string]string{{"id": "WifiMaster0/AccessPoint6", "ssid": "UKN-Test-Names"}}, Stations: []map[string]string{{"mac": "02:00:00:00:00:02", "ap": "WifiMaster0/AccessPoint6", "authenticated": "yes"}}}
+				if named {
+					s.Hostnames = keenetic.ParseDHCPHostnames("lease:\n mac: 02:00:00:00:00:02\n ip: 192.0.2.2\n hostname: Example-Client\n expires: 600\n")
+				}
+				dir := t.TempDir()
+				x := &device.Session{S: device.NewState(server.URL), StateDir: dir, Dev: inform.Device{MAC: mac}, Boot: time.Now()}
+				x.S.GCM = gcm
+				x.Extra = func() map[string]any {
+					return s.FieldsForConfig("wireless.1.ssid=UKN-Test-Names\nwireless.1.parent=wifi0\nwireless.1.id=test-wlan-id\nwireless.1.devname=ath0\n")
+				}
+				interval := time.Second
+				if err := exchange(context.Background(), server.Client(), x, filepath.Join(dir, "state.json"), &interval, nil); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
