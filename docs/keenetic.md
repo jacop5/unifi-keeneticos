@@ -419,8 +419,38 @@ controller health passed, and the journal was cleared. Comparing complete
 configuration settings, excluding generated comments and only the two intended
 AP6 WMM flags, matched the baseline exactly. WMM was left enabled on the test
 WLANs to honor their controller configuration. The daemon was then returned to
-log-only mode. The retry/backoff policy has automated coverage; this successful
-live attempt did not deliberately inject another controller failure.
+log-only mode. The retry/backoff policy was subsequently exercised against
+the real controller as described below.
+
+## Controller outage recovery
+
+`tools/inform-fault-proxy.py` is a temporary test relay for the standard Go
+`HTTP_PROXY` setting. It accepts encrypted inform packets only from one
+configured client and only for the exact configured HTTP inform URL. It
+forwards packets unchanged to the real controller, injects HTTP 503 for one
+selected request, logs only request counts/statuses, and stops after a bounded
+lifetime. `--fail-request 0` runs without injection for recovery. It does not
+decrypt packets, record credentials, change adoption state, or change the
+saved inform URL. Use it only with a separately mapped test WLAN and a
+nonempty guarded configuration delta; otherwise request 2 may be an ordinary
+inform rather than the post-change health check.
+
+On 2026-11-22, the Hero DSL used this relay to reach the real UniFi OS test
+controller. Both test AP6 WMM flags were temporarily cleared while the agent
+was stopped. The first inform reached the controller successfully. The next
+controller health-check request received the injected HTTP 503: the agent
+rolled both flags back to their immediate preimage, cleared its journal, and
+scheduled a one-minute retry. Both test APs remained up during backoff.
+
+The relay then became unreachable and expired, so successful controller
+communication was unavailable past the initial retry deadline. A pass-through
+relay was started, without restarting the agent or issuing a new controller
+configuration. The same agent process automatically retried, restored WMM on
+both test APs, passed the real controller health check, and cleared the journal.
+The saved controller configuration version matched before and after the test.
+All native settings matched the original pre-test baseline after excluding
+generated comments. The relay was stopped, and the agent returned to direct,
+log-only operation with no proxy environment and its saved inform URL intact.
 
 ## Minimum RSSI
 
