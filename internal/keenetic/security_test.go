@@ -65,3 +65,22 @@ func TestOWEPreimageRestoresKeyAndEncryption(t *testing.T) {
 		t.Fatalf("%#v", c)
 	}
 }
+
+func TestPersonalAuthenticationMethodsRequireExactTokens(t *testing.T) {
+	for _, method := range []string{"SAE-UNKNOWN", "NOT-SAE", "FT-SAE", "WPA-EAP", "WPA-PSK UNKNOWN", "UNKNOWN"} {
+		p, err := BuildPlan(wlan+"aaa.1.wpa.key.1.mgmt="+method+"\n", map[string]string{"1": "WifiMaster0/AccessPoint6"})
+		if err == nil && len(p.Unsupported) == 0 {
+			t.Fatalf("unsupported method %q was accepted", method)
+		}
+	}
+	for _, method := range []string{"WPA-PSK", "SAE", "WPA-PSK SAE"} {
+		p, err := BuildPlan(wlan+"aaa.1.wpa.key.1.mgmt="+method+"\n", map[string]string{"1": "WifiMaster0/AccessPoint6"})
+		if err != nil || len(p.Unsupported) != 0 {
+			t.Fatalf("supported method %q rejected: %v %v", method, err, p.Unsupported)
+		}
+	}
+	p, err := BuildPlan(wlan+"aaa.1.wpa.key.1.mgmt=WPA-PSK\naaa.1.wpa.key.4.mgmt=UNKNOWN\n", map[string]string{"1": "WifiMaster0/AccessPoint6"})
+	if err == nil && len(p.Unsupported) == 0 {
+		t.Fatal("unknown secondary method was ignored")
+	}
+}

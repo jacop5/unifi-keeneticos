@@ -221,13 +221,23 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		aaa := "aaa." + id + "."
 		mgmt := ""
+		sae, unknownMgmt := false, false
 		for i := 1; i <= 4; i++ {
-			mgmt += " " + cfg[fmt.Sprintf("%swpa.key.%d.mgmt", aaa, i)]
+			value := cfg[fmt.Sprintf("%swpa.key.%d.mgmt", aaa, i)]
+			mgmt += " " + value
+			for _, method := range strings.Fields(value) {
+				switch method {
+				case "WPA-PSK":
+				case "SAE":
+					sae = true
+				default:
+					unknownMgmt = true
+				}
+			}
 		}
-		sae := strings.Contains(mgmt, "SAE")
 		open := cfg[aaa+"wpa"] == "" && cfg[aaa+"wpa.psk"] == "" && (cfg[aaa+"security"] == "open" || cfg[aaa+"security"] == "none")
 		owe := open && cfg[aaa+"wpa3.support"] == "enabled"
-		if cfg[aaa+"ssid"] != ssid || (!open && (cfg[aaa+"wpa"] != "2" || strings.Contains(mgmt, "EAP") || (cfg[aaa+"wpa3.support"] == "enabled" && !sae))) || (open && strings.TrimSpace(mgmt) != "") {
+		if unknownMgmt || cfg[aaa+"ssid"] != ssid || (!open && (cfg[aaa+"wpa"] != "2" || (cfg[aaa+"wpa3.support"] == "enabled" && !sae))) || (open && strings.TrimSpace(mgmt) != "") {
 			p.Unsupported = append(p.Unsupported, prefix+"security")
 			continue
 		}

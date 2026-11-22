@@ -274,6 +274,17 @@ capture contains explicit disabled statuses for both test WLAN entries, but
 this change has not been applied live. It does not establish working 802.11r
 roaming: the native guide specifies a two-ASCII-symbol mobility domain, whose
 translation and interoperability still need verification before enablement.
+A log-only controller preview subsequently confirmed that enabling fast
+roaming emits only `aaa.N.ft.status=enabled` for these WLANs, without FT
+mobility-domain parameters. The original disabled profile was restored and
+received again by the agent; no native FT change was applied.
+
+Personal authentication methods are matched as complete `WPA-PSK` and `SAE`
+tokens across the four controller key-method entries. Unknown methods,
+including FT methods, mark the plan unsupported rather than silently becoming
+ordinary WPA2 or SAE. An omitted method retains the existing WPA2 fallback
+for controller formats that specify `wpa=2` and a personal key without a
+method entry. This parser validation has regression coverage.
 
 NDM execution currently uses `ndmc -c`. WLAN keys are redacted from logs
 and stored in private files, but can briefly appear in local process
