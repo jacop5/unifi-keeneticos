@@ -93,6 +93,25 @@ after resume. Its later HTTPS success was therefore excluded as evidence of
 automatic test-SSID reconnection; that behavior remains unverified. No saved
 user WLAN preference was changed to force reconnection.
 
+### Client power management and rate validation
+
+Client rows now include the native `psm` measurement as `state_pwrmgt` when
+NDM explicitly reports `yes` or `no`, and publish HT state from the measured
+client mode. Missing or unknown power-saving values are omitted. Rate
+conversion retains decimal Mbps precision and omits unavailable, negative,
+non-finite or overflowing values instead of fabricating a numeric speed.
+Regression tests cover both power states and invalid rate inputs.
+
+The new build was started log-only against the Titan controller. A temporary
+Mac connection to the test SSID appeared in the controller's active-client
+API with link rates and `powersave_enabled=false`, matching native `psm=no`.
+The controller normalizes the power field rather than exposing the raw
+`state_pwrmgt` name. Rates varied between samples, so this confirms reporting
+and units rather than an exact simultaneous rate match. The test did not
+exercise a client entering power save; the true-state path is unit-tested.
+The Mac's test preference was removed and Wi-Fi power restored to on, with
+Ethernet still active. WLAN application and LED control stayed disabled.
+
 ### Physical Ethernet status
 
 The collector now extracts physical `Port` objects from its existing read-only

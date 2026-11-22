@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/antoniocosta/unifi-openwrt/internal/translate"
+	"math"
 	"net"
 	"os/exec"
 	"regexp"
@@ -175,18 +176,26 @@ func (s *Snapshot) StationFields() []map[string]any {
 			band = "na"
 			name = "wifi1"
 		}
-		out = append(out, map[string]any{"mac": strings.ToLower(r["mac"]), "radio": band, "radio_name": name, "vap": r["ap"], "signal": number(r["rssi"]), "tx_rate": number(r["txrate"]) * 1000, "rx_rate": number(r["rxrate"]) * 1000, "tx_bytes": number(r["txbytes"]), "rx_bytes": number(r["rxbytes"]), "uptime": number(r["uptime"]), "authorized": true})
+		out = append(out, map[string]any{"mac": strings.ToLower(r["mac"]), "radio": band, "radio_name": name, "vap": r["ap"], "signal": number(r["rssi"]), "tx_bytes": number(r["txbytes"]), "rx_bytes": number(r["rxbytes"]), "uptime": number(r["uptime"]), "authorized": true})
 		row := out[len(out)-1]
 		if ip := s.ARP[strings.ToLower(r["mac"])]; ip != "" {
 			row["ip"] = ip
 		}
 		for _, direction := range []string{"tx", "rx"} {
-			rate, _ := strconv.ParseFloat(r[direction+"rate"], 64)
-			row[direction+"_rate"] = int64(rate * 1000)
+			rate, err := strconv.ParseFloat(r[direction+"rate"], 64)
+			// Omit unavailable or invalid measurements rather than converting
+			// NaN/overflow to a negative link rate.
+			if err == nil && !math.IsNaN(rate) && !math.IsInf(rate, 0) && rate >= 0 && rate*1000 < float64(math.MaxInt64) {
+				row[direction+"_rate"] = int64(rate * 1000)
+			}
 		}
 		row["state"] = 15
 		row["is_guest"] = false
 		row["is_11n"] = r["mode"] == "11n" || r["mode"] == "11ac" || r["mode"] == "11ax"
+		row["state_ht"] = row["is_11n"]
+		if r["psm"] == "yes" || r["psm"] == "no" {
+			row["state_pwrmgt"] = r["psm"] == "yes"
+		}
 		row["is_11ac"] = r["mode"] == "11ac"
 		row["is_11ax"] = r["mode"] == "11ax"
 		if width, ok := map[string]int{"20": 0, "40": 1, "80": 2, "160": 3}[r["ht"]]; ok {

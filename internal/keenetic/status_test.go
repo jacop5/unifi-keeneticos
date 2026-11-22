@@ -127,3 +127,41 @@ func TestStations(t *testing.T) {
 		t.Fatalf("fields: %#v", f)
 	}
 }
+
+func TestStationMeasuredPowerManagement(t *testing.T) {
+	for _, state := range []string{"yes", "no", "", "unknown"} {
+		s := &Snapshot{Stations: []map[string]string{{"mac": "02:00:00:00:00:01", "authenticated": "yes", "ap": "WifiMaster0/AccessPoint0", "mode": "11n", "psm": state}}}
+		row := s.StationFields()[0]
+		got, exists := row["state_pwrmgt"]
+		if exists != (state == "yes" || state == "no") {
+			t.Fatalf("invented power state for %q", state)
+		}
+		if exists && got != (state == "yes") {
+			t.Fatalf("incorrect power state for %q", state)
+		}
+		if row["state_ht"] != true {
+			t.Fatal("native HT state missing")
+		}
+	}
+}
+
+func TestStationRatesRejectUnavailableAndNonFiniteMeasurements(t *testing.T) {
+	for _, rate := range []string{"", "unknown", "NaN", "+Inf", "-Inf", "-1", "1e30", "1e300"} {
+		s := &Snapshot{Stations: []map[string]string{{"mac": "02:00:00:00:00:01", "authenticated": "yes", "ap": "WifiMaster0/AccessPoint0", "txrate": rate, "rxrate": rate}}}
+		for _, key := range []string{"tx_rate", "rx_rate"} {
+			if _, exists := s.StationFields()[0][key]; exists {
+				t.Fatalf("invalid rate %q emitted as %s", rate, key)
+			}
+		}
+	}
+	for _, sample := range []struct {
+		native string
+		want   int64
+	}{{"0", 0}, {"72.2", 72200}, {"0.5", 500}, {"2402", 2402000}} {
+		s := &Snapshot{Stations: []map[string]string{{"mac": "02:00:00:00:00:01", "authenticated": "yes", "ap": "WifiMaster0/AccessPoint0", "txrate": sample.native, "rxrate": sample.native}}}
+		row := s.StationFields()[0]
+		if row["tx_rate"] != sample.want || row["rx_rate"] != sample.want {
+			t.Fatalf("incorrect Mbps to Kbps conversion: %v", row)
+		}
+	}
+}
