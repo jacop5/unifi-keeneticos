@@ -263,6 +263,18 @@ successful client authentication remains a separate end-to-end check.
 uses `MODEL`. Fast roaming, VLAN provisioning, guest portal, mesh, scanning,
 client actions, QoS and several upstream management features are unfinished.
 
+Fast-roaming enable requests remain unsupported. An explicit
+`aaa.N.ft.status=disabled` now produces the per-AP `no ft enable` command;
+an absent status preserves native FT state, and an unknown status rejects
+the plan. The inverse restores the previous enable flag, and native readback
+must confirm that FT is disabled before accepting the transaction. The
+mobility-domain ID and over-the-DS setting are preserved. Planner, readback,
+idempotence and journaled rollback tests cover this path. The Titan controller
+capture contains explicit disabled statuses for both test WLAN entries, but
+this change has not been applied live. It does not establish working 802.11r
+roaming: the native guide specifies a two-ASCII-symbol mobility domain, whose
+translation and interoperability still need verification before enablement.
+
 NDM execution currently uses `ndmc -c`. WLAN keys are redacted from logs
 and stored in private files, but can briefly appear in local process
 arguments during application and recovery. The experimental terminal runner

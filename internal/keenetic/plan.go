@@ -314,8 +314,14 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 			rrm = "rrm"
 		}
 		add("interface " + target + " " + rrm)
-		if cfg[aaa+"ft.status"] == "enabled" {
+		switch cfg[aaa+"ft.status"] {
+		case "":
+		case "disabled":
+			add("interface " + target + " no ft enable")
+		case "enabled":
 			p.Unsupported = append(p.Unsupported, prefix+"fast-roaming")
+		default:
+			return p, fmt.Errorf("invalid fast-roaming status")
 		}
 		action := "up"
 		if cfg[prefix+"status"] == "disabled" || cfg[aaa+"status"] == "disabled" {
