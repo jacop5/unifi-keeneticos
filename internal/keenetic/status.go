@@ -86,6 +86,7 @@ type Snapshot struct {
 	VAPs                  []map[string]string
 	Ports                 []map[string]string
 	ARP                   map[string]string
+	Hostnames             map[string]string
 }
 
 func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
@@ -123,6 +124,11 @@ func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
 		return nil, err
 	}
 	s.ARP = ParseARP(string(b))
+	// DHCP may be unavailable when this device is an AP or uses an external
+	// DHCP server. Optional names must not prevent radio/client collection.
+	if leases, err := run(ctx, "show ip dhcp bindings"); err == nil {
+		s.Hostnames = ParseDHCPHostnames(string(leases))
+	}
 	b, err = run(ctx, "show interface")
 	if err != nil {
 		return nil, err
@@ -178,6 +184,9 @@ func (s *Snapshot) StationFields() []map[string]any {
 		}
 		out = append(out, map[string]any{"mac": strings.ToLower(r["mac"]), "radio": band, "radio_name": name, "vap": r["ap"], "signal": number(r["rssi"]), "tx_bytes": number(r["txbytes"]), "rx_bytes": number(r["rxbytes"]), "uptime": number(r["uptime"]), "authorized": true})
 		row := out[len(out)-1]
+		if hostname := s.Hostnames[strings.ToLower(r["mac"])]; hostname != "" {
+			row["hostname"] = hostname
+		}
 		if ip := s.ARP[strings.ToLower(r["mac"])]; ip != "" {
 			row["ip"] = ip
 		}

@@ -93,6 +93,22 @@ after resume. Its later HTTPS success was therefore excluded as evidence of
 automatic test-SSID reconnection; that behavior remains unverified. No saved
 user WLAN preference was changed to force reconnection.
 
+### Optional DHCP hostname enrichment
+
+The collector optionally reads `show ip dhcp bindings` and attaches hostnames
+from unexpired IPv4 leases to matching authenticated station MACs. Lease
+expiry must be positive or `infinity`; malformed addresses, control characters,
+overlong names and conflicting names for the same MAC are excluded. Registered
+host descriptions are not substituted for DHCP hostnames. Missing DHCP support
+is non-fatal, so external-DHCP and AP-mode operation can continue without
+names. Collection, matching and unavailable-DHCP fallback have regression tests.
+
+A log-only Titan probe collected 41 usable lease hostnames. The Mac test client
+had no usable hostname in that sample; the real controller still showed its
+active connection and rates without a hostname. This verifies collection and
+the missing-name path, not successful named-client display. Controller ingestion
+of an enriched name remains unverified. No DHCP configuration was changed.
+
 ### Client power management and rate validation
 
 Client rows now include the native `psm` measurement as `state_pwrmgt` when
