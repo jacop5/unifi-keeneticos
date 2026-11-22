@@ -17,6 +17,45 @@ aaa.1.wpa=2
 aaa.1.wpa.psk=secret-passphrase
 `
 
+func TestPlanRejectsUnknownEnableStatus(t *testing.T) {
+	for _, key := range []string{"radio.1.status", "wireless.1.status", "aaa.1.status"} {
+		for _, value := range []string{"disable", "true", "0", "ENABLED"} {
+			t.Run(key+"/"+value, func(t *testing.T) {
+				_, err := BuildPlan(wlan+key+"="+value+"\n", map[string]string{"1": "WifiMaster0/AccessPoint6"})
+				if err == nil {
+					t.Fatal("unknown status could enable an interface")
+				}
+			})
+		}
+	}
+}
+
+func TestPlanExplicitEnableStatus(t *testing.T) {
+	for _, key := range []string{"radio.1.status", "wireless.1.status", "aaa.1.status"} {
+		for _, value := range []string{"enabled", "disabled"} {
+			p, err := BuildPlan(wlan+key+"="+value+"\n", map[string]string{"1": "WifiMaster0/AccessPoint6"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			target := "WifiMaster0/AccessPoint6"
+			if key == "radio.1.status" {
+				target = "WifiMaster0"
+			}
+			action := "up"
+			if value == "disabled" {
+				action = "down"
+			}
+			found := false
+			for _, command := range p.Commands {
+				found = found || command.Text == "interface "+target+" "+action
+			}
+			if !found {
+				t.Fatalf("%s=%s did not request %s", key, value, action)
+			}
+		}
+	}
+}
+
 func TestPlanRequiresExplicitSlot(t *testing.T) {
 	p, err := BuildPlan(wlan, nil)
 	if err != nil {

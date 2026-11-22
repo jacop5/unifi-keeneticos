@@ -97,6 +97,9 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		default:
 			return p, fmt.Errorf("unknown radio %q", phy)
 		}
+		if err := validateEnableStatus(cfg, prefix+"status"); err != nil {
+			return p, err
+		}
 		if country, raw := translate.CountryCode(cfg[prefix+"countrycode"], cfg["radio.countrycode"]); raw != "" {
 			if country == "" {
 				p.Unsupported = append(p.Unsupported, prefix+"countrycode")
@@ -182,6 +185,9 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		if !valid {
 			return p, fmt.Errorf("invalid slot for WLAN %s", id)
+		}
+		if err := validateEnableStatus(cfg, prefix+"status", "aaa."+id+".status"); err != nil {
+			return p, err
 		}
 		schedule, err := compileSchedule(cfg, prefix, target)
 		if err != nil {
@@ -328,4 +334,17 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		add("interface " + target + " down")
 	}
 	return p, nil
+}
+
+// Missing status retains the controller format's existing defaults. Explicit
+// values must be recognised so a typo cannot turn a disable request into up.
+func validateEnableStatus(cfg translate.Cfg, keys ...string) error {
+	for _, key := range keys {
+		switch cfg[key] {
+		case "", "enabled", "disabled":
+		default:
+			return fmt.Errorf("invalid enable status for %s", key)
+		}
+	}
+	return nil
 }

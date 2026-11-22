@@ -244,6 +244,12 @@ the main daemon has not confirmed. Each journal has a unique identity so
 old watchdogs do not undo later transactions. Advanced features remain under development. The Entware service
 defaults to log-only mode; explicit action switches are described below.
 
+Explicit radio, WLAN and AAA administrative status values must be `enabled`
+or `disabled`. Unknown values reject the plan instead of falling through to
+an interface `up` command. Missing values retain the controller format's
+existing defaults. This validation is covered by planner regression tests;
+it does not require a live radio change.
+
 Before confirmation, native readback must match the requested encryption
 flags, PMF mode, hidden-SSID state, peer isolation, RRM, and key presence,
 in addition to SSID operation, bridge membership and MAC lists. A driver
