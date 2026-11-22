@@ -18,6 +18,7 @@ func TestFullCollection(t *testing.T) {
 		"show ip arp":                "Example 192.0.2.2 02:00:00:00:00:02 Home\n",
 		"show interface":             "Interface, name = \"AP\"\n id: WifiMaster0/AccessPoint0\n type: AccessPoint\n state: up\n ssid: Example\n",
 	}
+	responses["show interface"] += "Interface, name = \"1\"\n id: GigabitEthernet0/0\n type: Port\n link: up\n speed: 1000\n duplex: full\n"
 	run := func(_ context.Context, c string) ([]byte, error) {
 		v, ok := responses[c]
 		if !ok {
@@ -29,7 +30,7 @@ func TestFullCollection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s.VAPs) != 1 || s.Home["address"] != "192.0.2.1" || s.StationFields()[0]["ip"] != "192.0.2.2" {
+	if len(s.Ports) != 1 || len(s.VAPs) != 1 || s.Home["address"] != "192.0.2.1" || s.StationFields()[0]["ip"] != "192.0.2.2" {
 		t.Fatalf("%#v", s)
 	}
 	responses["show interface Bridge0"] = "mac: 02:00:00:00:00:01\naddress: fe80::1\n"

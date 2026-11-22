@@ -42,9 +42,10 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Adoption, saved controller key, AES-GCM informs | Verified live on Hero and Titan; retained across agent restart; controller restart recovery verified on Hero |
 | SSID, WPA2 personal, LAN bridge membership | Verified live on explicit non-primary AP slots |
 | WLAN pause/resume | Verified live; controller omission of paused WLANs handled in test-only mode |
-| Client authentication, DHCP and internet access | Titan 5 GHz Mac authentication, DHCP and Wi-Fi-bound HTTPS verified; Hero tester also confirmed test-WLAN connectivity |
+| Client authentication, DHCP and internet access | Titan 2.4/5 GHz Mac authentication, router-issued IPv4 leases and Wi-Fi-bound HTTPS verified; automatic reconnection remains unverified |
 | Client IP, band, signal, width, rates and throughput | Observed in UniFi and compared with NDM data |
 | Uptime, memory, CPU and radio/client telemetry | Implemented; basic live reporting verified, not every field is complete |
+| Physical Ethernet link status | Titan's five ports received by the controller with measured link speed/duplex; no port configuration or inferred uplink roles |
 | Private rollback journal, inverse commands, watchdog, startup recovery | Implemented; immediate failure and detached crash recovery verified on Titan |
 | Controller outage recovery | Real injected HTTP 503 rolled back; same-version retry confirmed after controller connectivity returned |
 | WPA3 personal, transition mode and PMF | Native command/rollback probes passed on disabled Hero slots on both bands; client authentication not yet verified |
@@ -58,7 +59,8 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
-| VLAN/uplink creation, fast roaming, mesh, guest portal, scanning, traffic shaping | Not ported; unmapped VLANs and fast-roaming configurations are explicitly rejected |
+| Fast roaming | Explicit disable implemented with readback/rollback; enable remains unsupported |
+| VLAN/uplink creation, mesh, guest portal, scanning, traffic shaping | Not ported; unmapped VLANs are explicitly rejected |
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |

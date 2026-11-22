@@ -93,6 +93,27 @@ after resume. Its later HTTPS success was therefore excluded as evidence of
 automatic test-SSID reconnection; that behavior remains unverified. No saved
 user WLAN preference was changed to force reconnection.
 
+### Physical Ethernet status
+
+The collector now extracts physical `Port` objects from its existing read-only
+`show interface` query. Native IDs distinguish separate switches that reuse
+local port indexes; sorted IDs provide deterministic one-based controller
+indexes. Native labels are retained, including the Titan's port label `0`.
+VLAN interfaces and aggregate switch objects are excluded. Unknown link
+states are omitted; unknown speed, duplex or negotiation values are not
+invented. A down port reports zero speed and no full-duplex link even if NDM
+retains earlier negotiation data.
+
+The new build was copied into the private Titan lab and started log-only,
+using the existing adopted state. The real controller remained connected and
+stored five physical ports in `port_stats`: native labels 1, 2 and 0 were up
+at 1000 Mbit/s full duplex with auto-negotiation; labels 3 and 4 were down.
+These matched native readback. The API evidence does not prove how all five
+ports render in the GUI for the emulated AP model. No WAN/uplink role, PoE
+capability, media type or traffic counter is inferred. Native configuration
+before and after the telemetry restart matched after removing only terminal
+formatting and generated comments. No WLAN apply or LED control was enabled.
+
 ## Hero DSL live controller test (2026-11-21)
 
 Verified against UniFi OS Server 5.1.42 / Network 10.5.67 in OrbStack:

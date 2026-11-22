@@ -83,6 +83,7 @@ type Snapshot struct {
 	Radios                []map[string]string
 	Stations              []map[string]string
 	VAPs                  []map[string]string
+	Ports                 []map[string]string
 	ARP                   map[string]string
 }
 
@@ -127,6 +128,9 @@ func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
 	}
 	for _, block := range strings.Split(string(b), "Interface, name = ") {
 		v := Values(block)
+		if v["type"] == "Port" && nativeEthernetPort.MatchString(v["id"]) {
+			s.Ports = append(s.Ports, v)
+		}
 		if v["type"] == "AccessPoint" && v["state"] == "up" && v["ssid"] != "" {
 			s.VAPs = append(s.VAPs, v)
 		}
@@ -267,7 +271,7 @@ func (s *Snapshot) Fields() map[string]any {
 		radios = append(radios, map[string]any{"name": name, "radio": band, "channel": number(r["channel"]), "ht": r["bandwidth"], "bw": number(r["bandwidth"]), "num_sta": count, "user-num_sta": count, "temperature": number(r["temperature"])})
 	}
 	count := len(s.StationFields())
-	return map[string]any{"num_sta": count, "user-num_sta": count, "stat": map[string]any{"user-num_sta": count}, "sta_table": s.StationFields(), "vap_table": s.VAPFields(), "sys_stats": stats, "system-stats": map[string]any{"cpu": s.System["cpuload"], "mem": fmt.Sprintf("%.1f", 100*float64(total-free)/float64(max(total, 1))), "uptime": number(s.System["uptime"])}, "uptime": number(s.System["uptime"]), "radio_table": radioTable, "radio_table_stats": radios}
+	return map[string]any{"port_table": s.PortFields(), "num_sta": count, "user-num_sta": count, "stat": map[string]any{"user-num_sta": count}, "sta_table": s.StationFields(), "vap_table": s.VAPFields(), "sys_stats": stats, "system-stats": map[string]any{"cpu": s.System["cpuload"], "mem": fmt.Sprintf("%.1f", 100*float64(total-free)/float64(max(total, 1))), "uptime": number(s.System["uptime"])}, "uptime": number(s.System["uptime"]), "radio_table": radioTable, "radio_table_stats": radios}
 }
 
 func (s *Snapshot) FieldsForConfig(text string) map[string]any {
