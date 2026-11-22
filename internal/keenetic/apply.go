@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -46,6 +47,11 @@ func ApplyChangesWatched(ctx context.Context, run Runner, changes []Change, jour
 		return fmt.Errorf("post-change health check is required")
 	}
 	if len(changes) == 0 {
+		if _, err := os.Stat(journal); err == nil {
+			return fmt.Errorf("pending rollback journal exists")
+		} else if !os.IsNotExist(err) {
+			return err
+		}
 		return nil
 	}
 	if err := SaveUndo(journal, changes); err != nil {

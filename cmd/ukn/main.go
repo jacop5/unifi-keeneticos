@@ -35,7 +35,7 @@ func main() {
 	probe := flag.Bool("probe", false, "collect router status and exit without contacting a controller")
 	terminalProbe := flag.Bool("terminal-probe", false, "test read-only NDM terminal execution and exit")
 	rollbackProbe := flag.String("rollback-probe", "", "test rollback on an unused disabled AP slot, then exit")
-	probeMode := flag.String("rollback-probe-mode", "ssid", "unused-slot rollback probe: ssid, owe, acl, wpa3, transition, rssi, schedule, schedule-binding, schedule-active or schedule-start")
+	probeMode := flag.String("rollback-probe-mode", "ssid", "unused-slot rollback probe: ssid, owe, acl, wpa3, transition, rssi, wmm, schedule, schedule-binding, schedule-active or schedule-start")
 	crashProbe := flag.Bool("crash-probe", false, "with -rollback-probe, exit before confirmation to test detached recovery")
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
 	ledControl := flag.Bool("led-control", false, "allow controller LED on/off commands independently of WLAN apply; no reboot or locate")
@@ -215,7 +215,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	lastPlanned := ""
+	var provisioning provisionRetry
 	var requests chan device.AdoptRequest
 	if *sshListen != "" {
 		u, err := url.Parse(x.S.InformURL)
@@ -265,16 +265,18 @@ func main() {
 				cfg, _ := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
 				return s.FieldsForConfig(string(cfg))
 			}
-			if err := exchange(ctx, client, x, path, &interval, actionHandler); err != nil {
-				log.Printf("inform: %v", err)
+			informErr := exchange(ctx, client, x, path, &interval, actionHandler)
+			if informErr != nil {
+				log.Printf("inform: %v", informErr)
 			}
-			if x.S.CfgVersion != lastPlanned {
+			if informErr == nil && provisioning.ready(x.S.CfgVersion, time.Now()) {
 				plannedVersion := x.S.CfgVersion
 				cfg, err := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
 				if err == nil {
 					plan, err := buildPlan(string(cfg), slots)
 					if err != nil {
 						log.Printf("configuration plan: %v", err)
+						provisioning.complete(plannedVersion)
 					} else {
 						for _, command := range plan.Commands {
 							log.Printf("plan: %s", command)
@@ -345,11 +347,16 @@ func main() {
 							cancel()
 							if err != nil {
 								log.Printf("apply: %v", err)
+								if provisioning.failed(plannedVersion, err, time.Now()) {
+									log.Printf("transient apply failure; retry in %s", provisioning.delay)
+								}
 							} else {
+								provisioning.complete(plannedVersion)
 								log.Print("configuration applied and confirmed")
 							}
+						} else {
+							provisioning.complete(plannedVersion)
 						}
-						lastPlanned = plannedVersion
 					}
 				}
 			}
@@ -395,7 +402,7 @@ func exchange(ctx context.Context, c *http.Client, x *device.Session, path strin
 		return nil
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("HTTP %d", resp.StatusCode)
+		return controllerHTTPError{status: resp.StatusCode}
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, inform.MaxBodySize+1))
 	if err != nil {

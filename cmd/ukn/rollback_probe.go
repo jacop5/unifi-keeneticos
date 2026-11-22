@@ -17,7 +17,7 @@ import (
 // ProbeRollback uses an unused, administratively disabled AP slot. It never
 // enables the interface or changes a serving WLAN's credentials.
 func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode string) error {
-	if mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "schedule" && mode != "schedule-binding" && mode != "schedule-active" && mode != "schedule-start" {
+	if mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "wmm" && mode != "schedule" && mode != "schedule-binding" && mode != "schedule-active" && mode != "schedule-start" {
 		return fmt.Errorf("unknown rollback probe mode")
 	}
 	if !regexp.MustCompile(`^WifiMaster[01]/AccessPoint[1-6]$`).MatchString(id) {
@@ -112,6 +112,9 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	if mode == "rssi" {
 		plan.Commands = append(plan.Commands, keenetic.Command{Text: "interface " + id + " rssi-threshold -75"})
 	}
+	if mode == "wmm" {
+		plan.Commands = append(plan.Commands, keenetic.Command{Text: "interface " + id + " wmm"})
+	}
 	if mode == "wpa3" || mode == "transition" {
 		var key [24]byte
 		if _, err := rand.Read(key[:]); err != nil {
@@ -124,7 +127,7 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	}
 	verified := false
 	err = keenetic.ApplyPlanWatched(ctx, keenetic.Local, plan, journal, func(context.Context) error {
-		if mode == "rssi" {
+		if mode == "rssi" || mode == "wmm" {
 			block, err := readBlock()
 			if err != nil {
 				return err
@@ -134,7 +137,7 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 			}
 			status, err := read()
 			if err != nil || status["state"] != "down" {
-				return fmt.Errorf("RSSI probe did not remain disabled: %v", err)
+				return fmt.Errorf("WLAN setting probe did not remain disabled: %v", err)
 			}
 		}
 		if mode == "wpa3" || mode == "transition" {

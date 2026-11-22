@@ -220,7 +220,7 @@ func preimageSettings(plan Plan, running string) ([]Change, error) {
 			continue
 		}
 		family := ""
-		for _, f := range []string{"channel width", "channel", "ssid", "authentication wpa-psk", "encryption enable", "encryption wpa2", "encryption wpa3", "encryption wpa", "encryption owe", "hide-ssid", "pmf", "peer-isolation", "rrm", "rssi-threshold"} {
+		for _, f := range []string{"channel width", "channel", "ssid", "authentication wpa-psk", "encryption enable", "encryption wpa2", "encryption wpa3", "encryption wpa", "encryption owe", "hide-ssid", "pmf", "peer-isolation", "rrm", "rssi-threshold", "wmm"} {
 			if setting == f || strings.HasPrefix(setting, f+" ") {
 				family = f
 				break

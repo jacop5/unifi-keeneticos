@@ -383,6 +383,45 @@ The current live topology is Mac over Wi-Fi → Hero DSL in router mode
 has been made. AP-mode operation remains unverified; changing mode requires
 a separate wired maintenance test and rediscovery of the management address.
 
+## WMM
+
+Explicit `wireless.N.wmm=enabled` and `disabled` requests map to per-AP `wmm`
+and `no wmm`. An absent request preserves the native setting; unknown values
+are rejected before application. The controller's normal configuration sends
+`enabled` on both test WLANs, while their old native AP6 configurations had no
+WMM flag. Only explicitly mapped APs are changed, including in connected test
+mode; no shared-radio command is generated. The inverse restores the native
+flag, unchanged settings generate no delta, and confirmation verifies readback.
+
+`-rollback-probe-mode wmm` tests enablement on an unused disabled/no-SSID
+non-primary slot, verifies that it stays down, then forces rollback and checks
+exact interface restoration. This setting does not implement U-APSD, DTIM,
+minimum-rate policy, or traffic shaping; traffic-priority behavior still needs
+an associated-client test.
+
+Both disabled AP5 band probes passed on Hero DSL 5.1.5 on 2026-11-22. A fresh
+controller provisioning request confirmed `wireless.1.wmm=enabled` and
+`wireless.2.wmm=enabled`. The first scoped apply lost its controller connection
+during the health check and correctly rolled WMM back to its original state.
+
+Transient network/deadline failures and HTTP 408/429/5xx responses now schedule
+an apply retry for the same controller version after one minute, doubling to
+a five-minute cap. A successful inform is required before starting an attempt.
+New controller versions bypass old backoff; success clears it. Unsupported
+settings, ownership/recovery failures, and other permanent errors are not
+automatically retried. Tests cover retry classification, deadlines, backoff,
+and version changes. Even an empty delta cannot be confirmed while an old
+rollback journal remains; recovery must finish first.
+
+The corrected build subsequently passed guarded provisioning against the real
+controller on both AP6 test WLANs: native readback showed `wmm` and `up`,
+controller health passed, and the journal was cleared. Comparing complete
+configuration settings, excluding generated comments and only the two intended
+AP6 WMM flags, matched the baseline exactly. WMM was left enabled on the test
+WLANs to honor their controller configuration. The daemon was then returned to
+log-only mode. The retry/backoff policy has automated coverage; this successful
+live attempt did not deliberately inject another controller failure.
+
 ## Minimum RSSI
 
 The controller's `stamgr.N.radio` selects a band (`ng` or `na`), and

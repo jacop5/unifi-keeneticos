@@ -51,12 +51,13 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
 | Per-WLAN MAC allow/deny lists | Implemented with registered Keenetic hosts; native list and rollback verified on an unused disabled Hero slot; client enforcement not yet verified |
 | Minimum RSSI | Per-band requests map only to owned AP slots; native threshold/rollback verified on disabled Hero slots on both bands; client enforcement not yet verified |
+| WMM | Controller provisioning and native readback confirmed on both Hero test bands; disabled-slot rollback verified; traffic-priority behavior not measured |
 | WLAN schedules | Native weekly timers and guarded recovery; controller blackout, automatic stop/start, and pause/resume verified on both Hero test bands |
 | Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
 | Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
-| VLAN/uplink creation, fast roaming, mesh, guest portal, scanning, QoS | Not ported; unmapped VLANs and fast-roaming configurations are explicitly rejected |
+| VLAN/uplink creation, fast roaming, mesh, guest portal, scanning, traffic shaping | Not ported; unmapped VLANs and fast-roaming configurations are explicitly rejected |
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |

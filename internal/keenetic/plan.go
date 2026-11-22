@@ -190,6 +190,15 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		if schedule != nil {
 			p.Schedules = append(p.Schedules, *schedule)
 		}
+		switch cfg[prefix+"wmm"] {
+		case "": // Preserve native configuration when not requested.
+		case "enabled":
+			add("interface " + target + " wmm")
+		case "disabled":
+			add("interface " + target + " no wmm")
+		default:
+			return p, fmt.Errorf("invalid WLAN WMM status")
+		}
 		band := "ng"
 		if parent == "WifiMaster1/" {
 			band = "na"

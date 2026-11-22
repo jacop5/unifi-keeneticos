@@ -48,6 +48,23 @@ func TestApplyHealthFailureRestoresPreimage(t *testing.T) {
 		t.Fatal("journal remains after successful rollback")
 	}
 }
+
+func TestNoopCannotConfirmWhileRecoveryIsPending(t *testing.T) {
+	journal := filepath.Join(t.TempDir(), "rollback.json")
+	if err := SaveUndo(journal, []Change{{Forward: Command{Text: "new"}, Undo: Command{Text: "old"}}}); err != nil {
+		t.Fatal(err)
+	}
+	err := ApplyChangesWatched(context.Background(), func(context.Context, string) ([]byte, error) {
+		t.Fatal("no-op pending recovery invoked native commands")
+		return nil, nil
+	}, nil, journal, func(context.Context) error { return nil }, nil)
+	if err == nil {
+		t.Fatal("no-op was confirmed while a watchdog could still restore old settings")
+	}
+	if _, err := os.Stat(journal); err != nil {
+		t.Fatal("pending recovery journal was discarded")
+	}
+}
 func TestApplyJournalsBeforeMutation(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "rollback.json")
 	run := func(_ context.Context, c string) ([]byte, error) {

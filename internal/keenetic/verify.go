@@ -117,7 +117,7 @@ func VerifyWLANSettings(plan Plan, running string) error {
 		setting := strings.TrimPrefix(fields[2], "no ")
 		enabled := setting == fields[2]
 		checked := false
-		for _, flag := range []string{"encryption enable", "encryption wpa", "encryption wpa2", "encryption wpa3", "encryption owe", "hide-ssid", "peer-isolation", "rrm"} {
+		for _, flag := range []string{"encryption enable", "encryption wpa", "encryption wpa2", "encryption wpa3", "encryption owe", "hide-ssid", "peer-isolation", "rrm", "wmm"} {
 			if setting != flag {
 				continue
 			}
