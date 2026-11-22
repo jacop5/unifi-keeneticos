@@ -20,7 +20,9 @@ ELF binaries are **big-endian MIPS** (ELF data encoding 2); `uname -m` reports
 `sh tools/build-keenetic.sh mips` for the Hero DSL; the bundle is written to
 `dist/keenetic-mips/`. See the live controller test results below.
 
-## Titan log-only controller test (2026-11-22)
+## Titan controller tests (2026-11-22)
+
+### Log-only baseline
 
 The current build was rechecked on Titan KN-1810 in router mode, using wired
 management. ELF data encoding 1 confirmed little-endian MIPS. The read-only
@@ -34,15 +36,52 @@ the adoption key and resumed informs without re-adoption. Firmware requests
 remained in the default refuse mode. WLAN application and LED control were
 not enabled.
 
-Explicit test mappings select AP6 on each band; both slots remain down and
-have no configured SSID. The two serving AP0 WLANs and their shared radios
+Explicit test mappings selected AP6 on each band; at this initial stage both
+slots stayed down with no configured SSID. The two serving AP0 WLANs and their shared radios
 are excluded from this test session. Their names are stored only in the
 private local test record, with no hard-coded deployment restriction added.
 All native configuration settings matched the saved baseline after adoption
 and again after the agent restart, excluding generated comment metadata.
-This verifies collection, controller adoption and persistence on the new
-environment; it does not count as provisioning a test WLAN or validating
-client traffic on the Titan.
+This initial stage verified collection, controller adoption and persistence;
+WLAN provisioning and client traffic were checked separately below.
+
+### WPA2 provisioning, pause/resume and client traffic
+
+A controller AP group containing only the Titan was created for
+`UKN-Test-Titan`, with a fresh random WPA2 password kept in a private local
+file. The existing Hero WLAN/profile was not changed. The controller generated
+WLAN indexes 3/4 for the new SSID; the temporary mapping selected native AP6
+on each band. A redacted preview was checked to contain only those AP commands
+and their membership in the existing home bridge. Shared-radio and serving
+AP0 commands were excluded before guarded application was enabled.
+
+Provisioning passed native WLAN/security/bridge readback and the real
+controller health check, cleared the journal, and brought both test APs up.
+Pausing only this controller profile omitted its WLAN entries; its checked
+plan was exactly the two AP6 `down` commands. Applying it disabled both test
+APs while both serving AP0 WLANs remained up. Resume produced the exact prior
+test-WLAN plan and successfully restored both test APs. Each controller change
+was received and previewed in log-only mode before its guarded apply.
+
+With the agent returned to log-only mode and Ethernet still active, the Mac
+joined the test SSID. Native associations confirmed its matching Wi-Fi MAC
+authenticated on `WifiMaster1/AccessPoint6` (5 GHz). The Wi-Fi interface obtained
+an IPv4 lease whose DHCP server identifier matched the Titan. An HTTPS request
+explicitly bound to that Wi-Fi address returned HTTP 200. Packet capture was
+unavailable because macOS denied BPF access, so a second TLS request used a
+socket with Darwin `IP_BOUND_IF` set to the Wi-Fi interface and checked by
+`getsockopt`; it also returned HTTP 200 with certificate verification enabled.
+macOS's inconsistent SSID status text was not counted as association evidence.
+This verifies the 5 GHz WPA2 client path; a 2.4 GHz client was not tested here.
+
+The Mac's new test preference was removed afterwards, its original Wi-Fi
+power-on state restored, and Ethernet remained active. Final comparisons
+confirmed that both serving WLANs and shared radios exactly matched baseline.
+After excluding only test AP6 blocks, their intended bridge membership,
+terminal escape formatting and generated comments, all other native settings
+also matched baseline. No routing, NAT, DHCP-server or startup configuration
+was changed. The test SSID remains enabled on both AP6 slots; the agent is
+left log-only. Client automatic reconnection after pause was not tested.
 
 ## Hero DSL live controller test (2026-11-21)
 

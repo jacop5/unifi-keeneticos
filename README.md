@@ -42,7 +42,7 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Adoption, saved controller key, AES-GCM informs | Verified live on Hero and Titan; retained across agent restart; controller restart recovery verified on Hero |
 | SSID, WPA2 personal, LAN bridge membership | Verified live on explicit non-primary AP slots |
 | WLAN pause/resume | Verified live; controller omission of paused WLANs handled in test-only mode |
-| Client authentication, DHCP and internet access | Confirmed by the tester on the isolated test WLAN |
+| Client authentication, DHCP and internet access | Titan 5 GHz Mac authentication, DHCP and Wi-Fi-bound HTTPS verified; Hero tester also confirmed test-WLAN connectivity |
 | Client IP, band, signal, width, rates and throughput | Observed in UniFi and compared with NDM data |
 | Uptime, memory, CPU and radio/client telemetry | Implemented; basic live reporting verified, not every field is complete |
 | Private rollback journal, inverse commands, watchdog, startup recovery | Implemented; immediate failure and detached crash recovery verified on Titan |
