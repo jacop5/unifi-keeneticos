@@ -14,6 +14,9 @@ import (
 type Command struct {
 	Text   string
 	Secret bool
+	// Only for inverse operations on a newly created native schedule.
+	// Recovery may run even when its forward creation never happened.
+	IfScheduleExists string `json:",omitempty"`
 }
 
 func (c Command) String() string {

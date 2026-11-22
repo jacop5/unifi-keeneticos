@@ -201,7 +201,7 @@ are explicit; the planner does not infer ownership from existing SSIDs.
 ## WLAN schedule development
 
 Schedule-enabled WLAN requests are explicitly rejected during application
-until native schedule binding and owned-object recovery are implemented.
+until native AP binding and its combined recovery are implemented.
 They must not silently become always-on WLANs. A redacted `-plan` preview
 includes the native schedule draft and its blocking reason.
 
@@ -218,7 +218,38 @@ Compilation and weekly-state evaluation have automated coverage. Native
 creation, grouped weekday action syntax, action removal, and deletion were
 checked using an unbound test schedule on Hero DSL; no AP was bound to it.
 The test object was removed afterwards. This does not establish operational
-WLAN scheduling or crash-safe binding/recovery, which remain unfinished.
+WLAN scheduling or crash-safe AP binding, which remain unfinished.
+
+Unbound schedule resources now have a separate transaction layer. Names are
+derived from the explicit AP target, existing objects require the exact
+backend ownership marker, and any reference from an AP or another service
+blocks a resource-only update. New-resource inverse commands are conditional
+on existence, so recovery also works when a crash preceded creation. The
+ownership marker is retained until deletion succeeds. Recovery refuses a
+resource whose marker or references have changed. Existing owned definitions
+are updated by action deltas; unrelated schedules are preserved.
+
+Tests cover each forward-command crash boundary for both creation and updates,
+immediate rollback, unchanged definitions, collisions, references, and invalid
+recovery commands. A native `-rollback-probe-mode schedule` test creates only
+an unbound resource, verifies its marker/actions, and forces rollback. It does
+not apply the WLAN commands used to compile the draft and never binds an AP.
+It retains the standard unused/disabled/no-SSID AP-slot prerequisites.
+
+On 2026-11-22, the unbound-resource probe passed on Hero DSL 5.1.5: creation,
+ownership/action readback, forced rollback, and deletion. An independent
+`-crash-probe` run terminated the probe after verification; the detached
+watchdog subsequently removed the resource and its private journal. Empty
+native schedules were also checked to remain visible in configuration
+readback before their marker/actions are added. Serving radio/primary AP
+configuration hashes matched the baseline and controller informs continued.
+No AP was bound to any of these test schedules.
+
+```sh
+ukn -rollback-probe WifiMaster0/AccessPoint5 \
+  -rollback-probe-mode schedule -state /tmp/ukn-schedule-resource-state
+# Add -crash-probe to test detached recovery; wait for watchdog cleanup.
+```
 
 The current live topology is Mac over Wi-Fi → Hero DSL in router mode
 (NAT and DHCP) → Huawei 5G gateway on its own LAN. No router/AP mode change

@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-// Change pairs a desired command with its exact inverse from the router's
-// preimage. Callers must capture inverses before submitting any changes.
+// Change pairs a desired step with recovery from the router's preimage.
+// New resources recover as a lifecycle (ending in deletion); their ownership
+// marker remains until that deletion succeeds. Prepare before any mutation.
 type Change struct{ Forward, Undo Command }
 
 // Transaction serializes confirmation and rollback. Its deadline is independent
@@ -62,8 +63,9 @@ func (t *Transaction) rollbackLocked() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	var errs []error
+	guardCache := map[string]bool{}
 	for i := t.applied - 1; i >= 0; i-- {
-		if _, err := t.run(ctx, t.changes[i].Undo.Text); err != nil {
+		if err := runUndo(ctx, t.run, t.changes[i].Undo, guardCache); err != nil {
 			errs = append(errs, fmt.Errorf("rollback command %d failed", i+1))
 		}
 	}

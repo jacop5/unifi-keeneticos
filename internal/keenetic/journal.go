@@ -83,11 +83,12 @@ func RecoverUndo(ctx context.Context, path string, run Runner) error {
 	if err = json.Unmarshal(b, &journal); err != nil || journal.ID == "" || len(journal.Commands) == 0 {
 		return fmt.Errorf("invalid rollback journal")
 	}
+	guardCache := map[string]bool{}
 	for i, c := range journal.Commands {
 		if c.Text == "" {
 			return fmt.Errorf("empty rollback command")
 		}
-		if _, err := run(ctx, c.Text); err != nil {
+		if err := runUndo(ctx, run, c, guardCache); err != nil {
 			return fmt.Errorf("rollback command %d failed", i+1)
 		}
 	}

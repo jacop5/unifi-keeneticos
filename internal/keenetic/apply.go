@@ -27,6 +27,15 @@ func ApplyPlanWatched(ctx context.Context, run Runner, plan Plan, journal string
 	if err != nil {
 		return err
 	}
+	return ApplyChangesWatched(ctx, run, changes, journal, health, arm)
+}
+
+// ApplyChangesWatched applies already-prepared native resource changes with
+// the same durable journal and watchdog protocol as WLAN provisioning.
+func ApplyChangesWatched(ctx context.Context, run Runner, changes []Change, journal string, health func(context.Context) error, arm func(string) error) error {
+	if health == nil {
+		return fmt.Errorf("post-change health check is required")
+	}
 	if len(changes) == 0 {
 		return nil
 	}
