@@ -20,6 +20,30 @@ ELF binaries are **big-endian MIPS** (ELF data encoding 2); `uname -m` reports
 `sh tools/build-keenetic.sh mips` for the Hero DSL; the bundle is written to
 `dist/keenetic-mips/`. See the live controller test results below.
 
+## Titan log-only controller test (2026-11-22)
+
+The current build was rechecked on Titan KN-1810 in router mode, using wired
+management. ELF data encoding 1 confirmed little-endian MIPS. The read-only
+collector completed successfully; the executable and new private test state
+were kept in a temporary directory, without replacing the installed service.
+
+The agent connected to the existing UniFi OS Server 5.1.42 / Network 10.5.67
+test controller in log-only mode. Adoption completed, AES-GCM was enabled,
+and the controller reported connected. Restarting only the test agent retained
+the adoption key and resumed informs without re-adoption. Firmware requests
+remained in the default refuse mode. WLAN application and LED control were
+not enabled.
+
+Explicit test mappings select AP6 on each band; both slots remain down and
+have no configured SSID. The two serving AP0 WLANs and their shared radios
+are excluded from this test session. Their names are stored only in the
+private local test record, with no hard-coded deployment restriction added.
+All native configuration settings matched the saved baseline after adoption
+and again after the agent restart, excluding generated comment metadata.
+This verifies collection, controller adoption and persistence on the new
+environment; it does not count as provisioning a test WLAN or validating
+client traffic on the Titan.
+
 ## Hero DSL live controller test (2026-11-21)
 
 Verified against UniFi OS Server 5.1.42 / Network 10.5.67 in OrbStack:
