@@ -1528,3 +1528,35 @@ attempted native account, so the session was closed without submitting a
 configuration command. Undocumented DTIM/U-APSD command discovery remains
 pending native-login information; the existing noninteractive SSH/NDM path
 continues to work.
+
+### Empty allow-list enforcement (2026-11-24)
+
+The dedicated Titan test profile was temporarily set to enabled MAC filtering,
+allow policy and an empty list, with its unsupported BSS transition disabled.
+This case requires no new Keenetic known-host registrations. The controller
+emitted a real empty allow-list for both test WLANs, and test-only preflight
+prepared ten reversible changes confined to AP6. A fresh full native backup
+preceded application. Guarded apply passed native ACL/security/bridge readback
+and controller health, then cleared its journal. The agent returned log-only.
+
+The Mac join attempt reported failure text despite `networksetup` returning
+zero. Both test APs remained up and a filtered association query counted zero
+authenticated AP6 clients. After restoring the controller's disabled MAC filter,
+a separately reviewed ten-change preflight and guarded apply restored policy
+none. An initial restoration preflight had read the previous permit snapshot;
+it was not applied. The updated profile was received and re-preflighted before
+application. Native/controller confirmation passed and the journal cleared.
+
+With the agent log-only again, the same Mac joined, acquired Wi-Fi IPv4, and
+native status confirmed authentication on the 5 GHz test AP6 using WPA2-PSK.
+This negative/positive pair verifies the empty allow-list case, not individual
+allow/deny entries or enforcement for other clients.
+
+Cleanup removed only the test SSID preference, returned Wi-Fi power on, and
+restored the saved controller security/BSS profile. Security, ACL, FT, bands,
+enabled state, AP group and schedule fields match their saved original values.
+The complete normalized native before/after hashes both equal
+`fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
+Full backups stayed on the router. Both primary WLANs and shared radios are
+included in that comparison. No rollback journal remains; the lab agent is
+log-only and the controller reports connected.
