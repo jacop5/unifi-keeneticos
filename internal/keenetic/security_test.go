@@ -247,3 +247,16 @@ func TestSAEIndexedKeysDoNotSilentlyLosePasswordsOrBindings(t *testing.T) {
 		}
 	}
 }
+
+func TestAuthenticationMethodsBeyondFourthEntry(t *testing.T) {
+	for _, index := range []string{"5", "32", "999"} {
+		cfg := wlan + "aaa.1.wpa.key." + index + ".mgmt=WPA-EAP\n"
+		p, err := BuildPlan(cfg, map[string]string{"1": "WifiMaster0/AccessPoint6"})
+		if err == nil && len(p.Unsupported) == 0 {
+			t.Fatalf("ignored authentication method at index %s", index)
+		}
+		if _, err := Preimage(p, ""); err == nil {
+			t.Fatal("unsupported authentication reached apply preparation")
+		}
+	}
+}

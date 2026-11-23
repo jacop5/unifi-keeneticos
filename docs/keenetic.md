@@ -1287,3 +1287,9 @@ and invokes the Python scope checker on that actual output. The mapped AP6
 scope passes and an AP5 scope fails; the synthetic credential is absent from
 the serialized report. The full Go race suite and Python tooling tests pass.
 This validates the offline review pipeline; no router settings were changed.
+
+Authentication-method validation now inspects all controller `wpa.key.*.mgmt`
+entries instead of only indices 1–4. Unsupported methods at higher indices
+reject the plan and cannot reach preimage preparation. Regression cases cover
+indices 5, 32 and 999. The full race suite, vet and both MIPS builds pass;
+this parser change was verified offline without router configuration changes.

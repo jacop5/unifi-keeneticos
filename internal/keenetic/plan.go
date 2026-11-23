@@ -257,8 +257,10 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		mgmt := ""
 		sae, unknownMgmt := false, false
-		for i := 1; i <= 4; i++ {
-			value := cfg[fmt.Sprintf("%swpa.key.%d.mgmt", aaa, i)]
+		for name, value := range cfg {
+			if !strings.HasPrefix(name, aaa+"wpa.key.") || !strings.HasSuffix(name, ".mgmt") {
+				continue
+			}
 			mgmt += " " + value
 			for _, method := range strings.Fields(value) {
 				switch method {
