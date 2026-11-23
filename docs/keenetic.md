@@ -1364,3 +1364,32 @@ on generated JSON. Python tests cover populated/missing/malformed diagnostics;
 the focused cross-tool and Python tooling tests pass. No router settings were
 changed. A read-only `ndmc` test-AP query ending in `?` was rejected as an
 unknown command, so that help syntax did not establish extra native controls.
+
+### WPA2/WPA3 transition-mode client check (2026-11-23)
+
+A fresh private native configuration backup preceded this test. Only the
+Titan-specific test WLAN profile changed: WPA3 support and transition enabled,
+optional PMF, BSS transition disabled. With experimental SAE advertisement and
+log-only operation, the received controller entries had SAE key management,
+`wpa3.transition=enabled` and PMF mode 1. Test-only preflight prepared eight
+reversible changes on AP6; the inspected plan retained WPA2, enabled WPA3 and
+requested optional PMF. Guarded application passed native settings and
+controller-health confirmation and cleared its rollback journal.
+
+The agent returned log-only before client association. The Mac acquired a
+Wi-Fi IPv4 address; the private native probe showed exactly one authenticated
+test client on `WifiMaster1/AccessPoint6`, security `wpa3-psk`, mode `11ac`.
+The controller reported one wireless client. This establishes WPA3 client
+operation in transition mode on 5 GHz, not WPA2-only client compatibility,
+2.4 GHz transition authentication or a new Wi-Fi-bound Internet test.
+
+Cleanup removed only the test SSID preference and restored Wi-Fi power on.
+A separately preflighted eight-change guarded apply restored native WPA2 and
+cleared its journal. Only after returning log-only was the full saved
+controller test profile restored, including its original BSS transition flag.
+Both controller SAE capability words returned to zero. The complete native
+before/after configurations match after removing ANSI formatting and generated
+comment lines; the initial byte comparison differed due to that formatting.
+This comparison includes both primary WLANs and shared radios. Ethernet
+retained the controller address. The lab remains log-only with no apply or
+experimental-SAE flag and no pending rollback journal.
