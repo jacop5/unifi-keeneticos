@@ -5,6 +5,12 @@ cd "$(dirname "$0")"
 [ "$(id -u)" = 0 ] || { printf '%s\n' 'Run as root under Entware' >&2; exit 1; }
 [ -d /opt/etc/init.d ] || { printf '%s\n' 'Entware is required' >&2; exit 1; }
 command -v ndmc >/dev/null || { printf '%s\n' 'Keenetic ndmc is required' >&2; exit 1; }
+command -v sha256sum >/dev/null || { printf '%s\n' 'sha256sum is required' >&2; exit 1; }
+[ -r SHA256SUMS ] || { printf '%s\n' 'Package integrity manifest is required' >&2; exit 1; }
+for file in ukn install.sh space-check.sh S99unifi-keenetic unifi-keenetic.conf LICENSE NOTICE licenses/Go-BSD-3-Clause.txt licenses/model-catalogue-MIT.txt; do
+ awk -v expected="$file" '$2 == expected { found=1 } END { exit !found }' SHA256SUMS || { printf 'Missing package hash: %s\n' "$file" >&2; exit 1; }
+done
+sha256sum -c SHA256SUMS || { printf '%s\n' 'Package integrity check failed; nothing installed' >&2; exit 1; }
 for file in LICENSE NOTICE licenses/Go-BSD-3-Clause.txt licenses/model-catalogue-MIT.txt; do
  [ -r "$file" ] || { printf 'Missing required license file: %s\n' "$file" >&2; exit 1; }
 done

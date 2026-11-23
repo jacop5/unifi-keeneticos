@@ -1156,3 +1156,18 @@ MIPS targets and corresponding source. Shell tests exercise sufficient,
 insufficient and malformed measurements using a candidate filename with spaces.
 The check does not reserve space against concurrent writers or make the whole
 installation transactional. No installed package was changed during validation.
+
+Both build targets now emit `SHA256SUMS` for the executable, installer,
+space-check helper, service script, default configuration and shipped runtime
+license notices. The installer requires hashes for every expected runtime file
+and verifies the manifest before sourcing helpers, probing the candidate,
+stopping an existing daemon or replacing files. Tests run the shipped gate
+against intact, corrupted, missing-file and missing-hash package fixtures.
+
+This detects incomplete transfers and accidental corruption, not authenticity:
+an attacker who replaces both files and hashes is outside this check. It is
+not a manifest of every corresponding-source file. Preserve the packaged
+configuration until installation completes; edit the installed configuration
+afterwards. Older/manual bundles without the manifest must be rebuilt before
+using the updated installer. No production installation was performed for
+this change.
