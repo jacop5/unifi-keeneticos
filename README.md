@@ -67,6 +67,7 @@ Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.6
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
+| DTIM period and U-APSD | No Keenetic translation; controller values currently ignored |
 | Service lifecycle and status | Private Titan start/restart/stop and live/stale/unrelated PID status verified; installed-package upgrade remains untested |
 | Offline preflight | Saved configuration/rollback preparation tested against a fresh Titan snapshot and followed by guarded AP6 apply |
 | Executable provenance | `-build-info` verified on Titan with clean revision, architecture and matching binary hash |

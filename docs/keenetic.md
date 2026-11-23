@@ -1320,3 +1320,23 @@ live after its launch SSH session closed, with no pending rollback journal.
 This was a temporary agent restart, not an installed-service update or a
 Wi-Fi configuration apply. The native shell lacks `nohup`; the failed first
 launch was corrected using inherited SIGHUP ignore and redirected input/output.
+
+### Remaining radio and power-save mapping gaps
+
+Source review confirms that the OpenWrt adapter handles `radio.N.txpower`,
+`wireless.N.dtim_period` and `wireless.N.uapsd`, while the Keenetic planner
+currently emits no native commands for them. Controller captures include DTIM
+and disabled U-APSD values; successful WLAN provisioning does not establish
+that those requested values took effect. They are not yet comprehensively
+classified as unsupported settings by the planner.
+
+The [Titan CLI reference](https://storage.googleapis.com/docs.help.keenetic.com/cli/5.1/en/cli_manual_kn-1810.pdf),
+section 3.32.183, defines `interface power` as 1–100 percent of the maximum,
+with default 100 and no `no` form. A controller numeric power value must not
+be copied directly to this percentage argument. A future implementation needs
+an established unit/capability conversion, exact native preimage and readback,
+and testing on a separate radio. The current test session excludes shared
+radio changes. Searches for DTIM and U-APSD spellings in the extracted 5.1
+manual found no entries; this is a bounded documentation search, not proof
+that the firmware has no corresponding controls. Those features need a native
+capability investigation before adding translations.
