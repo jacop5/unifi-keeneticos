@@ -1147,3 +1147,12 @@ add no WPA3-FT command. This avoids silently treating an SAE fast-roaming
 request as ordinary SAE. It does not add native FT support or establish a
 controller per-client WPA3 telemetry field; native association security remains
 the authoritative evidence used in the live authentication test.
+
+The installer now checks `/opt` free space before executing its read-only
+binary probe, stopping an installed service or writing replacement files.
+It requires candidate binary size plus 16 MiB headroom and refuses unknown
+space measurements. The packaged `space-check.sh` helper is included for both
+MIPS targets and corresponding source. Shell tests exercise sufficient,
+insufficient and malformed measurements using a candidate filename with spaces.
+The check does not reserve space against concurrent writers or make the whole
+installation transactional. No installed package was changed during validation.

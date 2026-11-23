@@ -11,7 +11,7 @@ case "$arch" in
 esac
 mkdir -p "$output"
 GOOS=linux GOARCH="$arch" GOMIPS=softfloat go build -trimpath -ldflags='-s -w' -o "$output/ukn" ./cmd/ukn
-cp packaging/keenetic/install.sh packaging/keenetic/S99unifi-keenetic packaging/keenetic/unifi-keenetic.conf "$output/"
+cp packaging/keenetic/install.sh packaging/keenetic/space-check.sh packaging/keenetic/S99unifi-keenetic packaging/keenetic/unifi-keenetic.conf "$output/"
 cp LICENSE NOTICE "$output/"
 mkdir -p "$output/licenses"
 cp LICENSES/Go-BSD-3-Clause.txt "$output/licenses/"

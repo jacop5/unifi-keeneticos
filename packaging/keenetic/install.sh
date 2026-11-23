@@ -8,6 +8,8 @@ command -v ndmc >/dev/null || { printf '%s\n' 'Keenetic ndmc is required' >&2; e
 for file in LICENSE NOTICE licenses/Go-BSD-3-Clause.txt licenses/model-catalogue-MIT.txt; do
  [ -r "$file" ] || { printf 'Missing required license file: %s\n' "$file" >&2; exit 1; }
 done
+. ./space-check.sh
+check_install_space ./ukn /opt
 # Execute only the read-only probe before installing a CPU-specific binary.
 chmod 700 ./ukn
 ./ukn -probe >/dev/null
