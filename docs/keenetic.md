@@ -1560,3 +1560,14 @@ The complete normalized native before/after hashes both equal
 Full backups stayed on the router. Both primary WLANs and shared radios are
 included in that comparison. No rollback journal remains; the lab agent is
 log-only and the controller reports connected.
+
+A reduced regression fixture now retains the observed empty-allow metadata:
+WLAN indexes 3/4 use device names ath2/ath3, while ACL tables are indexed 1/2.
+The fixture contains synthetic WPA2/SSID context, not a full private capture.
+Only allow-listed ACL status/policy/device-name fields were read from the router;
+no passwords, SSIDs or client entries were transferred for this fixture.
+The regression checks device-name matching, preservation of empty permit,
+registered-host-free preflight, exact quiesce/inverse ordering, idempotence,
+stale readback rejection and restoration to policy none. Full race tests pass.
+This adds offline coverage to the prior live enforcement observation and does
+not constitute a new live apply or individual-entry enforcement test.
