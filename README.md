@@ -50,7 +50,7 @@ Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.6
 | Physical Ethernet link status | Titan's five ports received by the controller with measured link speed/duplex; no port configuration or inferred uplink roles |
 | Private rollback journal, inverse commands, watchdog, startup recovery | Implemented; immediate failure and detached crash recovery verified on Titan |
 | Controller outage recovery | Real injected HTTP 503 rolled back; same-version retry confirmed after controller connectivity returned |
-| WPA3 personal, transition mode and PMF | Native command/rollback probes passed on disabled Hero slots on both bands; client authentication not yet verified |
+| WPA3 personal, transition mode and PMF | WPA3-only guarded provisioning and 5 GHz Mac WPA3 authentication verified on Titan with experimental SAE advertisement; transition-mode client authentication remains unverified |
 | Hidden SSID, peer isolation, RRM | Implemented and unit-tested; not comprehensively tested live |
 | Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
 | Per-WLAN MAC allow/deny lists | Implemented with registered Keenetic hosts; native list and rollback verified on an unused disabled Hero slot; client enforcement not yet verified |

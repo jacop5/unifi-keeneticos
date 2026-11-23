@@ -1110,3 +1110,29 @@ configuration commands ran. The original WPA2/PMF profile was restored, and
 the new agent restarted without the opt-in; controller readback confirmed
 both secondary radio capability words returned to zero. The lab remains
 log-only. WPA3 client authentication is still unverified.
+
+### WPA3-only client authentication (2026-11-23)
+
+The dedicated test profile temporarily disabled its unsupported BSS transition
+request. With experimental SAE advertisement on and the agent log-only,
+Titan-only force-provision refreshed a snapshot containing both SAE WLANs.
+Preflight prepared ten reversible changes with no unsupported settings.
+Guarded AP6 application passed native security/bridge readback and the real
+controller health check, then cleared its journal. The agent returned log-only
+before the client joined.
+
+The Mac joined the test SSID. A private native probe confirmed one authenticated
+client on `WifiMaster1/AccessPoint6` with `security=wpa3-psk`; the controller
+reported one client on the matching 5 GHz test WLAN. Both test APs had received
+WPA3-only/required-PMF provisioning, but this verifies client authentication
+only on 5 GHz. No WPA3 Internet-throughput or 2.4 GHz client claim is made.
+
+The Mac test preference was removed and Wi-Fi power restored. Native WPA2 was
+restored through a separately preflighted, guarded apply with BSS transition
+still disabled; confirmation and journal clearing passed. Only after returning
+to log-only was the original controller profile, including BSS transition,
+restored. SAE advertisement was disabled and the controller read back zero
+secondary capability bits on both radios. Full native before/after comparison
+matched after stripping terminal formatting and generated comments, including
+both primary WLANs and shared radios. The lab remains log-only; default SAE
+advertisement stays off. Transition-mode client interoperability is unverified.
