@@ -10,6 +10,7 @@ MODEL='U7PG2'
 APPLY=0
 WLAN_TEST_ONLY=0
 LED_CONTROL=0
+EXPERIMENTAL_SAE=0
 REPORT_UPGRADE_VERSION=0
 SLOTS=''
 NETWORKS=''
@@ -26,7 +27,7 @@ case "${1:-}" in
  start)
   [ "$ENABLED" = 1 ] || { printf '%s\n' 'unifi-keenetic is disabled'; exit 0; }
   [ -n "$INFORM_URL" ] || { printf '%s\n' 'INFORM_URL is required' >&2; exit 1; }
-  for option in "$APPLY" "$WLAN_TEST_ONLY" "$LED_CONTROL" "$REPORT_UPGRADE_VERSION"; do
+  for option in "$APPLY" "$WLAN_TEST_ONLY" "$LED_CONTROL" "$REPORT_UPGRADE_VERSION" "$EXPERIMENTAL_SAE"; do
    case "$option" in 0|1) ;; *) printf '%s\n' 'Action switches must be 0 or 1' >&2; exit 1 ;; esac
   done
   if [ "$APPLY" = 1 ] || [ "$WLAN_TEST_ONLY" = 1 ]; then
@@ -47,6 +48,7 @@ case "${1:-}" in
   fi
   [ "$APPLY" = 0 ] || set -- "$@" -apply
   [ "$WLAN_TEST_ONLY" = 0 ] || set -- "$@" -wlan-test-only
+  [ "$EXPERIMENTAL_SAE" = 0 ] || set -- "$@" -experimental-sae
   [ "$LED_CONTROL" = 0 ] || set -- "$@" -led-control
   [ "$REPORT_UPGRADE_VERSION" = 0 ] || set -- "$@" -report-upgrade-version
   mkdir -p "$(dirname "$pid")" "$STATE_DIR"

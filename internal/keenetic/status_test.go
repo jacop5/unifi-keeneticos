@@ -203,3 +203,19 @@ func TestStationRatesRejectUnavailableAndNonFiniteMeasurements(t *testing.T) {
 		}
 	}
 }
+
+func TestExperimentalSAEAdvertisesOnlyItsKnownBit(t *testing.T) {
+	s := &Snapshot{Radios: []map[string]string{{"id": "WifiMaster0"}, {"id": "WifiMaster1"}}}
+	for _, enabled := range []bool{false, true, false} {
+		s.ExperimentalSAE = enabled
+		want := 0
+		if enabled {
+			want = 1
+		}
+		for _, r := range s.Fields()["radio_table"].([]map[string]any) {
+			if r["radio_caps2"] != want {
+				t.Fatal("SAE capability not narrowly set or cleared")
+			}
+		}
+	}
+}

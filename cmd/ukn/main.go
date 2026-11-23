@@ -49,6 +49,7 @@ func main() {
 	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
 	preflightRunning := flag.String("preflight-running", "", "with -plan, validate rollback preparation against a saved native running-config; no router access")
 	showBuild := flag.Bool("build-info", false, "print local executable build metadata as JSON and exit; no router or controller access")
+	experimentalSAE := flag.Bool("experimental-sae", false, "advertise only the controller SAE radio capability for WPA3 testing; client interoperability unverified")
 	flag.Parse()
 	if err := validateOfflineMode(*preflightRunning, *planFile, map[string]bool{
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
@@ -177,7 +178,11 @@ func main() {
 	collect := func() (*keenetic.Snapshot, error) {
 		c, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
-		return keenetic.Collect(c, keenetic.Local)
+		snapshot, err := keenetic.Collect(c, keenetic.Local)
+		if snapshot != nil {
+			snapshot.ExperimentalSAE = *experimentalSAE
+		}
+		return snapshot, err
 	}
 	s, err := collect()
 	if err != nil {

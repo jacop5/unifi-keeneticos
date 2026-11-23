@@ -1075,3 +1075,20 @@ Native disabled-slot WPA3 command probes alone do not establish client
 interoperability, enterprise security or fast-roaming support. Any experimental
 advertisement must remain narrowly scoped and followed by real controller
 provisioning and client authentication checks before broader support claims.
+
+### Experimental SAE advertisement
+
+`-experimental-sae` (service `EXPERIMENTAL_SAE=1`) opts into reporting only
+SAE bit 1 in each native radio's `radio_caps2`. The default remains off, with
+an explicit zero to clear a previously advertised value on later informs.
+No enterprise, FT, OWE or other secondary radio capability is implied. This
+switch neither enables `-apply` nor issues native configuration commands.
+Use log-only mode first to inspect whether the real controller sends the
+intended WPA3 WLAN rather than omitting it.
+
+This is an experimental bridge to test the controller's identified eligibility
+gate, not a claim of verified WPA3 client interoperability. Native WPA3 command
+probes and translation checks exist, but real-controller provisioning and
+associated-client WPA3 authentication with this option remain outstanding.
+Tests cover default-off service behavior, option validation and precise bit
+set/clear behavior. No live agent was changed while implementing the option.

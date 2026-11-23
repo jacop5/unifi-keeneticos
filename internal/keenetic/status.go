@@ -86,6 +86,7 @@ func Local(ctx context.Context, command string) ([]byte, error) {
 var ndmError = regexp.MustCompile(`(?m)(?:error|critical)\[(?:0x)?[0-9a-fA-F]+\]:`)
 
 type Snapshot struct {
+	ExperimentalSAE       bool
 	Version, System, Home map[string]string
 	Radios                []map[string]string
 	Stations              []map[string]string
@@ -304,6 +305,11 @@ func (s *Snapshot) Fields() map[string]any {
 		// antenna capabilities from the emulated device profile.
 		if width := r["bandwidth"]; width != "" {
 			row["ht"] = width
+		}
+		// SAE is bit 1 of radio_caps2; clear it explicitly when opt-in is off.
+		row["radio_caps2"] = 0
+		if s.ExperimentalSAE {
+			row["radio_caps2"] = 1
 		}
 		radioTable = append(radioTable, row)
 		// The controller uses bw for measured operating width; radio_table.ht
