@@ -319,6 +319,15 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 			isolation = "peer-isolation"
 		}
 		add("interface " + target + " " + isolation)
+		// The documented per-AP rrm command supplies 802.11k; the separate
+		// Wi-Fi-system BSS transition control is not an equivalent AP command.
+		switch cfg[aaa+"bss_transition"] {
+		case "", "disabled":
+		case "enabled":
+			p.Unsupported = append(p.Unsupported, prefix+"bss-transition")
+		default:
+			return p, fmt.Errorf("invalid BSS transition status")
+		}
 		rrm := "no rrm"
 		if cfg[aaa+"11k.status"] == "enabled" {
 			rrm = "rrm"

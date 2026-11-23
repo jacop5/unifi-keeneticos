@@ -878,3 +878,17 @@ mode dispatch: recovery watchdog, rollback/crash probes, apply, LED control,
 native probes and model listing cannot be combined with `-preflight-running`.
 In particular, a recovery-watch request cannot take precedence over offline
 preflight. Unit coverage and built-command checks verify early rejection.
+
+### BSS transition requests
+
+An explicit `aaa.N.bss_transition=enabled` now marks the plan unsupported,
+rather than being silently ignored. Unknown status values reject planning.
+The documented per-AP `interface rrm` command implements 802.11k neighbour
+reporting; the guide's Wi-Fi-system `mws wlan rrm enable` description includes
+BSS Transition Management, but those controls have different scope. The port
+does not substitute Wi-Fi-system configuration for an individual mapped AP.
+Missing/disabled requests generate no BSS-transition command; this does not
+prove an independently configured native Wi-Fi-system feature is disabled.
+Regression coverage confirms unsupported requests cannot prepare application
+and that separate 802.11k translation remains intact. Native 802.11v control
+and client roaming behavior remain unfinished.
