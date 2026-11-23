@@ -161,3 +161,22 @@ func TestMalformedWPA3SwitchCannotDowngradeOWEToOpen(t *testing.T) {
 		}
 	}
 }
+
+func TestExplicitSecurityFamilyCannotBeOverriddenByStaleWPA(t *testing.T) {
+	slots := map[string]string{"1": "WifiMaster0/AccessPoint6"}
+	for _, family := range []string{"wep128", "wep", "wpaeap", "unknown", "open", "none"} {
+		p, err := BuildPlan(wlan+"aaa.1.security="+family+"\n", slots)
+		if err == nil && len(p.Unsupported) == 0 {
+			t.Fatalf("explicit %q was silently treated as WPA2", family)
+		}
+		if err == nil {
+			if _, err := Preimage(p, "interface WifiMaster0/AccessPoint6\n    down\n!\n"); err == nil {
+				t.Fatal("ambiguous security reached apply preparation")
+			}
+		}
+	}
+	p, err := BuildPlan(wlan+"aaa.1.security=wpapsk\n", slots)
+	if err != nil || len(p.Unsupported) != 0 {
+		t.Fatalf("explicit personal security rejected: %v %v", err, p.Unsupported)
+	}
+}

@@ -1187,3 +1187,12 @@ reject the plan. In particular, a misspelled OWE-enable value cannot silently
 fall through to unencrypted open-WLAN translation. Regression tests cover
 personal and open security inputs while retaining valid OWE/open behavior.
 No malformed requests were applied to hardware for this check.
+
+An explicit AAA security family can no longer be overridden by stale WPA
+fields. Unknown, WEP or enterprise families remain unsupported even when a
+WPA2 version/key is also present. Explicit open/none requests with conflicting
+WPA fields are likewise refused rather than silently translated as personal
+security. Absent family metadata retains the existing version/key classifier;
+explicit `wpapsk` remains accepted. Tests cover these contradictions and verify
+that unsupported plans cannot prepare application. No contradictory security
+configuration was applied on hardware.

@@ -238,6 +238,18 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 				}
 			}
 		}
+		// An explicit security family cannot be overridden by stale WPA keys.
+		switch cfg[aaa+"security"] {
+		case "", "wpapsk":
+		case "open", "none":
+			if cfg[aaa+"wpa"] != "" || cfg[aaa+"wpa.psk"] != "" {
+				p.Unsupported = append(p.Unsupported, prefix+"security")
+				continue
+			}
+		default:
+			p.Unsupported = append(p.Unsupported, prefix+"security")
+			continue
+		}
 		open := cfg[aaa+"wpa"] == "" && cfg[aaa+"wpa.psk"] == "" && (cfg[aaa+"security"] == "open" || cfg[aaa+"security"] == "none")
 		owe := open && cfg[aaa+"wpa3.support"] == "enabled"
 		if unknownMgmt || cfg[aaa+"ssid"] != ssid || (!open && (cfg[aaa+"wpa"] != "2" || (cfg[aaa+"wpa3.support"] == "enabled" && !sae))) || (open && strings.TrimSpace(mgmt) != "") {
