@@ -1092,3 +1092,21 @@ probes and translation checks exist, but real-controller provisioning and
 associated-client WPA3 authentication with this option remain outstanding.
 Tests cover default-off service behavior, option validation and precise bit
 set/clear behavior. No live agent was changed while implementing the option.
+
+### SAE eligibility experiment (2026-11-23)
+
+The opt-in build was hash-checked through the staging helper and run log-only.
+The real controller received `radio_caps2=1` on both radios. Repeating the
+WPA3-only test-profile request then delivered both test WLANs with SAE,
+`wpa3.support=enabled`, transition disabled and required PMF. The redacted
+plan selected native WPA3, disabled WPA2 and forced PMF on both AP6 slots.
+This confirms the capability gate and controller delivery, not application.
+
+The plan also correctly rejected BSS transition. The saved original test
+profile has `bss_transition=true`, and its received WLAN entries enable that
+unsupported feature under both WPA2 and WPA3. This must be resolved for the
+isolated client test; do not bypass the unsupported-plan check. No native
+configuration commands ran. The original WPA2/PMF profile was restored, and
+the new agent restarted without the opt-in; controller readback confirmed
+both secondary radio capability words returned to zero. The lab remains
+log-only. WPA3 client authentication is still unverified.
