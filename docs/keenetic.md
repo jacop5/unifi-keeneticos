@@ -1504,3 +1504,27 @@ Both primary WLANs and shared radios are included. No rollback journal remains,
 the controller reports connected, secondary SAE capability words are zero,
 and the Ethernet controller address is retained. The new verified build now
 runs the lab in log-only test mode, with no apply or experimental FT/SAE flags.
+
+### Detached FT crash recovery (2026-11-24)
+
+The FT disabled-slot probe was repeated on unused AP5 with `-crash-probe`,
+using a separate private probe state and a fresh native backup. It verified
+native FT readback while the AP remained disabled, armed the watchdog, then
+exited intentionally with status 77 before confirmation. A subsequent process
+inspection found the detached watcher alive with the expected journal path;
+the journal was still pending. After its 65-second delay, the journal cleared
+and the watcher exited without restarting the crashed parent.
+
+The entire native configuration then matched the pre-crash backup after
+ANSI/CR/comment normalization. Both hashes were
+`fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
+Only equality and hashes were returned; full backups stayed on the router.
+The main lab daemon retained log-only arguments. This validates detached
+recovery for FT settings, not an FT client handoff.
+
+An attempt to inspect interactive native CLI completion encountered a separate
+KeeneticOS login prompt. The available SSH credential did not authenticate the
+attempted native account, so the session was closed without submitting a
+configuration command. Undocumented DTIM/U-APSD command discovery remains
+pending native-login information; the existing noninteractive SSH/NDM path
+continues to work.
