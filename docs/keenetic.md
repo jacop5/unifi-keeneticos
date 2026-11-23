@@ -1058,3 +1058,20 @@ changed during the preview. WPA3 client authentication remains unverified;
 resolve controller WLAN eligibility before enabling guarded application for
 this test. An accepted profile API update alone does not prove an AP received
 that WLAN or the requested security configuration.
+
+Static follow-up of the same controller archive traced the SAE eligibility
+gate to `com.ubnt.service.config.ubntconf.NKpwaro.ROhmZrYJh(CLgbNxgjr,
+NYCLZfielo, fSFkDPvCiJTebBnrTVn)`: a WPA3-only profile returns null when the
+radio's `umXybewPH()` capability check is false (offsets 0–53). That check tests
+bit 1 of `radio_caps2`. The radio factory reads that field at offsets 305–311,
+the builder stores it in `JERWTLdhR`, and the immutable radio's
+`QTEIGhHZlMPcpAj()` exposes it through `UlfXjlov`; absent values default to zero
+in the bit check. This is a static controller gate, not a native driver test.
+
+The Keenetic radio reports currently omit `radio_caps2`, so this is consistent
+with the observed WLAN omission and narrows the next experiment to explicit
+SAE capability reporting. No capability bit was added during this investigation.
+Native disabled-slot WPA3 command probes alone do not establish client
+interoperability, enterprise security or fast-roaming support. Any experimental
+advertisement must remain narrowly scoped and followed by real controller
+provisioning and client authentication checks before broader support claims.
