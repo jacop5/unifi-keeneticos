@@ -1232,3 +1232,12 @@ mixed CCMP/TKIP requests. Missing cipher metadata retains existing behavior;
 this validation does not add an independent native cipher-selection command.
 Tests cover indexed/mixed/unknown requests and refusal during apply preparation.
 No unsupported cipher was applied to hardware.
+
+Indexed SAE password tables now follow the same single-key limitation. A
+redundant first wildcard entry matching the global personal password is
+accepted; additional/mismatching passwords, per-client MAC keys and nonempty
+VLAN or key-ID bindings are unsupported. This preserves the ordinary captured
+SAE shape without claiming multi-key enforcement. Tests cover the default
+entry and rejected alternatives; only key equality/field presence was inspected
+on the saved private controller capture, never credential contents in output.
+The new rejection edge cases were not applied to hardware.

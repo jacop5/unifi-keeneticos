@@ -248,7 +248,7 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 				}
 			}
 		}
-		if multipleKeys || cfg[aaa+"wpa.psk_radius"] != "" {
+		if multipleKeys || cfg[aaa+"wpa.psk_radius"] != "" || !singleSAEKey(cfg, aaa) {
 			p.Unsupported = append(p.Unsupported, prefix+"private-psk")
 			continue
 		}
@@ -442,4 +442,29 @@ func nativePMF(status, mode string, sae, transition, owe bool) (string, error) {
 		return "pmf", nil
 	}
 	return "no pmf", nil
+}
+
+// Accept only the controller's redundant wildcard entry for the same global
+// password. Per-station keys, additional passwords and VLAN/ID bindings need
+// native mechanisms this backend does not implement.
+func singleSAEKey(cfg translate.Cfg, aaa string) bool {
+	prefix := aaa + "sae.psk."
+	for key, value := range cfg {
+		if !strings.HasPrefix(key, prefix) || value == "" {
+			continue
+		}
+		switch strings.TrimPrefix(key, prefix) {
+		case "1.psk":
+			if cfg[aaa+"wpa.psk"] == "" || value != cfg[aaa+"wpa.psk"] {
+				return false
+			}
+		case "1.mac":
+			if !strings.EqualFold(value, "ff:ff:ff:ff:ff:ff") {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }

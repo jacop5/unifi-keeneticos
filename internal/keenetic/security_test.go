@@ -225,3 +225,25 @@ func TestUnsupportedCipherCannotBeSilentlySubstituted(t *testing.T) {
 		t.Fatalf("captured cipher shape rejected: %v %v", err, p.Unsupported)
 	}
 }
+
+func TestSAEIndexedKeysDoNotSilentlyLosePasswordsOrBindings(t *testing.T) {
+	base := wlan + "aaa.1.wpa.key.1.mgmt=SAE\naaa.1.wpa3.support=enabled\n"
+	slots := map[string]string{"1": "WifiMaster0/AccessPoint6"}
+	redundant := "aaa.1.sae.psk.1.psk=secret-passphrase\naaa.1.sae.psk.1.mac=ff:ff:ff:ff:ff:ff\n"
+	p, err := BuildPlan(base+redundant, slots)
+	if err != nil || len(p.Unsupported) != 0 {
+		t.Fatalf("redundant default SAE entry rejected: %v %v", err, p.Unsupported)
+	}
+	for _, extra := range []string{
+		"aaa.1.sae.psk.1.psk=different-password\n",
+		"aaa.1.sae.psk.2.psk=second-password\n",
+		"aaa.1.sae.psk.1.mac=02:00:00:00:00:01\n",
+		"aaa.1.sae.psk.1.vlan=20\n",
+		"aaa.1.sae.psk.1.id=client-key\n",
+	} {
+		p, err := BuildPlan(base+extra, slots)
+		if err == nil && len(p.Unsupported) == 0 {
+			t.Fatal("unsupported SAE key/binding ignored")
+		}
+	}
+}
