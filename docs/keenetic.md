@@ -1223,3 +1223,12 @@ Wi-Fi power to on; Ethernet remained active and the controller remained
 connected/adopted. Future checks must distinguish join acknowledgement, DHCP
 readiness, native association and a device-bound TLS connection rather than
 using any earlier step as proof of the next.
+
+Explicit controller pairwise-cipher requests are currently limited to CCMP,
+and explicit PMF cipher requests to AES-128-CMAC, matching the captured test
+configuration. Other nonempty pairwise/PMF cipher values mark the plan
+unsupported rather than silently substituting a native default. This includes
+mixed CCMP/TKIP requests. Missing cipher metadata retains existing behavior;
+this validation does not add an independent native cipher-selection command.
+Tests cover indexed/mixed/unknown requests and refusal during apply preparation.
+No unsupported cipher was applied to hardware.

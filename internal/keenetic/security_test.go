@@ -206,3 +206,22 @@ func TestPrivatePSKCannotSilentlyBecomeSinglePassword(t *testing.T) {
 		t.Fatalf("explicitly disabled stale table affected ordinary PSK: %v", err)
 	}
 }
+
+func TestUnsupportedCipherCannotBeSilentlySubstituted(t *testing.T) {
+	slots := map[string]string{"1": "WifiMaster0/AccessPoint6"}
+	for _, extra := range []string{"aaa.1.wpa.1.pairwise=TKIP\n", "aaa.1.wpa.1.pairwise=CCMP TKIP\n", "aaa.1.wpa.2.pairwise=GCMP-256\n", "aaa.1.pmf.cipher=BIP-GMAC-256\n"} {
+		p, err := BuildPlan(wlan+extra, slots)
+		if err == nil && len(p.Unsupported) == 0 {
+			t.Fatal("unsupported cipher silently substituted")
+		}
+		if err == nil {
+			if _, err := Preimage(p, "interface WifiMaster0/AccessPoint6\n    down\n!\n"); err == nil {
+				t.Fatal("unsupported cipher reached apply preparation")
+			}
+		}
+	}
+	p, err := BuildPlan(wlan+"aaa.1.wpa.1.pairwise=CCMP\naaa.1.pmf.cipher=AES-128-CMAC\n", slots)
+	if err != nil || len(p.Unsupported) != 0 {
+		t.Fatalf("captured cipher shape rejected: %v %v", err, p.Unsupported)
+	}
+}

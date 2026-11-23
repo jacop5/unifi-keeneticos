@@ -223,6 +223,19 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		if err := validateEnableStatus(cfg, aaa+"wpa3.support", aaa+"wpa3.transition"); err != nil {
 			return p, err
 		}
+		unsupportedCipher := false
+		for key, value := range cfg {
+			if strings.HasPrefix(key, aaa+"wpa.") && strings.HasSuffix(key, ".pairwise") && value != "" && value != "CCMP" {
+				unsupportedCipher = true
+			}
+		}
+		if cipher := cfg[aaa+"pmf.cipher"]; cipher != "" && cipher != "AES-128-CMAC" {
+			unsupportedCipher = true
+		}
+		if unsupportedCipher {
+			p.Unsupported = append(p.Unsupported, prefix+"security-cipher")
+			continue
+		}
 		pskFile := cfg[aaa+"wpa.psk_file.status"]
 		if err := validateEnableStatus(cfg, aaa+"wpa.psk_file.status"); err != nil {
 			return p, err
