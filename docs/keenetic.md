@@ -849,3 +849,26 @@ terminal formatting and generated comments, confirmed all non-test native
 settings unchanged, including serving WLANs and shared radios. This validates
 the preflight/application path against a fresh snapshot; it does not extend
 coverage to unrestricted provisioning or prove every feature's client behavior.
+
+### Latest-build client validation (2026-11-23)
+
+With the latest build running log-only after guarded provisioning, the Mac
+joined the separate test SSID. Native collection confirmed authentication on
+`WifiMaster1/AccessPoint6`. The real controller reported exactly one managed
+client at device level, on `wifi1`, and on the corresponding test WLAN; the
+other managed band/WLAN remained at zero. These observations validate the
+normal client-count path, not malformed-record or ambiguous-roam handling,
+which remains covered by regression tests.
+
+The controller now had a hostname for this client. A private native probe and
+controller API comparison matched the client MAC and verified exact equality
+between the unexpired DHCP hostname and the controller's hostname. This closes
+the earlier named-client API validation gap; GUI rendering was not inspected.
+Rates and the normalized power-save field were also present.
+
+The attempted Wi-Fi-bound HTTPS probe stopped at local DNS resolution before
+opening its TLS connection. No Internet-success claim is made for this run,
+and no router DNS settings were changed to force a pass. Earlier Wi-Fi HTTPS
+results remain separate evidence. The temporary Mac test preference was removed,
+Wi-Fi power restored to on and Ethernet remained active. The agent stayed
+log-only; this client test issued no WLAN provisioning commands.
