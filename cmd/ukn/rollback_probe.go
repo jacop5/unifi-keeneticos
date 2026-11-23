@@ -17,7 +17,7 @@ import (
 // ProbeRollback uses an unused, administratively disabled AP slot. It never
 // enables the interface or changes a serving WLAN's credentials.
 func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode string) error {
-	if mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "wmm" && mode != "schedule" && mode != "schedule-binding" && mode != "schedule-active" && mode != "schedule-start" {
+	if mode != "ft" && mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "wmm" && mode != "schedule" && mode != "schedule-binding" && mode != "schedule-active" && mode != "schedule-start" {
 		return fmt.Errorf("unknown rollback probe mode")
 	}
 	if !regexp.MustCompile(`^WifiMaster[01]/AccessPoint[1-6]$`).MatchString(id) {
@@ -101,6 +101,9 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	if err != nil {
 		return err
 	}
+	if mode == "ft" {
+		plan = disabledFTProbePlan(id)
+	}
 	if mode == "owe" {
 		for _, command := range []string{"encryption enable", "no encryption wpa", "no encryption wpa2", "no encryption wpa3", "encryption owe", "pmf force"} {
 			plan.Commands = append(plan.Commands, keenetic.Command{Text: "interface " + id + " " + command})
@@ -127,7 +130,7 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	}
 	verified := false
 	err = keenetic.ApplyPlanWatched(ctx, keenetic.Local, plan, journal, func(context.Context) error {
-		if mode == "rssi" || mode == "wmm" {
+		if mode == "rssi" || mode == "wmm" || mode == "ft" {
 			block, err := readBlock()
 			if err != nil {
 				return err
@@ -263,4 +266,14 @@ func verifySecurityProbe(mode, block, state string) error {
 		return fmt.Errorf("transition probe did not enable WPA2/WPA3 with optional PMF")
 	}
 	return nil
+}
+
+// Called only after probeRollback has established a non-primary, SSID-free,
+// disabled slot. No up, bridge or shared-radio command belongs in this plan.
+func disabledFTProbePlan(id string) keenetic.Plan {
+	p := keenetic.Plan{}
+	for _, setting := range []string{"ssid ukn-rollback-probe", "ft mdid AB", "no ft otd", "ft enable"} {
+		p.Commands = append(p.Commands, keenetic.Command{Text: "interface " + id + " " + setting})
+	}
+	return p
 }

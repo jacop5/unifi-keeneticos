@@ -1438,3 +1438,13 @@ stale readback and service argument forwarding. Full race tests, vet and both
 MIPS builds pass. This implementation has not yet been applied live: neither
 successful FT reassociation nor roaming between Keenetic/UniFi devices is
 established. The existing Titan lab agent remains unchanged and log-only.
+
+`-rollback-probe-mode ft` adds a disabled-slot FT command/recovery probe.
+The existing probe guards require an explicit non-primary AP that is down and
+has no SSID in status or running configuration. It sets a temporary SSID,
+MDID AB, over-the-air mode and FT enable without raising the interface or
+changing bridge membership. Native readback must match while the interface
+remains down, then intentional health-check failure exercises watched rollback.
+The final interface block must exactly match its preimage. Offline regression
+checks scope and inverse commands; race tests and vet pass. Hardware execution
+is the next check and does not establish working client roaming.
