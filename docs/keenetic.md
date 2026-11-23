@@ -831,3 +831,21 @@ driver support or post-change health. Snapshots can become stale; repeat the
 live checks before applying anything. While management is VPN-only, use this
 mode for preparation and defer network changes until independent management
 access is available.
+
+### Fresh Titan validation (2026-11-23)
+
+After wired management was re-established, the existing UniFi OS VM was
+started and the Titan resumed connected/adopted status without re-adoption.
+A fresh native configuration backup was saved privately on the router and
+Mac, with matching SHA-256 hashes. Offline preflight of the received controller
+configuration against that backup prepared four reversible changes, limited
+to the two AP6 test slots and existing home-bridge membership.
+
+The latest build then applied that scoped plan with guarded native readback
+and a real controller health check. Application was confirmed and the journal
+cleared. The agent was returned to log-only mode immediately afterwards.
+Before/after comparison, excluding only AP6 blocks, their bridge membership,
+terminal formatting and generated comments, confirmed all non-test native
+settings unchanged, including serving WLANs and shared radios. This validates
+the preflight/application path against a fresh snapshot; it does not extend
+coverage to unrestricted provisioning or prove every feature's client behavior.
