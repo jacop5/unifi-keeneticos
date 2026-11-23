@@ -1023,3 +1023,15 @@ healthy. Check `df -k /tmp` before transferring test builds, retain headroom
 beyond the binary size, and remove only identified obsolete lab executables.
 A failed or incomplete upload must not be executed. No router configuration
 was changed by this probe or cleanup.
+
+For future lab transfers, `python3 tools/stage-keenetic.py BINARY --host HOST
+--directory /tmp/ukn-LAB` checks free space before upload, requiring binary size
+plus 16 MiB headroom. The directory must already exist; use a private lab
+location. It stages to a unique filename, verifies SHA-256 and never executes,
+installs or deletes a build. SSH credentials are handled by SSH, not stored by
+the helper. Default SSH user/port are root/222 and can be overridden.
+
+A failed upload or hash check prints the candidate path for inspection; do not
+execute it. Space checks are not reservations against concurrent writers.
+Automated tests cover low-space refusal before upload, free-space parsing and
+scoped unique paths. This helper has not yet performed a hardware transfer.
