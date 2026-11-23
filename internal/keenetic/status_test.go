@@ -19,6 +19,7 @@ func TestFullCollection(t *testing.T) {
 		"show interface":             "Interface, name = \"AP\"\n id: WifiMaster0/AccessPoint0\n type: AccessPoint\n state: up\n ssid: Example\n",
 	}
 	responses["show interface"] += "Interface, name = \"1\"\n id: GigabitEthernet0/0\n type: Port\n link: up\n speed: 1000\n duplex: full\n"
+	responses["show ip hotspot"] = "host:\n mac: 02:00:00:00:00:02\n ip: 192.0.2.2\n hostname: Active-Host\n link: up\n"
 	responses["show ip dhcp bindings"] = "lease:\n mac: 02:00:00:00:00:02\n ip: 192.0.2.2\n hostname: Example-Client\n expires: 60\n"
 	run := func(_ context.Context, c string) ([]byte, error) {
 		v, ok := responses[c]
@@ -39,7 +40,7 @@ func TestFullCollection(t *testing.T) {
 	}
 	delete(responses, "show ip dhcp bindings")
 	s, err = Collect(context.Background(), run)
-	if err != nil || len(s.StationFields()) != 1 || len(s.Hostnames) != 0 {
+	if err != nil || len(s.StationFields()) != 1 || s.StationFields()[0]["hostname"] != "Active-Host" {
 		t.Fatalf("optional DHCP failure broke collection: %v", err)
 	}
 	responses["show interface Bridge0"] = "mac: 02:00:00:00:00:01\naddress: fe80::1\n"

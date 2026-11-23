@@ -36,3 +36,18 @@ func TestDHCPHostnamesUseUnexpiredLeases(t *testing.T) {
 		t.Fatal("unrelated lease supplied hostname")
 	}
 }
+
+func TestActiveHostnameFallbackExcludesOfflineHosts(t *testing.T) {
+	text := "host:\n mac: 02:00:00:00:00:01\n ip: 192.0.2.2\n hostname: Active-Client\n link: up\n"
+	if got := ParseActiveHostnames(text); got["02:00:00:00:00:01"] != "Active-Client" {
+		t.Fatal(got)
+	}
+	for _, state := range []string{"down", "unknown", ""} {
+		if len(ParseActiveHostnames(strings.ReplaceAll(text, "link: up", "link: "+state))) != 0 {
+			t.Fatal("inactive host supplied name")
+		}
+	}
+	if len(ParseActiveHostnames(text+strings.ReplaceAll(text, "Active-Client", "Conflicting"))) != 0 {
+		t.Fatal("conflicting hostnames accepted")
+	}
+}

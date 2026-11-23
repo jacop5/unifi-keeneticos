@@ -129,6 +129,16 @@ func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
 	if leases, err := run(ctx, "show ip dhcp bindings"); err == nil {
 		s.Hostnames = ParseDHCPHostnames(string(leases))
 	}
+	if hosts, err := run(ctx, "show ip hotspot"); err == nil {
+		if s.Hostnames == nil {
+			s.Hostnames = map[string]string{}
+		}
+		for mac, name := range ParseActiveHostnames(string(hosts)) {
+			if s.Hostnames[mac] == "" {
+				s.Hostnames[mac] = name
+			}
+		}
+	}
 	b, err = run(ctx, "show interface")
 	if err != nil {
 		return nil, err

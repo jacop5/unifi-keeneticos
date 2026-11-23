@@ -11,19 +11,32 @@ import (
 // ParseDHCPHostnames uses only unexpired IPv4 leases. Conflicting names for a
 // MAC are omitted rather than selected according to native output order.
 func ParseDHCPHostnames(text string) map[string]string {
+	return parseHostnames(Records(text, "lease"), func(r map[string]string) bool {
+		if r["expires"] == "infinity" {
+			return true
+		}
+		n, err := strconv.ParseInt(r["expires"], 10, 64)
+		return err == nil && n > 0
+	})
+}
+
+// ParseActiveHostnames excludes offline hosts; it never invents DHCP leases.
+func ParseActiveHostnames(text string) map[string]string {
+	return parseHostnames(Records(text, "host"), func(r map[string]string) bool { return r["link"] == "up" })
+}
+
+func parseHostnames(records []map[string]string, active func(map[string]string) bool) map[string]string {
 	out := map[string]string{}
 	conflicts := map[string]bool{}
-	for _, lease := range Records(text, "lease") {
+	for _, lease := range records {
+		if !active(lease) {
+			continue
+		}
 		mac, err := net.ParseMAC(lease["mac"])
 		if err != nil || len(mac) != 6 || mac[0]&1 != 0 || net.ParseIP(lease["ip"]).To4() == nil {
 			continue
 		}
-		if lease["expires"] != "infinity" {
-			expires, err := strconv.ParseInt(lease["expires"], 10, 64)
-			if err != nil || expires <= 0 {
-				continue
-			}
-		}
+
 		name := strings.TrimSpace(lease["hostname"])
 		if name == "" || len(name) > 253 || strings.IndexFunc(name, unicode.IsControl) >= 0 {
 			continue

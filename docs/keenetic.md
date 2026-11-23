@@ -892,3 +892,12 @@ prove an independently configured native Wi-Fi-system feature is disabled.
 Regression coverage confirms unsupported requests cannot prepare application
 and that separate 802.11k translation remains intact. Native 802.11v control
 and client roaming behavior remain unfinished.
+
+Hostname enrichment also optionally reads `show ip hotspot` as a fallback
+when a matching unexpired DHCP lease supplies no name. Only link-up hosts
+with valid IPv4/MAC identities and unambiguous hostnames qualify. DHCP names
+retain precedence. Host records do not create clients: authenticated native
+associations still determine the station table. Failure of either optional
+query does not block status collection. Collection tests cover precedence and
+DHCP-unavailable fallback; parser tests reject offline or conflicting hosts.
+This fallback has not yet been validated live in AP/external-DHCP mode.
