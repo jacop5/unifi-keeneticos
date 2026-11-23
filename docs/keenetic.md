@@ -1004,3 +1004,22 @@ errors. This does not terminate every descendant or prove that an interrupted
 configuration command had no effect; native readback and journaled recovery
 remain necessary. This process-edge case is tested on the host, not forced on
 the production router.
+
+### Latest collector probe and lab disk usage (2026-11-23)
+
+The updated collector passed a standalone read-only Titan probe: two radios,
+five physical ports, four active APs, eight native station records, 34 enriched
+hostnames and 35 address entries were collected. These are snapshot counts,
+not persistent inventory or proof of external-DHCP/AP-mode behavior. Optional
+enrichment completed under its budget in this normal run; forced-delay behavior
+remains covered only by host tests.
+
+A first upload ran out of the router's 127236 KiB `/tmp` tmpfs because retained
+lab binaries had accumulated. The incomplete upload and superseded, non-running
+lab executables were removed; the active binary, adoption state, journals and
+configuration backups were retained. The successful probe binary was removed
+again afterwards, leaving 49212 KiB free. Controller connectivity remained
+healthy. Check `df -k /tmp` before transferring test builds, retain headroom
+beyond the binary size, and remove only identified obsolete lab executables.
+A failed or incomplete upload must not be executed. No router configuration
+was changed by this probe or cleanup.
