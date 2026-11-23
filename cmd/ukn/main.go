@@ -46,7 +46,11 @@ func main() {
 	planFile := flag.String("plan", "", "print a redacted plan for a saved UniFi system_cfg and exit")
 	slotsFile := flag.String("slots", "", "JSON mapping of UniFi WLAN indexes to Keenetic AP interface IDs")
 	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
+	preflightRunning := flag.String("preflight-running", "", "with -plan, validate rollback preparation against a saved native running-config; no router access")
 	flag.Parse()
+	if *preflightRunning != "" && *planFile == "" {
+		log.Fatal("-preflight-running requires -plan")
+	}
 	networks := map[string]string{}
 	if *networksFile != "" {
 		if *wlanTestOnly {
@@ -101,6 +105,17 @@ func main() {
 		plan, err := buildPlan(string(data), slots)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if *preflightRunning != "" {
+			running, err := os.ReadFile(*preflightRunning)
+			if err != nil {
+				log.Fatal(err)
+			}
+			changes, err := preflightPlan(plan, string(running), slots, *wlanTestOnly)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("offline preflight passed: %d reversible changes; no router commands executed\n", changes)
 		}
 		for _, command := range plan.Commands {
 			fmt.Println(command)

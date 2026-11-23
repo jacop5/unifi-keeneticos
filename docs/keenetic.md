@@ -807,3 +807,27 @@ On 2026-11-21, the UniFi OS test controller's device overview showed channel
 12 at 40 MHz and channel 36 at 80 MHz, matching native measurements, with
 the daemon still in log-only WLAN mode. Configured width preferences and
 operating measurements remain separate; no radio setting was changed.
+
+## Offline preparation while remote
+
+Use saved controller and native snapshots to check whether a plan can prepare
+its rollback, without connecting to a router:
+
+```sh
+ukn -plan system_cfg.txt -slots slots.json -wlan-test-only \
+  -preflight-running running-config.txt
+```
+
+This invokes the same preimage preparation used by guarded application,
+including test-slot ownership checks when `-wlan-test-only` is selected.
+Unsupported plans, missing interfaces and unpreparable inverses fail with a
+nonzero exit status. Successful output includes the number of reversible
+changes, followed by the normal redacted plan. No native commands, controller
+requests, journal writes or recovery actions run in this mode. Keep snapshots
+private: native configurations and controller files can contain credentials.
+
+A passing offline check does not establish current ownership, connectivity,
+driver support or post-change health. Snapshots can become stale; repeat the
+live checks before applying anything. While management is VPN-only, use this
+mode for preparation and defer network changes until independent management
+access is available.
