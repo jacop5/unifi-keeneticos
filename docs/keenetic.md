@@ -1206,3 +1206,20 @@ status is also unsupported; an explicit disabled status ignores stale table
 entries. Malformed status values reject planning. Tests verify these requests
 cannot prepare application. No private-PSK enforcement support or live client
 validation is claimed.
+
+### Follow-up DNS and client-test readiness (2026-11-23)
+
+A Mac-side resolver check failed for `example.com` but returned an IPv4 answer
+for `www.apple.com`; VPN-scoped resolvers were present. The earlier single-domain
+failure therefore does not establish a general router/test-WLAN DNS outage.
+No DNS/VPN setting was changed and the responsible resolver was not isolated.
+
+A repeat client test exposed that a successful macOS join command can precede
+IPv4 readiness. The subsequent attempt used a bounded address wait and required
+native AP6 authentication evidence before HTTPS. DHCP became ready, but the SSH
+connection closed during native verification, so HTTPS was not attempted and
+no success was counted. Both attempts removed the test preference and restored
+Wi-Fi power to on; Ethernet remained active and the controller remained
+connected/adopted. Future checks must distinguish join acknowledgement, DHCP
+readiness, native association and a device-bound TLS connection rather than
+using any earlier step as proof of the next.
