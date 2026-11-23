@@ -957,5 +957,9 @@ Missing, malformed, stale or unrelated PID records return 3. It honors the
 configured PID path and never signals a process or changes router state.
 Shell regression tests cover live, missing, malformed, zombie and reused-PID
 cases. This is process status, not proof of controller connectivity or WLAN
-health; those checks remain separate. Hardware validation of this new status
-subcommand is pending.
+health; those checks remain separate. Hardware validation on the Titan passed on 2026-11-23 using a private script
+copy pointed at the lab executable: live status returned 0; stale, unrelated
+(the SSH shell) and malformed PID records returned 3. The private PID file
+was restored to the live agent afterwards. No process was stopped or signalled,
+and the real controller remained connected/adopted. The installed service
+was not replaced.
