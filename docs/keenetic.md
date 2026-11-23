@@ -1403,3 +1403,38 @@ both native WPA2/WPA3 flags, checks reversible preparation, rejects missing
 WPA2 or forced-PMF readback, and preserves ignored DTIM/U-APSD diagnostics.
 The full race suite passes. This fixture records the existing observed client
 result rather than claiming a second live apply or WPA2-only client test.
+
+### Experimental native WPA2 fast roaming
+
+`-experimental-ft-domains PATH` opts into a restricted native FT translation.
+The JSON file maps a controller SSID to an explicit two-alphanumeric-symbol
+Keenetic mobility domain, for example:
+
+```json
+{"UKN-Test-FT": "AB"}
+```
+
+The service equivalent is `EXPERIMENTAL_FT_DOMAINS='/absolute/path/domains.json'`;
+its default is empty. It does not enable `APPLY`. Without a mapping, enabled
+FT requests remain unsupported. Existing explicit FT-disable behavior remains.
+The experimental domain is operator-selected; the daemon does not derive or
+infer a domain compatible with native UniFi APs. The CLI reference permits two
+ASCII symbols; this implementation restricts them to alphanumeric characters
+so the command needs no quoting. Domains must be unique per SSID in the file.
+
+For enable, exactly one mapped WLAN on each band must have the same SSID,
+WPA2 personal key, effective PMF mode and native bridge, with FT requested on
+both. Both must be enabled and have no enabled WLAN schedule. Single-band,
+mismatched, scheduled, open/enterprise and WPA3 pairs remain unsupported.
+Other existing unsupported-setting checks continue to block the entire plan.
+The native command sequence sets the explicit MDID, disables over-the-DS mode
+and enables FT over the air after both WLANs' ordinary settings are configured.
+The transaction layer retains prior domain/transport/enable state and checks
+native readback. WLAN-test mode retains non-primary-slot and test-SSID guards.
+
+Offline tests cover opt-in/default behavior, matching/mismatching pairs,
+PMF/bridge requirements, domain validation, command ordering, exact preimages,
+stale readback and service argument forwarding. Full race tests, vet and both
+MIPS builds pass. This implementation has not yet been applied live: neither
+successful FT reassociation nor roaming between Keenetic/UniFi devices is
+established. The existing Titan lab agent remains unchanged and log-only.

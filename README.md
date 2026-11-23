@@ -61,7 +61,7 @@ Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.6
 | Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
-| Fast roaming | Explicit disable implemented with readback/rollback; enable remains unsupported |
+| Fast roaming | Explicit disable implemented; experimental opt-in for matched dual-band WPA2 with explicit native domain, rollback/readback tested offline; roaming unverified |
 | BSS transition (802.11v) | Enabled requests explicitly unsupported; per-AP 802.11k RRM is not treated as equivalent |
 | VLAN/uplink creation, mesh, guest portal, scanning, traffic shaping | Not ported; unmapped VLANs are explicitly rejected |
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |

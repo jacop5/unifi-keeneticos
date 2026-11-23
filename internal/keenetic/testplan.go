@@ -14,6 +14,11 @@ import (
 // non-primary AP slots. Radio-wide and unrelated WLAN settings never enter
 // the planner. Only separately named UKN-Test SSIDs can be provisioned.
 func BuildWLANTestPlan(text string, slots map[string]string) (Plan, error) {
+	return BuildWLANTestPlanWithFT(text, slots, nil)
+}
+
+// BuildWLANTestPlanWithFT retains all test scoping with explicit FT domains.
+func BuildWLANTestPlanWithFT(text string, slots, domains map[string]string) (Plan, error) {
 	text, err := normalizeScheduleWindows(text)
 	if err != nil {
 		return Plan{}, err
@@ -57,7 +62,7 @@ func BuildWLANTestPlan(text string, slots map[string]string) (Plan, error) {
 	for _, key := range keys {
 		fmt.Fprintf(&selected, "%s=%s\n", key, cfg[key])
 	}
-	p, err := BuildPlan(selected.String(), activeSlots)
+	p, err := BuildPlanWithOptions(selected.String(), activeSlots, PlannerOptions{FTDomains: domains})
 	if err != nil {
 		return p, err
 	}

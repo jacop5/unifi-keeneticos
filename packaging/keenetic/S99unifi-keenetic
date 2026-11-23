@@ -14,6 +14,7 @@ EXPERIMENTAL_SAE=0
 REPORT_UPGRADE_VERSION=0
 SLOTS=''
 NETWORKS=''
+EXPERIMENTAL_FT_DOMAINS=''
 STATE_DIR='/opt/var/lib/unifi-keenetic'
 PID_FILE='/opt/var/run/unifi-keenetic.pid'
 config=${UKN_CONFIG:-/opt/etc/unifi-keenetic.conf}
@@ -45,6 +46,10 @@ case "${1:-}" in
   if [ -n "$NETWORKS" ]; then
    [ -r "$NETWORKS" ] || { printf '%s\n' 'NETWORKS file is not readable' >&2; exit 1; }
    set -- "$@" -networks "$NETWORKS"
+  fi
+  if [ -n "$EXPERIMENTAL_FT_DOMAINS" ]; then
+   [ -r "$EXPERIMENTAL_FT_DOMAINS" ] || { printf '%s\n' 'EXPERIMENTAL_FT_DOMAINS file is not readable' >&2; exit 1; }
+   set -- "$@" -experimental-ft-domains "$EXPERIMENTAL_FT_DOMAINS"
   fi
   [ "$APPLY" = 0 ] || set -- "$@" -apply
   [ "$WLAN_TEST_ONLY" = 0 ] || set -- "$@" -wlan-test-only

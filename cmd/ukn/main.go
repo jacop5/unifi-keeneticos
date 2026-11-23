@@ -47,6 +47,7 @@ func main() {
 	planFile := flag.String("plan", "", "print a redacted plan for a saved UniFi system_cfg and exit")
 	slotsFile := flag.String("slots", "", "JSON mapping of UniFi WLAN indexes to Keenetic AP interface IDs")
 	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
+	ftDomainsFile := flag.String("experimental-ft-domains", "", "JSON SSID-to-native-MDID map for experimental matched dual-band WPA2 FT; no UniFi interoperability claim")
 	preflightRunning := flag.String("preflight-running", "", "with -plan, validate rollback preparation against a saved native running-config; no router access")
 	showBuild := flag.Bool("build-info", false, "print local executable build metadata as JSON and exit; no router or controller access")
 	experimentalSAE := flag.Bool("experimental-sae", false, "advertise only the controller SAE radio capability for WPA3 testing; client interoperability unverified")
@@ -85,11 +86,21 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	ftDomains := map[string]string{}
+	if *ftDomainsFile != "" {
+		b, err := os.ReadFile(*ftDomainsFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.Unmarshal(b, &ftDomains); err != nil {
+			log.Fatal("invalid FT domains JSON")
+		}
+	}
 	buildPlan := func(text string, slots map[string]string) (keenetic.Plan, error) {
 		if *wlanTestOnly {
-			return keenetic.BuildWLANTestPlan(text, slots)
+			return keenetic.BuildWLANTestPlanWithFT(text, slots, ftDomains)
 		}
-		return keenetic.BuildPlanWithNetworks(text, slots, networks)
+		return keenetic.BuildPlanWithOptions(text, slots, keenetic.PlannerOptions{Networks: networks, FTDomains: ftDomains})
 	}
 	if *listModels {
 		for _, m := range models.All() {

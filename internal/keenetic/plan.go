@@ -56,13 +56,26 @@ func BuildPlan(text string, slots map[string]string) (Plan, error) {
 // BuildPlanWithNetworks maps VLAN IDs to operator-provisioned native bridges.
 // It never creates an uplink, DHCP service, bridge, or management network.
 func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan, error) {
+	return BuildPlanWithOptions(text, slots, PlannerOptions{Networks: networks})
+}
+
+// PlannerOptions requires operator-owned native resources; none are inferred.
+type PlannerOptions struct {
+	Networks  map[string]string
+	FTDomains map[string]string // SSID -> explicit two-alphanumeric-symbol native MDID.
+}
+
+func BuildPlanWithOptions(text string, slots map[string]string, options PlannerOptions) (Plan, error) {
+	if err := validateFTDomains(options.FTDomains); err != nil {
+		return Plan{}, err
+	}
 	text, err := normalizeScheduleWindows(text)
 	if err != nil {
 		return Plan{}, err
 	}
 	cfg := translate.ParseCfg(text)
 	p := Plan{}
-	bridges, unsupported, err := resolveNetworks(cfg, networks)
+	bridges, unsupported, err := resolveNetworks(cfg, options.Networks)
 	if err != nil {
 		return p, err
 	}
@@ -157,6 +170,7 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 			}
 		}
 	}
+	var ftCommands []Command
 	var ids []string
 	for key := range cfg {
 		if strings.HasPrefix(key, "wireless.") && strings.HasSuffix(key, ".ssid") {
@@ -394,7 +408,14 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		case "disabled":
 			add("interface " + target + " no ft enable")
 		case "enabled":
-			p.Unsupported = append(p.Unsupported, prefix+"fast-roaming")
+			domain := options.FTDomains[ssid]
+			if domain == "" || !matchingFTPair(cfg, slots, bridges, ssid) {
+				p.Unsupported = append(p.Unsupported, prefix+"fast-roaming")
+			} else {
+				for _, setting := range []string{"ft mdid " + domain, "no ft otd", "ft enable"} {
+					ftCommands = append(ftCommands, Command{Text: "interface " + target + " " + setting})
+				}
+			}
 		default:
 			return p, fmt.Errorf("invalid fast-roaming status")
 		}
@@ -411,6 +432,8 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		add("interface " + target + " " + action)
 	}
+	// Configure both members before enabling their shared FT domain.
+	p.Commands = append(p.Commands, ftCommands...)
 	var missing []string
 	for id, target := range slots {
 		if cfg["wireless."+id+".ssid"] == "" {

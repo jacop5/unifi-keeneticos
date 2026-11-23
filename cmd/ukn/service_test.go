@@ -28,6 +28,8 @@ func TestEntwareServiceOptions(t *testing.T) {
 	}{
 		{"defaults", "", true, nil},
 		{"experimental SAE", "EXPERIMENTAL_SAE=1\n", true, []string{"-experimental-sae"}},
+		{"experimental FT mapping", "EXPERIMENTAL_FT_DOMAINS='" + slots + "'\n", true, []string{"-experimental-ft-domains", slots}},
+		{"missing FT mapping", "EXPERIMENTAL_FT_DOMAINS='/missing-ukn-ft'\n", false, nil},
 		{"invalid SAE", "EXPERIMENTAL_SAE=yes\n", false, nil},
 		{"custom state", "STATE_DIR='/tmp/private state'\nPID_FILE='/tmp/private pid/agent.pid'\n", true, []string{"-state", "/tmp/private state"}},
 		{"relative state", "STATE_DIR=relative\n", false, nil},
@@ -69,7 +71,7 @@ set -- start
 				}
 			}
 			if tc.name == "defaults" {
-				for _, flag := range []string{"-apply", "-wlan-test-only", "-led-control", "-networks", "-slots", "-report-upgrade-version", "-experimental-sae"} {
+				for _, flag := range []string{"-apply", "-wlan-test-only", "-led-control", "-networks", "-slots", "-report-upgrade-version", "-experimental-sae", "-experimental-ft-domains"} {
 					if strings.Contains(string(out), "ARG:"+flag+"\n") {
 						t.Fatalf("default service enabled %s", flag)
 					}
