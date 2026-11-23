@@ -1393,3 +1393,13 @@ comment lines; the initial byte comparison differed due to that formatting.
 This comparison includes both primary WLANs and shared radios. Ethernet
 retained the controller address. The lab remains log-only with no apply or
 experimental-SAE flag and no pending rollback journal.
+
+The observed transition-mode controller shape is retained as a reduced,
+whitelisted regression fixture in `internal/keenetic/testdata/`. SSIDs and keys
+are synthetic; unrelated WLANs, identities and network configuration were not
+copied. It preserves the observed SAE-only key-management token alongside
+transition enabled and optional PMF on both bands. The regression requires
+both native WPA2/WPA3 flags, checks reversible preparation, rejects missing
+WPA2 or forced-PMF readback, and preserves ignored DTIM/U-APSD diagnostics.
+The full race suite passes. This fixture records the existing observed client
+result rather than claiming a second live apply or WPA2-only client test.
