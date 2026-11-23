@@ -23,12 +23,16 @@ func preflightPlan(plan keenetic.Plan, running string, slots map[string]string, 
 }
 
 // Reject conflicting modes before any mode dispatch or native command runs.
-func validateOfflineMode(snapshot, plan string, modes map[string]bool) error {
+func validateOfflineMode(snapshot, plan string, modes map[string]bool, labels ...string) error {
+	label := "-preflight-running"
+	if len(labels) > 0 {
+		label = labels[0]
+	}
 	if snapshot == "" {
 		return nil
 	}
 	if plan == "" {
-		return fmt.Errorf("-preflight-running requires -plan")
+		return fmt.Errorf("%s requires -plan", label)
 	}
 	var conflicts []string
 	for name, enabled := range modes {
@@ -38,7 +42,7 @@ func validateOfflineMode(snapshot, plan string, modes map[string]bool) error {
 	}
 	sort.Strings(conflicts)
 	if len(conflicts) > 0 {
-		return fmt.Errorf("-preflight-running cannot be combined with -%s", conflicts[0])
+		return fmt.Errorf("%s cannot be combined with -%s", label, conflicts[0])
 	}
 	return nil
 }

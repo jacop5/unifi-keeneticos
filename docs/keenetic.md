@@ -1250,3 +1250,17 @@ cover malformed values and intact valid translations. This validation does
 not establish client-isolation enforcement; that still needs associated-client
 testing. Locate remains unsupported: the inspected guide provides LED role
 bindings and shutdown control, not a direct native Locate blink operation.
+
+`-plan-json` with `-plan` emits a schema-version-1 JSON report for tooling:
+redacted command strings, unsupported settings, `planner_supported`, ACL target/
+policy/client-count summaries and schedule actions. Raw credential-bearing
+command fields and ACL client identities are not serialized. It can combine
+with offline `-preflight-running`, reporting whether that check ran and its
+reversible-change count. Without preflight those fields are false/null.
+
+JSON planning rejects conflicting action/probe/recovery modes before dispatch.
+Unsupported settings remain inspectable in the JSON report; they do not become
+applicable merely because JSON encoding succeeds. Planning/preflight errors
+still return nonzero with diagnostics on stderr. The schema is a diagnostic
+interface, not a claim of native health or support for unknown controller
+settings. Tests cover redaction and built-command JSON/action-mode behavior.

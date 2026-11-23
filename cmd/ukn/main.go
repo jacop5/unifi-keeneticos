@@ -50,13 +50,20 @@ func main() {
 	preflightRunning := flag.String("preflight-running", "", "with -plan, validate rollback preparation against a saved native running-config; no router access")
 	showBuild := flag.Bool("build-info", false, "print local executable build metadata as JSON and exit; no router or controller access")
 	experimentalSAE := flag.Bool("experimental-sae", false, "advertise only the controller SAE radio capability for WPA3 testing; client interoperability unverified")
+	jsonPlan := flag.Bool("plan-json", false, "with -plan, print a redacted structured plan without router access")
 	flag.Parse()
-	if err := validateOfflineMode(*preflightRunning, *planFile, map[string]bool{
+	offlineModes := map[string]bool{
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
 		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl,
 		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild,
-	}); err != nil {
+	}
+	if err := validateOfflineMode(*preflightRunning, *planFile, offlineModes); err != nil {
 		log.Fatal(err)
+	}
+	if *jsonPlan {
+		if err := validateOfflineMode("requested", *planFile, offlineModes, "-plan-json"); err != nil {
+			log.Fatal(err)
+		}
 	}
 	if *showBuild {
 		info, _ := debug.ReadBuildInfo()
@@ -120,6 +127,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		var preflightChanges *int
 		if *preflightRunning != "" {
 			running, err := os.ReadFile(*preflightRunning)
 			if err != nil {
@@ -129,7 +137,16 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("offline preflight passed: %d reversible changes; no router commands executed\n", changes)
+			preflightChanges = &changes
+			if !*jsonPlan {
+				fmt.Printf("offline preflight passed: %d reversible changes; no router commands executed\n", changes)
+			}
+		}
+		if *jsonPlan {
+			if err := json.NewEncoder(os.Stdout).Encode(redactedPlan(plan, preflightChanges)); err != nil {
+				log.Fatal(err)
+			}
+			return
 		}
 		for _, command := range plan.Commands {
 			fmt.Println(command)
