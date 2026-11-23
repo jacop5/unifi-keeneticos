@@ -78,7 +78,7 @@ aaa.3.bss_transition=disabled
 		t.Fatal(err)
 	}
 	for _, target := range []string{"WifiMaster0/AccessPoint6", "WifiMaster0/AccessPoint5"} {
-		cmd := exec.Command(python, checker, path, "--ap", target)
+		cmd := exec.Command(python, checker, path, "--ap", target, "--require-no-ignored-settings")
 		cmd.Env = append(os.Environ(), "PYTHONDONTWRITEBYTECODE=1")
 		out, err := cmd.CombinedOutput()
 		if (err == nil) != (target == slots["3"]) {

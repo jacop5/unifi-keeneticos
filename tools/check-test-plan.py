@@ -6,13 +6,15 @@ import json
 import re
 
 
-def check(report, aps, bridge):
+def check(report, aps, bridge, require_no_ignored=False):
     if not aps or any(not re.fullmatch(r'WifiMaster[01]/AccessPoint[1-6]', ap) for ap in aps):
         raise ValueError('explicit non-primary test APs required')
     if not re.fullmatch(r'Bridge[0-9]+', bridge):
         raise ValueError('invalid bridge')
     if report.get('schema_version') != 1 or report.get('planner_supported') is not True or report.get('unsupported') != [] or report.get('preflight_passed') is not True:
         raise ValueError('supported, preflighted schema-1 plan required')
+    if require_no_ignored and report.get('ignored_settings') != []:
+        raise ValueError('explicit empty ignored_settings required for strict review')
     commands = report.get('commands')
     targets = report.get('command_targets')
     if not isinstance(commands, list) or not isinstance(targets, list) or len(commands) != len(targets):
@@ -42,10 +44,12 @@ def main():
     parser.add_argument('plan')
     parser.add_argument('--ap', action='append', required=True)
     parser.add_argument('--bridge', default='Bridge0')
+    parser.add_argument('--require-no-ignored-settings', action='store_true',
+                        help='also reject known untranslated settings or missing diagnostics')
     args = parser.parse_args()
     with open(args.plan) as stream:
         report = json.load(stream)
-    check(report, set(args.ap), args.bridge)
+    check(report, set(args.ap), args.bridge, args.require_no_ignored_settings)
     print('Test-interface scope passed; no commands executed. Revalidate live ownership before applying.')
 
 

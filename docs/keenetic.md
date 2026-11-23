@@ -1353,3 +1353,14 @@ mutation scope, not implementation of ignored requests. Regression tests cover
 scoping, unchanged command output and separate JSON semantics; race tests, vet
 and both MIPS builds pass. The running Titan agent was not replaced by this
 change and no live settings were applied.
+
+The offline scope checker accepts optional `--require-no-ignored-settings`.
+This also requires an explicit empty `ignored_settings` array: known ignored
+requests, missing diagnostics and malformed diagnostics fail strict review.
+The default remains scope-only for older reports. This is a check against the
+planner's known omissions, not proof that every unknown controller field is
+implemented. The cross-tool Go integration test now exercises the strict flag
+on generated JSON. Python tests cover populated/missing/malformed diagnostics;
+the focused cross-tool and Python tooling tests pass. No router settings were
+changed. A read-only `ndmc` test-AP query ending in `?` was rejected as an
+unknown command, so that help syntax did not establish extra native controls.

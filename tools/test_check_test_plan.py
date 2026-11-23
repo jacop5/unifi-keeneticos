@@ -27,6 +27,21 @@ class ScopeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 checker.check(bad, {ap}, 'Bridge0')
 
+    def test_strict_review_requires_explicit_no_ignored_settings(self):
+        ap = 'WifiMaster0/AccessPoint6'
+        report = dict(schema_version=1, planner_supported=True, unsupported=[],
+                      preflight_passed=True, commands=[], command_targets=[],
+                      ignored_settings=[])
+        checker.check(report, {ap}, 'Bridge0', require_no_ignored=True)
+        for ignored in [['wireless.3.dtim_period'], None, '', False, {}]:
+            report['ignored_settings'] = ignored
+            checker.check(report, {ap}, 'Bridge0')  # Scope-only review remains distinct.
+            with self.assertRaises(ValueError):
+                checker.check(report, {ap}, 'Bridge0', require_no_ignored=True)
+        del report['ignored_settings']
+        with self.assertRaises(ValueError):
+            checker.check(report, {ap}, 'Bridge0', require_no_ignored=True)
+
 
 if __name__ == '__main__':
     unittest.main()
