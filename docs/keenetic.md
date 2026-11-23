@@ -1310,3 +1310,13 @@ preflight against saved private WPA3 controller/native snapshots passed with
 file for this test; no controller profile or native setting changed. This
 validates execution/preflight on MIPS, not a new live WPA3 apply. The existing
 log-only agent remains running; the staged candidate was not installed.
+
+The temporary Titan agent was then switched to the verified `291d186`
+executable in log-only WLAN-test mode, retaining adoption/state and slot
+mappings. Its command line excludes apply, LED control and experimental SAE.
+It received the controller WLAN configuration and explicitly reported the
+original profile's enabled BSS transition as unsupported. The process remained
+live after its launch SSH session closed, with no pending rollback journal.
+This was a temporary agent restart, not an installed-service update or a
+Wi-Fi configuration apply. The native shell lacks `nohup`; the failed first
+launch was corrected using inherited SIGHUP ignore and redirected input/output.
