@@ -9,9 +9,12 @@ import (
 )
 
 func TestJSONPlanRedactsCredentialCommands(t *testing.T) {
-	p := keenetic.Plan{Commands: []keenetic.Command{{Text: "private-password", Secret: true}, {Text: "interface WifiMaster0/AccessPoint6 down"}}, Unsupported: []string{"wireless.1.security"}, AccessLists: []keenetic.AccessList{{Target: "WifiMaster0/AccessPoint6", Policy: "deny", MACs: []string{"02:00:00:00:00:01"}}}}
+	p := keenetic.Plan{Commands: []keenetic.Command{{Text: "interface WifiMaster0/AccessPoint6 authentication wpa-psk private-password", Secret: true}, {Text: "interface WifiMaster0/AccessPoint6 down"}}, Unsupported: []string{"wireless.1.security"}, AccessLists: []keenetic.AccessList{{Target: "WifiMaster0/AccessPoint6", Policy: "deny", MACs: []string{"02:00:00:00:00:01"}}}}
 	n := 2
 	report := redactedPlan(p, &n)
+	if report["command_targets"].([]string)[0] != "WifiMaster0/AccessPoint6" {
+		t.Fatal("redaction lost safe target metadata")
+	}
 	data, err := json.Marshal(report)
 	if err != nil {
 		t.Fatal(err)

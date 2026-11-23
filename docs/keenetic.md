@@ -1264,3 +1264,19 @@ applicable merely because JSON encoding succeeds. Planning/preflight errors
 still return nonzero with diagnostics on stderr. The schema is a diagnostic
 interface, not a claim of native health or support for unknown controller
 settings. Tests cover redaction and built-command JSON/action-mode behavior.
+
+JSON plans include an additive `command_targets` array aligned with redacted
+commands, so tooling can inspect a credential command's interface without
+seeing its key. `python3 tools/check-test-plan.py PLAN.json --ap
+WifiMaster0/AccessPoint6 --ap WifiMaster1/AccessPoint6` checks a generated,
+supported and preflighted report against those explicit non-primary slots.
+It rejects shared-radio/primary/out-of-scope targets and permits only test AP
+membership commands on the selected bridge (`--bridge`, default Bridge0).
+ACL and schedule targets must also be in scope. It executes nothing and adds
+no protected SSID names to the deployment daemon.
+
+This is a diagnostic check on a locally generated report, not authentication
+of arbitrary JSON or proof of live resource ownership, timer exclusivity,
+network isolation or post-change health. Regenerate the report from current
+private snapshots and retain all guarded-apply checks. Tests cover redacted
+credential target metadata, out-of-scope targets and missing preflight status.
