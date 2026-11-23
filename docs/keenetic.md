@@ -984,3 +984,13 @@ revision `d105fa1bc57273a73d105e7273ff85bcd42b99c4` reported `linux/mipsle`,
 `b0a481a31906b6c4711945c8e6aa4bb6490105a57e3c9b055e99403695b127a3`.
 The binary ran only from a private lab path; the existing log-only agent
 was not replaced.
+
+Optional DHCP/active-host enrichment runs only after required interface,
+association, ARP and management-identity checks. Both optional queries share
+a two-second child-context budget, bounded further by the caller's deadline.
+A slow or unavailable metadata query is skipped without discarding the core
+snapshot; if DHCP consumes the budget, active-host fallback may also be absent
+for that sample. This prevents optional queries from taking the remaining
+required-interface collection budget. Regression tests check query ordering,
+deadline presence, enrichment precedence and unavailable-query behavior.
+Hardware behavior with deliberately delayed metadata queries is untested.

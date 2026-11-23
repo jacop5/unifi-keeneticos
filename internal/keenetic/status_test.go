@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestFullCollection(t *testing.T) {
@@ -21,7 +22,24 @@ func TestFullCollection(t *testing.T) {
 	responses["show interface"] += "Interface, name = \"1\"\n id: GigabitEthernet0/0\n type: Port\n link: up\n speed: 1000\n duplex: full\n"
 	responses["show ip hotspot"] = "host:\n mac: 02:00:00:00:00:02\n ip: 192.0.2.2\n hostname: Active-Host\n link: up\n"
 	responses["show ip dhcp bindings"] = "lease:\n mac: 02:00:00:00:00:02\n ip: 192.0.2.2\n hostname: Example-Client\n expires: 60\n"
-	run := func(_ context.Context, c string) ([]byte, error) {
+	requiredDone := false
+	run := func(queryCtx context.Context, c string) ([]byte, error) {
+		if c == "show version" {
+			requiredDone = false
+		}
+		if c == "show interface" {
+			requiredDone = true
+		}
+		if c == "show ip dhcp bindings" || c == "show ip hotspot" {
+			if !requiredDone {
+				t.Fatal("optional query ran before required interface collection")
+			}
+			deadline, ok := queryCtx.Deadline()
+			if !ok || time.Until(deadline) > 2*time.Second {
+				t.Fatal("optional query has no bounded enrichment budget")
+			}
+		}
+
 		v, ok := responses[c]
 		if !ok {
 			return nil, fmt.Errorf("unexpected query")

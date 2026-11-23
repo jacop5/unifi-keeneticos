@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var ansi = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
@@ -124,27 +125,6 @@ func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
 		return nil, err
 	}
 	s.ARP = ParseARP(string(b))
-	// DHCP may be unavailable when this device is an AP or uses an external
-	// DHCP server. Optional names must not prevent radio/client collection.
-	if leases, err := run(ctx, "show ip dhcp bindings"); err == nil {
-		s.Hostnames = ParseDHCPHostnames(string(leases))
-	}
-	if hosts, err := run(ctx, "show ip hotspot"); err == nil {
-		for mac, ip := range ParseActiveHostIPs(string(hosts)) {
-			if s.ARP[mac] == "" {
-				s.ARP[mac] = ip
-			}
-		}
-
-		if s.Hostnames == nil {
-			s.Hostnames = map[string]string{}
-		}
-		for mac, name := range ParseActiveHostnames(string(hosts)) {
-			if s.Hostnames[mac] == "" {
-				s.Hostnames[mac] = name
-			}
-		}
-	}
 	b, err = run(ctx, "show interface")
 	if err != nil {
 		return nil, err
@@ -161,6 +141,30 @@ func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
 	mac, macErr := net.ParseMAC(s.Home["mac"])
 	if macErr != nil || len(mac) != 6 || net.ParseIP(s.Home["address"]).To4() == nil {
 		return nil, fmt.Errorf("Bridge0 has no management MAC/IP")
+	}
+	// Required measurements are complete before optional enrichment begins.
+	optionalCtx, cancelOptional := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelOptional()
+	// DHCP may be unavailable when this device is an AP or uses an external
+	// DHCP server. Optional names must not prevent radio/client collection.
+	if leases, err := run(optionalCtx, "show ip dhcp bindings"); err == nil {
+		s.Hostnames = ParseDHCPHostnames(string(leases))
+	}
+	if hosts, err := run(optionalCtx, "show ip hotspot"); err == nil {
+		for mac, ip := range ParseActiveHostIPs(string(hosts)) {
+			if s.ARP[mac] == "" {
+				s.ARP[mac] = ip
+			}
+		}
+
+		if s.Hostnames == nil {
+			s.Hostnames = map[string]string{}
+		}
+		for mac, name := range ParseActiveHostnames(string(hosts)) {
+			if s.Hostnames[mac] == "" {
+				s.Hostnames[mac] = name
+			}
+		}
 	}
 	return s, nil
 }
