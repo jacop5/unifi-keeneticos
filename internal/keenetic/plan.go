@@ -220,6 +220,9 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 			p.AccessLists = append(p.AccessLists, *acl)
 		}
 		aaa := "aaa." + id + "."
+		if err := validateEnableStatus(cfg, aaa+"wpa3.support", aaa+"wpa3.transition"); err != nil {
+			return p, err
+		}
 		mgmt := ""
 		sae, unknownMgmt := false, false
 		for i := 1; i <= 4; i++ {

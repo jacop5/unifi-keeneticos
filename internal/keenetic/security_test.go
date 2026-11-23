@@ -134,3 +134,30 @@ aaa.1.bss_transition=enabled
 		}
 	}
 }
+
+func TestMalformedWPA3SwitchCannotDowngradeOWEToOpen(t *testing.T) {
+	open := "wireless.1.ssid=UKN-Test-OWE\nwireless.1.parent=wifi0\nwireless.1.usage=user\naaa.1.ssid=UKN-Test-OWE\naaa.1.security=open\n"
+	slots := map[string]string{"1": "WifiMaster0/AccessPoint6"}
+	for _, base := range []string{open, wlan} {
+		for _, key := range []string{"wpa3.support", "wpa3.transition"} {
+			for _, value := range []string{"enable", "true", "unknown", "enabled; reboot"} {
+				if _, err := BuildPlan(base+"aaa.1."+key+"="+value+"\n", slots); err == nil {
+					t.Fatalf("ambiguous %s=%q accepted", key, value)
+				}
+			}
+		}
+	}
+	for _, value := range []string{"enabled", "disabled", ""} {
+		p, err := BuildPlan(open+"aaa.1.wpa3.support="+value+"\n", slots)
+		if err != nil || len(p.Unsupported) != 0 {
+			t.Fatalf("valid switch rejected: %s %v", value, err)
+		}
+		text := ""
+		for _, c := range p.Commands {
+			text += c.Text + "\n"
+		}
+		if (value == "enabled") != strings.Contains(text, "interface WifiMaster0/AccessPoint6 encryption owe\n") {
+			t.Fatal("OWE/open selection changed")
+		}
+	}
+}

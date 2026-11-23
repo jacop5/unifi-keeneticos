@@ -1180,3 +1180,10 @@ SAE transition retains optional PMF unless the controller explicitly requires
 it. Unknown status/mode values reject planning. Regression tests cover stale
 values, required security modes and invalid input. These edge cases have not
 been forced on hardware; the prior valid WPA3/PMF live test remains separate.
+
+Explicit `wpa3.support` and `wpa3.transition` switches now accept only
+`enabled`/`disabled` (or absence for existing defaults). Malformed switches
+reject the plan. In particular, a misspelled OWE-enable value cannot silently
+fall through to unencrypted open-WLAN translation. Regression tests cover
+personal and open security inputs while retaining valid OWE/open behavior.
+No malformed requests were applied to hardware for this check.
