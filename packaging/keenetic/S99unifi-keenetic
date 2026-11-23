@@ -63,7 +63,7 @@ case "${1:-}" in
   attempts=0
   while [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; do
    # A zombie has exited and released its locks; its parent may reap it later.
-   if [ -r "/proc/$old_pid/status" ] && grep -q '^State:[[:space:]]*Z' "/proc/$old_pid/status"; then break; fi
+   if [ -r "/proc/$old_pid/status" ] && grep -q '^State:[[:space:]]*Z' "/proc/$old_pid/status" 2>/dev/null; then break; fi
    [ "$attempts" -lt 15 ] || { printf '%s\n' 'Daemon has not exited; refusing immediate restart' >&2; exit 1; }
    sleep 1
    attempts=$((attempts + 1))

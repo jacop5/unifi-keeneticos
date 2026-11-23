@@ -938,3 +938,15 @@ need distinct adoption listener ports and controller identities. Shell tests
 verify quoted paths containing spaces and reject relative/empty paths. These
 configuration options have not yet been exercised through a full hardware
 service restart. Existing configurations retain their original default paths.
+
+A subsequent isolated Titan lifecycle test exercised service `start`, `restart`
+and `stop`, each returning success. The script differed from the packaged
+service only in its executable path to the private lab binary; `UKN_CONFIG`
+selected private PID bookkeeping and the existing lab adoption-state directory.
+Process readback confirmed those paths and log-only flags. Restart replaced
+PID 21879 with PID 21944, and the controller retained adopted/connected status.
+The service-managed process was stopped and the ordinary private log-only
+agent restored. The installed service and its configuration were not replaced.
+A transient `/proc/PID/status` disappearance during the exit check was harmless;
+the script now suppresses that expected race diagnostic. This exercises service
+control with the lab binary, not an upgrade of the installed daemon package.
