@@ -59,7 +59,7 @@ Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.6
 | WLAN schedules | Native weekly timers and guarded recovery; controller blackout, automatic stop/start, and pause/resume verified on both Hero test bands |
 | Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
 | Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
-| Automatic client reconnect after WLAN pause | Not verified |
+| Automatic client reconnect after WLAN pause | Not observed in the Titan/Mac test; manual rejoin worked after resume; cause unresolved |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
 | Fast roaming | Explicit disable implemented; experimental opt-in for matched dual-band WPA2 with explicit native domain, guarded AP6 provisioning and 5 GHz WPA2 client authentication with FT enabled verified on Titan; actual FT reassociation/roaming unverified |
 | BSS transition (802.11v) | Enabled requests explicitly unsupported; per-AP 802.11k RRM is not treated as equivalent |

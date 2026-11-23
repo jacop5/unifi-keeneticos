@@ -1571,3 +1571,35 @@ registered-host-free preflight, exact quiesce/inverse ordering, idempotence,
 stale readback rejection and restoration to policy none. Full race tests pass.
 This adds offline coverage to the prior live enforcement observation and does
 not constitute a new live apply or individual-entry enforcement test.
+
+### Automatic reconnect observation (2026-11-24)
+
+A fresh full native backup and four-change test-only preflight preceded this
+controller pause/resume test. The supported WPA2 test profile disabled BSS
+transition temporarily; baseline guarded application passed and cleared its
+journal. The Mac joined and acquired Wi-Fi IPv4. Native association records
+identified one authenticated AP6 client. Its identity was retained privately
+on the router for equality checks, not printed or copied into the repository.
+
+Controller pause drove both test AP6 interfaces down, reduced the authenticated
+test count from one to zero, and passed guarded confirmation. Controller resume
+returned both interfaces up and passed confirmation. No second join command
+was issued during the automatic-reconnect observation. The authenticated AP6
+count remained zero through 23:45:07 UTC, more than a minute after resume
+confirmation at 23:43:49 UTC. macOS still listed the test network as a saved
+preference (rank 1, zero-based), but its current-SSID query was unavailable.
+Other saved preferences were neither printed nor changed. These observations
+do not identify why automatic reconnection did not occur.
+
+After ending the observation and returning the agent log-only, a manual join
+acquired Wi-Fi IPv4 and the native authenticated-client identity matched the
+baseline exactly. Thus the resumed SSID remained usable; automatic client
+reconnection is still not established. This is not attributed to a daemon or
+client defect without further evidence.
+
+Cleanup removed only the test SSID preference, restored Wi-Fi power on, and
+restored all checked controller test-profile fields to their saved originals.
+The complete normalized native configurations match, with both SHA-256 values
+`fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
+Both primary WLANs and shared radios are included in that comparison. The lab
+agent remains log-only and no rollback journal is pending.
