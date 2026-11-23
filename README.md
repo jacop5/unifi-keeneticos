@@ -105,7 +105,7 @@ sh tools/build-keenetic.sh mipsle
 ```
 
 Bundles include license notices and a corresponding-source snapshot with
-vendored Go dependencies. When redistributing a binary, share the complete
+vendored Go dependencies. Each build recreates the source bundle so files removed from the working tree do not survive from an older build. When redistributing a binary, share the complete
 bundle, including its source directory; see [the distribution review](docs/licensing.md).
 
 Copy the matching bundle to the router. Start with the read-only probe:

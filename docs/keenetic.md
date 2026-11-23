@@ -1603,3 +1603,23 @@ The complete normalized native configurations match, with both SHA-256 values
 `fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
 Both primary WLANs and shared radios are included in that comparison. The lab
 agent remains log-only and no rollback journal is pending.
+
+### Fresh source-bundle verification (2026-11-24)
+
+Package builds previously merged source into the existing output directory,
+which could retain files deleted from the current tree. The build script now
+copies source and vendors dependencies into a fresh temporary directory,
+replaces the generated source directory only after that succeeds, and cleans
+its temporary directory on exit. Runtime/controller state is not among the
+copied input directories.
+
+Verification deliberately placed obsolete synthetic files in both the old
+source root and vendor directory, rebuilt, and confirmed both disappeared
+with no staging directory left behind. Required source, build scripts and
+license/notice files remained present. Both MIPS packages built and passed
+their runtime SHA-256 manifests. Executables were then rebuilt from each
+bundled source tree using vendored dependencies with GOPROXY/GOSUMDB disabled
+and a separate dependency location. Both builds passed, as did the full race
+test suite run from the bundled source with offline dependency resolution.
+This verifies rebuildability and source freshness, not a bit-identical build
+or a cryptographic signature. No router settings were changed.

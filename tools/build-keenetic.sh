@@ -18,10 +18,16 @@ cp LICENSES/Go-BSD-3-Clause.txt "$output/licenses/"
 cp internal/models/NOTICE "$output/licenses/model-catalogue-MIT.txt"
 # Ship rebuildable corresponding source with the binary, not just a URL or
 # a promise of a future source offer. Exclude runtime/controller secrets.
-mkdir -p "$output/source"
-cp -R cmd internal tools packaging docs LICENSES "$output/source/"
-cp go.mod go.sum LICENSE NOTICE README.md "$output/source/"
-go mod vendor -o "$output/source/vendor"
+# Rebuild source in a fresh directory: merging into an earlier bundle can
+# retain files deleted from the current tree, including obsolete dependencies.
+source_stage=$(mktemp -d "$output/.source.XXXXXX")
+trap 'rm -rf "$source_stage"' 0
+trap 'exit 1' HUP INT TERM
+cp -R cmd internal tools packaging docs LICENSES "$source_stage/"
+cp go.mod go.sum LICENSE NOTICE README.md "$source_stage/"
+go mod vendor -o "$source_stage/vendor"
+rm -rf "$output/source"
+mv "$source_stage" "$output/source"
 # Runtime package integrity (not a signature or source-tree manifest).
 (cd "$output" && sha256sum ukn install.sh space-check.sh S99unifi-keenetic unifi-keenetic.conf LICENSE NOTICE licenses/Go-BSD-3-Clause.txt licenses/model-catalogue-MIT.txt > SHA256SUMS)
 printf 'Built %s (%s softfloat)\n' "$output" "$arch"
