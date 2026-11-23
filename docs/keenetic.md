@@ -1470,3 +1470,37 @@ because they may contain credentials; the comparison instead returned only
 hashes/counts and equality status, with the backups retained on the router.
 This establishes command acceptance and recovery on a disabled slot, not
 successful FT authentication or roaming on the enabled paired test WLANs.
+
+### Paired FT provisioning and client connectivity (2026-11-24)
+
+A fresh native backup preceded this AP6-only test. The dedicated controller
+WPA2 profile temporarily disabled BSS transition and enabled fast roaming on
+both bands. The received capture had `ft.status=enabled` for WLANs 3/4; explicit
+native domain AB was supplied through the experimental mapping file. Real
+controller configuration preflight prepared eight reversible changes, with FT
+commands following both WLANs' ordinary settings. Guarded apply passed native
+readback and controller-health confirmation and cleared its journal.
+
+The agent returned log-only before the Mac joined. The Mac obtained a Wi-Fi
+IPv4 address, and a filtered native association query reported the 5 GHz test
+AP6, authenticated yes, security `wpa2-psk`, mode `11ac`. Only these operational
+fields were returned, excluding client identities and primary-WLAN records.
+This verifies client connectivity with FT enabled; it does not prove that the
+client negotiated FT or executed an FT reassociation/roam.
+
+Cleanup removed only the test SSID preference and restored Wi-Fi power on.
+The controller's original FT-disable request was restored with BSS still off;
+a six-change preflight and guarded apply confirmed native FT disable. The
+agent then returned log-only without an FT mapping. The temporary domain was
+reset on each test AP6 with `no ft mdid`, matching the recorded baseline's
+absence of any FT settings. This explicit cleanup is needed because ordinary
+FT-disable intentionally preserves a previously configured mobility domain.
+The full original controller security/BSS profile was then restored.
+
+On-router comparison of complete native configurations, after ANSI/CR/comment
+normalization, produced matching SHA-256 values:
+`fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
+Both primary WLANs and shared radios are included. No rollback journal remains,
+the controller reports connected, secondary SAE capability words are zero,
+and the Ethernet controller address is retained. The new verified build now
+runs the lab in log-only test mode, with no apply or experimental FT/SAE flags.
