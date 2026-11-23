@@ -1623,3 +1623,24 @@ and a separate dependency location. Both builds passed, as did the full race
 test suite run from the bundled source with offline dependency resolution.
 This verifies rebuildability and source freshness, not a bit-identical build
 or a cryptographic signature. No router settings were changed.
+
+### Bounded native web-app inspection (2026-11-24)
+
+The router's public page identified `main-F2B3C5E.js`, read without login or
+configuration requests. The static asset is 6,382,901 bytes, SHA-256
+`6cb49c39d5ae4873b8977333cd75379420e82acd364eefafc84b458551a87ed8`.
+Case-insensitive searches with identifier boundaries found zero exact DTIM,
+UAPSD or APSD names in this asset. An initial unbounded `dtim` substring search
+had 42 unrelated matches such as loadTime/extendedTimeOut; those are not native
+DTIM capability evidence. Exact deauth/disassoc/kick names were also absent
+from this selected asset, without establishing that the firmware lacks them.
+
+REA parent evidence
+`ev_dfcc18d2daf004d3578c2cbb9d142b39a02c9cd6b88b13a69c23c8e5406362f3`
+retains artifact identity and the analysis limitation. Syntax parsing succeeded,
+but member-mutation analysis exceeded its alias-state limit; the application
+and semantic graphs are partial. No graph-level feature-absence conclusion is
+supported. The evidence bundle and source asset are retained locally, not
+redistributed in this repository. No JavaScript was executed. This inspection
+provided no established native translation for DTIM/U-APSD; interactive command
+discovery still needs the separate KeeneticOS login. No router settings changed.
