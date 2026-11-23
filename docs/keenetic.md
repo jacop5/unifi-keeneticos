@@ -963,3 +963,19 @@ copy pointed at the lab executable: live status returned 0; stale, unrelated
 was restored to the live agent afterwards. No process was stopped or signalled,
 and the real controller remained connected/adopted. The installed service
 was not replaced.
+
+## Identify the local executable
+
+`ukn -build-info` prints JSON containing its Go version, target OS/architecture,
+MIPS floating-point mode when available, and compiler-embedded Git revision,
+modification status and VCS timestamp. It exits before router collection,
+controller contact, state locking or recovery. Missing VCS information is
+reported as `unknown`, as can happen when rebuilding the packaged source
+outside a Git checkout. A dirty build reports its base revision and
+`modified=true`; that revision alone does not identify the changed sources.
+
+This is executable provenance, separate from both the native KeeneticOS
+version and the UniFi compatibility version (including optional update-version
+reporting). It never changes any of those versions or adoption state. Unit
+tests cover present/missing metadata, and a built host executable was checked
+for JSON output. Hardware execution of this command remains unverified.

@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"syscall"
 	"time"
@@ -47,13 +48,21 @@ func main() {
 	slotsFile := flag.String("slots", "", "JSON mapping of UniFi WLAN indexes to Keenetic AP interface IDs")
 	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
 	preflightRunning := flag.String("preflight-running", "", "with -plan, validate rollback preparation against a saved native running-config; no router access")
+	showBuild := flag.Bool("build-info", false, "print local executable build metadata as JSON and exit; no router or controller access")
 	flag.Parse()
 	if err := validateOfflineMode(*preflightRunning, *planFile, map[string]bool{
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
 		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl,
-		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels,
+		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild,
 	}); err != nil {
 		log.Fatal(err)
+	}
+	if *showBuild {
+		info, _ := debug.ReadBuildInfo()
+		if err := json.NewEncoder(os.Stdout).Encode(buildInformation(info)); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	networks := map[string]string{}
 	if *networksFile != "" {
