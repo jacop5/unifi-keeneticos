@@ -1171,3 +1171,12 @@ configuration until installation completes; edit the installed configuration
 afterwards. Older/manual bundles without the manifest must be rebuilt before
 using the updated installer. No production installation was performed for
 this change.
+
+PMF translation now validates explicit status/mode values and respects WPA2
+PMF disable even when a stale mode 2 remains in the controller configuration.
+Absent status does not independently enable PMF from the mode field, matching
+the upstream status gate. WPA3-only SAE and OWE still force required PMF;
+SAE transition retains optional PMF unless the controller explicitly requires
+it. Unknown status/mode values reject planning. Regression tests cover stale
+values, required security modes and invalid input. These edge cases have not
+been forced on hardware; the prior valid WPA3/PMF live test remains separate.

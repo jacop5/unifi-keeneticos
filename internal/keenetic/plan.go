@@ -301,12 +301,9 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		} else {
 			add("interface " + target + " no hide-ssid")
 		}
-		pmf := "no pmf"
-		if cfg[aaa+"pmf.status"] == "enabled" || sae {
-			pmf = "pmf"
-		}
-		if cfg[aaa+"pmf.mode"] == "2" || (sae && cfg[aaa+"wpa3.transition"] != "enabled") || owe {
-			pmf = "pmf force"
+		pmf, err := nativePMF(cfg[aaa+"pmf.status"], cfg[aaa+"pmf.mode"], sae, cfg[aaa+"wpa3.transition"] == "enabled", owe)
+		if err != nil {
+			return p, err
 		}
 		add("interface " + target + " " + pmf)
 		bridge := bridges[id]
@@ -379,4 +376,26 @@ func validateEnableStatus(cfg translate.Cfg, keys ...string) error {
 		}
 	}
 	return nil
+}
+
+// Explicit disable wins over stale mode values for WPA2. SAE/OWE still retain
+// the PMF required by their authentication modes.
+func nativePMF(status, mode string, sae, transition, owe bool) (string, error) {
+	switch status {
+	case "", "enabled", "disabled":
+	default:
+		return "", fmt.Errorf("invalid PMF status")
+	}
+	switch mode {
+	case "", "0", "1", "2":
+	default:
+		return "", fmt.Errorf("invalid PMF mode")
+	}
+	if owe || (sae && !transition) || (status == "enabled" && mode == "2") {
+		return "pmf force", nil
+	}
+	if status == "enabled" || sae {
+		return "pmf", nil
+	}
+	return "no pmf", nil
 }
