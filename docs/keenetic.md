@@ -1448,3 +1448,25 @@ remains down, then intentional health-check failure exercises watched rollback.
 The final interface block must exactly match its preimage. Offline regression
 checks scope and inverse commands; race tests and vet pass. Hardware execution
 is the next check and does not establish working client roaming.
+
+### Native FT command and rollback check (2026-11-24)
+
+A clean `e479972` MIPS little-endian softfloat build was staged with free-space
+and SHA-256 checks. A fresh full native backup preceded the FT rollback probe
+on `WifiMaster0/AccessPoint5`. The probe passed: the slot was disabled and
+SSID-free, temporary MDID/over-the-air/FT-enable settings matched readback while
+the slot stayed down, intentional health failure triggered watched recovery,
+and its complete interface block matched the preimage afterward. No probe
+journal remained. The existing main lab agent retained log-only arguments.
+
+Full before/after comparison was performed on the router after stripping ANSI
+formatting, carriage returns and generated comment lines. Both normalized
+files have 728 lines and the same SHA-256:
+`fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
+This includes both primary WLANs and shared radios. An earlier sed-based
+normalization did not remove all formatting; the corrected awk comparison
+matched. Automatic approval review rejected downloading the full backups
+because they may contain credentials; the comparison instead returned only
+hashes/counts and equality status, with the backups retained on the router.
+This establishes command acceptance and recovery on a disabled slot, not
+successful FT authentication or roaming on the enabled paired test WLANs.
