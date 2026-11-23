@@ -978,4 +978,9 @@ This is executable provenance, separate from both the native KeeneticOS
 version and the UniFi compatibility version (including optional update-version
 reporting). It never changes any of those versions or adoption state. Unit
 tests cover present/missing metadata, and a built host executable was checked
-for JSON output. Hardware execution of this command remains unverified.
+for JSON output. Hardware execution passed on the Titan on 2026-11-23. A clean build from
+revision `d105fa1bc57273a73d105e7273ff85bcd42b99c4` reported `linux/mipsle`,
+`gomips=softfloat` and `modified=false`. Its SHA-256 was
+`b0a481a31906b6c4711945c8e6aa4bb6490105a57e3c9b055e99403695b127a3`.
+The binary ran only from a private lab path; the existing log-only agent
+was not replaced.
