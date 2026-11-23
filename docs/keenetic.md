@@ -1034,4 +1034,9 @@ the helper. Default SSH user/port are root/222 and can be overridden.
 A failed upload or hash check prints the candidate path for inspection; do not
 execute it. Space checks are not reservations against concurrent writers.
 Automated tests cover low-space refusal before upload, free-space parsing and
-scoped unique paths. This helper has not yet performed a hardware transfer.
+scoped unique paths. Hardware staging passed on the Titan on 2026-11-23: a 9502911-byte build was
+uploaded only after the headroom check and its SHA-256 matched the host copy.
+The unique candidate was never executed or installed and was removed explicitly
+after verification, restoring 49212 KiB free in `/tmp`. The original log-only
+agent remained running and connected/adopted. Low-space refusal is covered by
+an automated test without filling the production router's filesystem.
