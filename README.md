@@ -31,19 +31,21 @@ Their existing notices and the [model catalogue's MIT notice](internal/models/NO
 | Device | KeeneticOS | Go target | Verified |
 | --- | --- | --- | --- |
 | Hero DSL KN-2410 | 5.1.5 | linux/mips, softfloat, **big-endian** | Adoption, encrypted informs, telemetry, isolated WPA2 WLAN provisioning, client connectivity, pause/resume, daemon and controller restart recovery |
-| Titan KN-1810 (tested unit) | 5.1.9 | linux/mipsle, softfloat, **little-endian** | Read-only collection, Entware installation, immediate rollback and detached crash recovery on an unused disabled AP slot |
+| Titan KN-1810 (tested unit) | 5.1.9 | linux/mipsle, softfloat, **little-endian** | Adoption/reconnection, isolated WPA2 provisioning and pause/resume, 2.4/5 GHz client traffic, rollback/watchdog recovery, Ethernet telemetry and private service lifecycle tests |
 
-Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in OrbStack. Do not infer CPU byte order from `uname -m`: both tested routers report `mips`. Verify the actual binary format/Entware architecture for your device. Other models, layouts and firmware versions are unverified.
+Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in OrbStack. Do not infer CPU byte order from `uname -m`: both tested routers report `mips`. Verify the actual binary format/Entware architecture for your device. Other models, layouts and firmware versions are unverified.
 
 ## Feature status on Keenetic
 
 | Feature | Status |
 | --- | --- |
-| Adoption, saved controller key, AES-GCM informs | Verified live on Hero and Titan; retained across agent restart; controller restart recovery verified on Hero |
+| Adoption, saved controller key, AES-GCM informs | Verified live on Hero and Titan; retained across agent restart; controller restart/reconnection verified on both |
 | SSID, WPA2 personal, LAN bridge membership | Verified live on explicit non-primary AP slots |
 | WLAN pause/resume | Verified live; controller omission of paused WLANs handled in test-only mode |
 | Client authentication, DHCP and internet access | Titan 2.4/5 GHz Mac authentication, router-issued IPv4 leases and Wi-Fi-bound HTTPS verified; automatic reconnection remains unverified |
 | Client IP, band, signal, width, rates and throughput | Observed in UniFi and compared with NDM data |
+| Client names, counts and power-save status | Titan controller API count consistency, DHCP hostname equality and active power-state reporting verified; sleeping-client transitions untested |
+| Active-host name/IP fallback | Implemented with ARP/DHCP precedence and offline/conflict filtering; external-DHCP/AP-mode live validation outstanding |
 | Uptime, memory, CPU and radio/client telemetry | Implemented; basic live reporting verified, not every field is complete |
 | Physical Ethernet link status | Titan's five ports received by the controller with measured link speed/duplex; no port configuration or inferred uplink roles |
 | Private rollback journal, inverse commands, watchdog, startup recovery | Implemented; immediate failure and detached crash recovery verified on Titan |
@@ -60,12 +62,18 @@ Live Hero testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in Orb
 | Automatic client reconnect after WLAN pause | Not verified |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
 | Fast roaming | Explicit disable implemented with readback/rollback; enable remains unsupported |
+| BSS transition (802.11v) | Enabled requests explicitly unsupported; per-AP 802.11k RRM is not treated as equivalent |
 | VLAN/uplink creation, mesh, guest portal, scanning, traffic shaping | Not ported; unmapped VLANs are explicitly rejected |
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
+| Service lifecycle and status | Private Titan start/restart/stop and live/stale/unrelated PID status verified; installed-package upgrade remains untested |
+| Offline preflight | Saved configuration/rollback preparation tested against a fresh Titan snapshot and followed by guarded AP6 apply |
+| Executable provenance | `-build-info` verified on Titan with clean revision, architecture and matching binary hash |
 
 Radio telemetry reports native channel widths without guessing antenna or transmit-power capabilities. UniFi's device overview was verified live at 40 MHz on 2.4 GHz and 80 MHz on 5 GHz, matching the Hero's native measurements. VLAN configurations require explicit bridge mappings and complete membership information; they never fall back to Home. See [VLAN setup](docs/keenetic.md#vlan-wlan-binding).
+
+The latest Titan client run verified counts and hostname ingestion, but its HTTPS check stopped at DNS resolution; earlier successful Wi-Fi-bound HTTPS tests are separate evidence. See the dated [live-test notes](docs/keenetic.md) for the scope of each result.
 
 Unknown controller settings are not comprehensively classified. A successful adoption does not establish support for every control exposed by the selected UniFi model. This daemon never installs Ubiquiti firmware.
 
@@ -123,9 +131,10 @@ Then start or stop it:
 ```sh
 /opt/etc/init.d/S99unifi-keenetic start
 /opt/etc/init.d/S99unifi-keenetic stop
+/opt/etc/init.d/S99unifi-keenetic status
 ```
 
-The packaged service starts in **log-only mode**: it reports status and receives controller configuration but does not apply it. `ukn -models` lists available identities; `-model CODE` selects one. Default persistent state is `/opt/var/lib/unifi-keenetic`.
+The packaged service starts in **log-only mode**: it reports status and receives controller configuration but does not apply it. `ukn -models` lists available identities; `-model CODE` selects one. Default persistent state is `/opt/var/lib/unifi-keenetic`. `STATE_DIR` and `PID_FILE` can select separate absolute paths; isolated instances also need distinct listener ports and controller identities. `status` checks process identity, not controller or WLAN health. `ukn -build-info` reports the actual executable build separately from its UniFi compatibility version.
 
 Adopt the pending device in UniFi. For a virtualized controller, set Inform Host Override to an address reachable from the router, not an internal container address.
 
