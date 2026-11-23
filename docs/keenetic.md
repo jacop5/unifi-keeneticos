@@ -1280,3 +1280,10 @@ of arbitrary JSON or proof of live resource ownership, timer exclusivity,
 network isolation or post-change health. Regenerate the report from current
 private snapshots and retain all guarded-apply checks. Tests cover redacted
 credential target metadata, out-of-scope targets and missing preflight status.
+
+A cross-tool integration test now builds a synthetic WPA2 test plan, prepares
+its preimage from an offline native snapshot, serializes the redacted JSON,
+and invokes the Python scope checker on that actual output. The mapped AP6
+scope passes and an AP5 scope fails; the synthetic credential is absent from
+the serialized report. The full Go race suite and Python tooling tests pass.
+This validates the offline review pipeline; no router settings were changed.
