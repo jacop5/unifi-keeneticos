@@ -68,7 +68,12 @@ func Records(text, marker string) []map[string]string {
 type Runner func(context.Context, string) ([]byte, error)
 
 func Local(ctx context.Context, command string) ([]byte, error) {
-	b, err := exec.CommandContext(ctx, "ndmc", "-c", command).CombinedOutput()
+	cmd := exec.CommandContext(ctx, "ndmc", "-c", command)
+	// A surviving descendant must not hold CombinedOutput open indefinitely
+	// after the command deadline kills ndmc. Transaction readback/recovery
+	// handles an interrupted mutation; this does not claim it was undone.
+	cmd.WaitDelay = 250 * time.Millisecond
+	b, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("ndmc execution: %w", err)
 	}

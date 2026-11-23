@@ -994,3 +994,13 @@ for that sample. This prevents optional queries from taking the remaining
 required-interface collection budget. Regression tests check query ordering,
 deadline presence, enrichment precedence and unavailable-query behavior.
 Hardware behavior with deliberately delayed metadata queries is untested.
+
+The local NDM runner also bounds output-pipe cleanup with a 250 ms Go
+`WaitDelay`. After a command is cancelled, a surviving descendant holding
+stdout/stderr open cannot keep `CombinedOutput` waiting for that pipe
+indefinitely. A real-process regression uses a cancelled shell and a sleeping
+child to verify prompt return and exclusion of private command output from
+errors. This does not terminate every descendant or prove that an interrupted
+configuration command had no effect; native readback and journaled recovery
+remain necessary. This process-edge case is tested on the host, not forced on
+the production router.
