@@ -24,3 +24,20 @@ func TestOfflinePreflightRequiresReversibleOwnedTargets(t *testing.T) {
 		t.Fatal("unsupported plan accepted")
 	}
 }
+
+func TestOfflinePreflightRejectsConflictingModesBeforeDispatch(t *testing.T) {
+	for _, mode := range []string{"rollback-watch", "rollback-probe", "crash-probe", "apply", "led-control", "probe", "terminal-probe", "models"} {
+		if err := validateOfflineMode("native.cfg", "controller.cfg", map[string]bool{mode: true}); err == nil {
+			t.Fatalf("conflicting %s accepted", mode)
+		}
+		if err := validateOfflineMode("native.cfg", "controller.cfg", map[string]bool{mode: false}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := validateOfflineMode("native.cfg", "", nil); err == nil {
+		t.Fatal("missing plan accepted")
+	}
+	if err := validateOfflineMode("", "", map[string]bool{"apply": true}); err != nil {
+		t.Fatal("normal live mode rejected")
+	}
+}

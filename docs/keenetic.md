@@ -872,3 +872,9 @@ and no router DNS settings were changed to force a pass. Earlier Wi-Fi HTTPS
 results remain separate evidence. The temporary Mac test preference was removed,
 Wi-Fi power restored to on and Ethernet remained active. The agent stayed
 log-only; this client test issued no WLAN provisioning commands.
+
+Offline preflight rejects conflicting action modes before input loading or
+mode dispatch: recovery watchdog, rollback/crash probes, apply, LED control,
+native probes and model listing cannot be combined with `-preflight-running`.
+In particular, a recovery-watch request cannot take precedence over offline
+preflight. Unit coverage and built-command checks verify early rejection.

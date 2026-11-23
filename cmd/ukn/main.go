@@ -48,8 +48,12 @@ func main() {
 	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
 	preflightRunning := flag.String("preflight-running", "", "with -plan, validate rollback preparation against a saved native running-config; no router access")
 	flag.Parse()
-	if *preflightRunning != "" && *planFile == "" {
-		log.Fatal("-preflight-running requires -plan")
+	if err := validateOfflineMode(*preflightRunning, *planFile, map[string]bool{
+		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
+		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl,
+		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels,
+	}); err != nil {
+		log.Fatal(err)
 	}
 	networks := map[string]string{}
 	if *networksFile != "" {
