@@ -1040,3 +1040,21 @@ The unique candidate was never executed or installed and was removed explicitly
 after verification, restoring 49212 KiB free in `/tmp`. The original log-only
 agent remained running and connected/adopted. Low-space refusal is covered by
 an automated test without filling the production router's filesystem.
+
+### WPA3 controller preview (2026-11-23)
+
+A controller-only preview changed the dedicated Titan test profile to
+`wpa3_support=true`, `wpa3_transition=false`, and required PMF while keeping
+`wpa_mode=wpa2` (the controller rejected `wpa_mode=wpa3`). The router agent
+was verified log-only before the change. The resulting received configuration
+omitted both Titan test WLAN entries and produced only AP6-down preview commands;
+no native commands were applied. The configured identity is U7PG2/AP-AC-Pro.
+Whether model capabilities or another controller eligibility rule caused the
+omission remains unresolved; this is not evidence that native WPA3 failed.
+
+The original WPA2/PMF profile was restored immediately. Both test WLAN entries
+returned with WPA-PSK security. Native test SSIDs and primary WLANs were not
+changed during the preview. WPA3 client authentication remains unverified;
+resolve controller WLAN eligibility before enabling guarded application for
+this test. An accepted profile API update alone does not prove an AP received
+that WLAN or the requested security configuration.
