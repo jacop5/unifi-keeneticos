@@ -27,6 +27,9 @@ func TestEntwareServiceOptions(t *testing.T) {
 		flags        []string
 	}{
 		{"defaults", "", true, nil},
+		{"custom state", "STATE_DIR='/tmp/private state'\nPID_FILE='/tmp/private pid/agent.pid'\n", true, []string{"-state", "/tmp/private state"}},
+		{"relative state", "STATE_DIR=relative\n", false, nil},
+		{"empty pid", "PID_FILE=''\n", false, nil},
 		{"test apply", "APPLY=1\nWLAN_TEST_ONLY=1\nSLOTS='" + slots + "'\n", true, []string{"-apply", "-wlan-test-only", "-slots", slots}},
 		{"LED only", "LED_CONTROL=1\n", true, []string{"-led-control"}},
 		{"version reporting", "REPORT_UPGRADE_VERSION=1\n", true, []string{"-report-upgrade-version"}},
@@ -87,7 +90,11 @@ func TestEntwareStopWaitsForProcessExit(t *testing.T) {
 		if err := os.WriteFile(pid, []byte("12345\n"), 0600); err != nil {
 			t.Fatal(err)
 		}
-		text := strings.ReplaceAll(string(original), "/opt/var/run/unifi-keenetic.pid", pid)
+		text := string(original)
+		config := filepath.Join(dir, "config")
+		if err := os.WriteFile(config, []byte("PID_FILE='"+pid+"'\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
 		if mode == "zombie" {
 			proc := filepath.Join(dir, "proc")
 			os.MkdirAll(filepath.Join(proc, "12345"), 0700)
@@ -113,7 +120,7 @@ set -- stop
 . "$script"
 `, "stop-test", script)
 
-		cmd.Env = append(os.Environ(), "UKN_CONFIG="+filepath.Join(dir, "absent-config"))
+		cmd.Env = append(os.Environ(), "UKN_CONFIG="+config)
 		out, err := cmd.CombinedOutput()
 		if (err != nil) != stuck {
 			t.Fatalf("stuck=%v err=%v output=%s", stuck, err, out)

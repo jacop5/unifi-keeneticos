@@ -927,3 +927,14 @@ The corrected private script returned success for the observed zombie, and a
 replacement log-only agent acquired the same state and reconnected without
 re-adoption. The installed service was not replaced. This validates graceful
 stop and zombie handling, not a complete installed-service restart sequence.
+
+The service configuration supports `STATE_DIR` and `PID_FILE`, defaulting to
+`/opt/var/lib/unifi-keenetic` and `/opt/var/run/unifi-keenetic.pid`. Both must
+be absolute paths. State is passed explicitly to the daemon, and its directory
+is created with private permissions; the configured PID parent is also created.
+This allows isolated service tests or instances without sharing adoption keys,
+recovery journals, state locks or process bookkeeping. Separate instances also
+need distinct adoption listener ports and controller identities. Shell tests
+verify quoted paths containing spaces and reject relative/empty paths. These
+configuration options have not yet been exercised through a full hardware
+service restart. Existing configurations retain their original default paths.

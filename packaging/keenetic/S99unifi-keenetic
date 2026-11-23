@@ -13,10 +13,15 @@ LED_CONTROL=0
 REPORT_UPGRADE_VERSION=0
 SLOTS=''
 NETWORKS=''
+STATE_DIR='/opt/var/lib/unifi-keenetic'
+PID_FILE='/opt/var/run/unifi-keenetic.pid'
 config=${UKN_CONFIG:-/opt/etc/unifi-keenetic.conf}
 [ ! -r "$config" ] || . "$config"
 daemon=/opt/sbin/ukn
-pid=/opt/var/run/unifi-keenetic.pid
+pid=$PID_FILE
+for path in "$STATE_DIR" "$PID_FILE"; do
+ case "$path" in /*) ;; *) printf '%s\n' 'STATE_DIR and PID_FILE must be absolute paths' >&2; exit 1 ;; esac
+done
 case "${1:-}" in
  start)
   [ "$ENABLED" = 1 ] || { printf '%s\n' 'unifi-keenetic is disabled'; exit 0; }
@@ -31,7 +36,7 @@ case "${1:-}" in
    printf '%s\n' 'NETWORKS cannot be used in connected Wi-Fi test mode' >&2
    exit 1
   fi
-  set -- -url "$INFORM_URL" -ssh-listen "$SSH_LISTEN" -model "$MODEL"
+  set -- -state "$STATE_DIR" -url "$INFORM_URL" -ssh-listen "$SSH_LISTEN" -model "$MODEL"
   if [ -n "$SLOTS" ]; then
    [ -r "$SLOTS" ] || { printf '%s\n' 'SLOTS file is not readable' >&2; exit 1; }
    set -- "$@" -slots "$SLOTS"
@@ -44,8 +49,8 @@ case "${1:-}" in
   [ "$WLAN_TEST_ONLY" = 0 ] || set -- "$@" -wlan-test-only
   [ "$LED_CONTROL" = 0 ] || set -- "$@" -led-control
   [ "$REPORT_UPGRADE_VERSION" = 0 ] || set -- "$@" -report-upgrade-version
-  mkdir -p /opt/var/run /opt/var/lib/unifi-keenetic
-  chmod 700 /opt/var/lib/unifi-keenetic
+  mkdir -p "$(dirname "$pid")" "$STATE_DIR"
+  chmod 700 "$STATE_DIR"
   start-stop-daemon -S -b -m -p "$pid" -x "$daemon" -- "$@"
   ;;
  stop)
