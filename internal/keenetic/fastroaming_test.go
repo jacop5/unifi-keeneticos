@@ -75,3 +75,43 @@ func TestFastRoamingDisableReadbackAndRollback(t *testing.T) {
 		t.Fatal("recovered FT journal was not cleared")
 	}
 }
+
+// These transaction primitives do not enable controller FT translation.
+func TestFastRoamingDomainAndTransportTransaction(t *testing.T) {
+	const root = "interface WifiMaster0/AccessPoint6"
+	before := root + "\n    ft mdid AB\n    ft otd\n    down\n!\n"
+	p := Plan{Commands: []Command{{Text: root + " ft mdid CD"}, {Text: root + " no ft otd"}}}
+	if VerifyWLANSettings(p, before) == nil {
+		t.Fatal("stale domain and transport accepted")
+	}
+	wrongTransport := strings.ReplaceAll(before, "ft mdid AB", "ft mdid CD")
+	if VerifyWLANSettings(p, wrongTransport) == nil {
+		t.Fatal("stale over-the-DS mode accepted")
+	}
+	after := strings.ReplaceAll(wrongTransport, "    ft otd\n", "")
+	if err := VerifyWLANSettings(p, after); err != nil {
+		t.Fatal(err)
+	}
+	changes, err := Preimage(p, before)
+	if err != nil || len(changes) != 2 {
+		t.Fatalf("changes=%v error=%v", changes, err)
+	}
+	if changes[0].Undo.Text != root+" ft mdid AB" || changes[1].Undo.Text != root+" ft otd" {
+		t.Fatal("FT preimage not preserved")
+	}
+	if changes, err := Preimage(p, after); err != nil || len(changes) != 0 {
+		t.Fatalf("not idempotent: %v %v", changes, err)
+	}
+	reset := Plan{Commands: []Command{{Text: root + " no ft mdid"}, {Text: root + " ft otd"}}}
+	if VerifyWLANSettings(reset, after) == nil {
+		t.Fatal("domain reset ignored")
+	}
+	resetAfter := root + "\n    ft otd\n    down\n!\n"
+	if err := VerifyWLANSettings(reset, resetAfter); err != nil {
+		t.Fatal(err)
+	}
+	changes, err = Preimage(reset, after)
+	if err != nil || len(changes) != 2 || changes[0].Undo.Text != root+" ft mdid CD" || changes[1].Undo.Text != root+" no ft otd" {
+		t.Fatalf("reset inverse: %v %v", changes, err)
+	}
+}

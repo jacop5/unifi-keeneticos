@@ -1293,3 +1293,11 @@ entries instead of only indices 1–4. Unsupported methods at higher indices
 reject the plan and cannot reach preimage preparation. Regression cases cover
 indices 5, 32 and 999. The full race suite, vet and both MIPS builds pass;
 this parser change was verified offline without router configuration changes.
+
+The transaction layer now preserves inverses and checks native readback for
+`ft mdid` and `ft otd`, in preparation for fast-roaming experiments. Offline
+regressions cover changed/reset domains, enabled/disabled over-the-DS mode,
+stale readback rejection and idempotence. Controller FT-enable requests remain
+unsupported: these primitives do not establish domain/key compatibility or
+working roaming and were not applied to the router. The CLI reference sections
+3.32.79–81 document the native controls and two-ASCII-symbol MDID requirement.

@@ -117,7 +117,7 @@ func VerifyWLANSettings(plan Plan, running string) error {
 		setting := strings.TrimPrefix(fields[2], "no ")
 		enabled := setting == fields[2]
 		checked := false
-		for _, flag := range []string{"encryption enable", "encryption wpa", "encryption wpa2", "encryption wpa3", "encryption owe", "hide-ssid", "peer-isolation", "rrm", "wmm", "ft enable"} {
+		for _, flag := range []string{"encryption enable", "encryption wpa", "encryption wpa2", "encryption wpa3", "encryption owe", "hide-ssid", "peer-isolation", "rrm", "wmm", "ft enable", "ft otd"} {
 			if setting != flag {
 				continue
 			}
@@ -133,6 +133,21 @@ func VerifyWLANSettings(plan Plan, running string) error {
 		}
 		if checked {
 			continue
+		}
+		if setting == "ft mdid" || strings.HasPrefix(setting, "ft mdid ") {
+			actual := ""
+			for _, line := range lines {
+				if strings.HasPrefix(line, "ft mdid ") {
+					actual = line
+				}
+			}
+			want := ""
+			if enabled {
+				want = setting
+			}
+			if actual != want {
+				return fmt.Errorf("native WLAN FT mobility domain does not match plan")
+			}
 		}
 		if setting == "pmf" || setting == "pmf force" {
 			actual := ""
