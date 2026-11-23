@@ -1136,3 +1136,14 @@ secondary capability bits on both radios. Full native before/after comparison
 matched after stripping terminal formatting and generated comments, including
 both primary WLANs and shared radios. The lab remains log-only; default SAE
 advertisement stays off. Transition-mode client interoperability is unverified.
+
+The captured SAE wire shape now has a sanitized regression case: `wpa=2`
+with SAE key management, WPA3 enabled, transition disabled and PMF mode 2
+must produce WPA3-only/required-PMF commands on the mapped AP. Unmapped WLAN
+settings remain excluded and synthetic credentials remain redacted.
+`aaa.N.wpa3.ft.status=enabled` is explicitly unsupported independently of the
+ordinary FT switch; unknown values reject planning. Disabled/missing values
+add no WPA3-FT command. This avoids silently treating an SAE fast-roaming
+request as ordinary SAE. It does not add native FT support or establish a
+controller per-client WPA3 telemetry field; native association security remains
+the authoritative evidence used in the live authentication test.

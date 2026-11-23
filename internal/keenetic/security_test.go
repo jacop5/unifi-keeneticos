@@ -84,3 +84,53 @@ func TestPersonalAuthenticationMethodsRequireExactTokens(t *testing.T) {
 		t.Fatal("unknown secondary method was ignored")
 	}
 }
+
+func TestControllerSAEWireShapeAndWPA3FastRoaming(t *testing.T) {
+	// Sanitized shape observed from Network 10.5.67, with a synthetic key.
+	cfg := `wireless.3.ssid=UKN-Test-SAE
+wireless.3.parent=wifi1
+wireless.3.usage=user
+aaa.3.ssid=UKN-Test-SAE
+aaa.3.wpa=2
+aaa.3.wpa.psk=synthetic-test-key
+aaa.3.wpa.key.1.mgmt=SAE
+aaa.3.wpa3.support=enabled
+aaa.3.wpa3.transition=disabled
+aaa.3.wpa3.ft.status=disabled
+aaa.3.pmf.status=enabled
+aaa.3.pmf.mode=2
+aaa.3.bss_transition=disabled
+aaa.3.ft.status=disabled
+wireless.1.ssid=Unmapped
+wireless.1.parent=wifi0
+wireless.1.usage=user
+aaa.1.bss_transition=enabled
+`
+	slots := map[string]string{"3": "WifiMaster1/AccessPoint6"}
+	p, err := BuildWLANTestPlan(cfg, slots)
+	if err != nil || len(p.Unsupported) != 0 {
+		t.Fatalf("captured SAE shape rejected: %v %v", err, p.Unsupported)
+	}
+	text := ""
+	for _, c := range p.Commands {
+		text += c.String() + "\n"
+	}
+	for _, want := range []string{" encryption wpa3\n", " no encryption wpa2\n", " pmf force\n"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q", want)
+		}
+	}
+	if strings.Contains(text, "synthetic-test-key") || strings.Contains(text, "WifiMaster0/") {
+		t.Fatal("key leaked or unrelated WLAN included")
+	}
+	for _, status := range []string{"enabled", "invalid"} {
+		changed := strings.ReplaceAll(cfg, "wpa3.ft.status=disabled", "wpa3.ft.status="+status)
+		p, err := BuildWLANTestPlan(changed, slots)
+		if status == "enabled" && err == nil && len(p.Unsupported) == 0 {
+			t.Fatal("WPA3 FT silently ignored")
+		}
+		if status == "invalid" && err == nil {
+			t.Fatal("invalid WPA3 FT accepted")
+		}
+	}
+}

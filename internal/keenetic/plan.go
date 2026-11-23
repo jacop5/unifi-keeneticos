@@ -342,6 +342,13 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		default:
 			return p, fmt.Errorf("invalid fast-roaming status")
 		}
+		switch cfg[aaa+"wpa3.ft.status"] {
+		case "", "disabled":
+		case "enabled":
+			p.Unsupported = append(p.Unsupported, prefix+"wpa3-fast-roaming")
+		default:
+			return p, fmt.Errorf("invalid WPA3 fast-roaming status")
+		}
 		action := "up"
 		if cfg[prefix+"status"] == "disabled" || cfg[aaa+"status"] == "disabled" {
 			action = "down"
