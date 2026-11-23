@@ -918,3 +918,12 @@ lock. If the process remains alive, stop/restart fails explicitly; it does not
 send SIGKILL. Tests exercise successful delayed exit and bounded refusal using
 the shipped script with simulated processes. Installed-service restart on
 hardware has not yet been exercised for this change.
+
+An isolated Titan shutdown test on 2026-11-23 exposed a zombie-process edge
+case: TERM stopped the temporary log-only daemon, but its parent retained a
+zombie PID, so `kill -0` remained successful. The service wait now recognizes
+Linux `/proc/PID/status` state Z as exited. A regression test covers this case.
+The corrected private script returned success for the observed zombie, and a
+replacement log-only agent acquired the same state and reconnected without
+re-adoption. The installed service was not replaced. This validates graceful
+stop and zombie handling, not a complete installed-service restart sequence.

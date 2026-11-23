@@ -79,7 +79,8 @@ func TestEntwareStopWaitsForProcessExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, stuck := range []bool{false, true} {
+	for _, mode := range []string{"exits", "stuck", "zombie"} {
+		stuck := mode == "stuck"
 		dir := t.TempDir()
 		pid := filepath.Join(dir, "daemon.pid")
 		script := filepath.Join(dir, "service")
@@ -87,11 +88,19 @@ func TestEntwareStopWaitsForProcessExit(t *testing.T) {
 			t.Fatal(err)
 		}
 		text := strings.ReplaceAll(string(original), "/opt/var/run/unifi-keenetic.pid", pid)
+		if mode == "zombie" {
+			proc := filepath.Join(dir, "proc")
+			os.MkdirAll(filepath.Join(proc, "12345"), 0700)
+			if err := os.WriteFile(filepath.Join(proc, "12345", "status"), []byte("State:\tZ (zombie)\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			text = strings.ReplaceAll(text, "/proc/", proc+"/")
+		}
 		if err := os.WriteFile(script, []byte(text), 0700); err != nil {
 			t.Fatal(err)
 		}
 		behavior := `n=$((n+1)); [ "$n" -lt 3 ]`
-		if stuck {
+		if mode != "exits" {
 			behavior = "return 0"
 		}
 		cmd := exec.Command("bash", "-c", `
