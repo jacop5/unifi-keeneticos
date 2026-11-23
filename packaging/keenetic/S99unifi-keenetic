@@ -69,9 +69,24 @@ case "${1:-}" in
    attempts=$((attempts + 1))
   done
   ;;
+ status)
+  if [ ! -r "$pid" ]; then printf '%s\n' 'unifi-keenetic is not running'; exit 3; fi
+  current_pid=$(cat "$pid")
+  case "$current_pid" in ''|*[!0-9]*|0|1) printf '%s\n' 'Invalid daemon PID file'; exit 3 ;; esac
+  expected_exe=$(readlink -f "$daemon" 2>/dev/null || true)
+  if [ -n "$expected_exe" ] && kill -0 "$current_pid" 2>/dev/null &&
+     [ -r "/proc/$current_pid/status" ] &&
+     ! grep -q '^State:[[:space:]]*Z' "/proc/$current_pid/status" 2>/dev/null &&
+     [ "$(readlink "/proc/$current_pid/exe" 2>/dev/null)" = "$expected_exe" ]; then
+   printf 'unifi-keenetic is running (PID %s)\n' "$current_pid"
+   exit 0
+  fi
+  printf '%s\n' 'unifi-keenetic is not running (stale or unrelated PID)'
+  exit 3
+  ;;
  restart)
   "$0" stop
   "$0" start
   ;;
- *) printf 'Usage: %s {start|stop|restart}\n' "$0" >&2; exit 1 ;;
+ *) printf 'Usage: %s {start|stop|restart|status}\n' "$0" >&2; exit 1 ;;
 esac

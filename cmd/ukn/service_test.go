@@ -133,3 +133,56 @@ set -- stop
 		}
 	}
 }
+
+func TestEntwareStatusRejectsStaleAndUnrelatedPIDs(t *testing.T) {
+	original, err := os.ReadFile("../../packaging/keenetic/S99unifi-keenetic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"running", "missing", "invalid", "zombie", "unrelated"} {
+		dir := t.TempDir()
+		pid := filepath.Join(dir, "pid")
+		proc := filepath.Join(dir, "proc")
+		if err := os.MkdirAll(filepath.Join(proc, "12345"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		state := "State:\tS (sleeping)\n"
+		if mode == "zombie" {
+			state = "State:\tZ (zombie)\n"
+		}
+		if err := os.WriteFile(filepath.Join(proc, "12345", "status"), []byte(state), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if mode != "missing" {
+			value := "12345"
+			if mode == "invalid" {
+				value = "12345; reboot"
+			}
+			if err := os.WriteFile(pid, []byte(value), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		config := filepath.Join(dir, "config")
+		os.WriteFile(config, []byte("PID_FILE='"+pid+"'\n"), 0600)
+		script := filepath.Join(dir, "service")
+		os.WriteFile(script, []byte(strings.ReplaceAll(string(original), "/proc/", proc+"/")), 0700)
+		exe := "/opt/sbin/ukn"
+		if mode == "unrelated" {
+			exe = "/bin/other"
+		}
+		cmd := exec.Command("bash", "-c", `
+kill() { return 0; }
+script=$1
+# Pass the simulated executable through a wrapper without invoking real readlink.
+reported=$2
+readlink() { if [ "$1" = -f ]; then printf '%s' /opt/sbin/ukn; else printf '%s' "$reported"; fi; }
+set -- status
+. "$script"
+`, "status-test", script, exe)
+		cmd.Env = append(os.Environ(), "UKN_CONFIG="+config)
+		out, err := cmd.CombinedOutput()
+		if (err == nil) != (mode == "running") {
+			t.Fatalf("mode=%s err=%v output=%s", mode, err, out)
+		}
+	}
+}

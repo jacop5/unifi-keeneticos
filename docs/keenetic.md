@@ -950,3 +950,12 @@ agent restored. The installed service and its configuration were not replaced.
 A transient `/proc/PID/status` disappearance during the exit check was harmless;
 the script now suppresses that expected race diagnostic. This exercises service
 control with the lab binary, not an upgrade of the installed daemon package.
+
+`S99unifi-keenetic status` is read-only and returns 0 only for a live,
+non-zombie PID whose `/proc/PID/exe` matches the configured daemon executable.
+Missing, malformed, stale or unrelated PID records return 3. It honors the
+configured PID path and never signals a process or changes router state.
+Shell regression tests cover live, missing, malformed, zombie and reused-PID
+cases. This is process status, not proof of controller connectivity or WLAN
+health; those checks remain separate. Hardware validation of this new status
+subcommand is pending.
