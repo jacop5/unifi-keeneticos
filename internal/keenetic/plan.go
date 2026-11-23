@@ -223,6 +223,22 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		if err := validateEnableStatus(cfg, aaa+"wpa3.support", aaa+"wpa3.transition"); err != nil {
 			return p, err
 		}
+		pskFile := cfg[aaa+"wpa.psk_file.status"]
+		if err := validateEnableStatus(cfg, aaa+"wpa.psk_file.status"); err != nil {
+			return p, err
+		}
+		multipleKeys := pskFile == "enabled"
+		if pskFile == "" {
+			for key, value := range cfg {
+				if strings.HasPrefix(key, aaa+"wpa.psk_file.") && value != "" {
+					multipleKeys = true
+				}
+			}
+		}
+		if multipleKeys || cfg[aaa+"wpa.psk_radius"] != "" {
+			p.Unsupported = append(p.Unsupported, prefix+"private-psk")
+			continue
+		}
 		mgmt := ""
 		sae, unknownMgmt := false, false
 		for i := 1; i <= 4; i++ {

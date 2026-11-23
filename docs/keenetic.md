@@ -1196,3 +1196,13 @@ security. Absent family metadata retains the existing version/key classifier;
 explicit `wpapsk` remains accepted. Tests cover these contradictions and verify
 that unsupported plans cannot prepare application. No contradictory security
 configuration was applied on hardware.
+
+Private PSK tables and RADIUS-selected PSKs are explicitly unsupported by the
+single-key backend. The controller's inspected generator emits
+`aaa.N.wpa.psk_file.status=enabled` and indexed table entries for private keys;
+its RADIUS PSK path emits `aaa.N.wpa.psk_radius`. Such requests cannot silently
+become a single `authentication wpa-psk` configuration. A nonempty table without
+status is also unsupported; an explicit disabled status ignores stale table
+entries. Malformed status values reject planning. Tests verify these requests
+cannot prepare application. No private-PSK enforcement support or live client
+validation is claimed.

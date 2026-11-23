@@ -180,3 +180,29 @@ func TestExplicitSecurityFamilyCannotBeOverriddenByStaleWPA(t *testing.T) {
 		t.Fatalf("explicit personal security rejected: %v %v", err, p.Unsupported)
 	}
 }
+
+func TestPrivatePSKCannotSilentlyBecomeSinglePassword(t *testing.T) {
+	slots := map[string]string{"1": "WifiMaster0/AccessPoint6"}
+	for _, extra := range []string{
+		"aaa.1.wpa.psk_file.status=enabled\n",
+		"aaa.1.wpa.psk_file.1.psk=another-secret\n",
+		"aaa.1.wpa.psk_radius=profile1\n",
+	} {
+		p, err := BuildPlan(wlan+extra, slots)
+		if err == nil && len(p.Unsupported) == 0 {
+			t.Fatal("private PSK request silently accepted")
+		}
+		if err == nil {
+			if _, err := Preimage(p, "interface WifiMaster0/AccessPoint6\n    down\n!\n"); err == nil {
+				t.Fatal("private PSK request reached apply preparation")
+			}
+		}
+	}
+	if _, err := BuildPlan(wlan+"aaa.1.wpa.psk_file.status=invalid\n", slots); err == nil {
+		t.Fatal("malformed PPSK status accepted")
+	}
+	p, err := BuildPlan(wlan+"aaa.1.wpa.psk_file.status=disabled\naaa.1.wpa.psk_file.1.psk=stale-secret\n", slots)
+	if err != nil || len(p.Unsupported) != 0 {
+		t.Fatalf("explicitly disabled stale table affected ordinary PSK: %v", err)
+	}
+}
