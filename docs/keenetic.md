@@ -1301,3 +1301,12 @@ stale readback rejection and idempotence. Controller FT-enable requests remain
 unsupported: these primitives do not establish domain/key compatibility or
 working roaming and were not applied to the router. The CLI reference sections
 3.32.79–81 document the native controls and two-ASCII-symbol MDID requirement.
+
+Hardware execution check (2026-11-23): staged revision `291d186` on the
+Titan after checking tmpfs headroom and matching its SHA-256. `-build-info`
+reported Linux/mipsle softfloat with an unmodified source revision. Offline
+preflight against saved private WPA3 controller/native snapshots passed with
+10 reversible changes. BSS transition was disabled only in a copied controller
+file for this test; no controller profile or native setting changed. This
+validates execution/preflight on MIPS, not a new live WPA3 apply. The existing
+log-only agent remains running; the staged candidate was not installed.
