@@ -901,3 +901,12 @@ associations still determine the station table. Failure of either optional
 query does not block status collection. Collection tests cover precedence and
 DHCP-unavailable fallback; parser tests reject offline or conflicting hosts.
 This fallback has not yet been validated live in AP/external-DHCP mode.
+
+Active-host data can also supply a client's IPv4 address when ARP has no
+entry. ARP retains precedence. Only unambiguous link-up IPv4/MAC pairs qualify;
+unspecified, multicast, loopback, limited-broadcast and malformed addresses are
+excluded. No DHCP lease or wireless association is inferred from this fallback,
+and only authenticated association rows receive the resulting address. It
+reuses the optional host query without adding another native request. Parser
+and collection tests cover offline/conflicting records, missing ARP and ARP
+precedence. External-DHCP/AP-mode live validation remains outstanding.

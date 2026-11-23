@@ -130,6 +130,12 @@ func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
 		s.Hostnames = ParseDHCPHostnames(string(leases))
 	}
 	if hosts, err := run(ctx, "show ip hotspot"); err == nil {
+		for mac, ip := range ParseActiveHostIPs(string(hosts)) {
+			if s.ARP[mac] == "" {
+				s.ARP[mac] = ip
+			}
+		}
+
 		if s.Hostnames == nil {
 			s.Hostnames = map[string]string{}
 		}

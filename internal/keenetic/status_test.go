@@ -43,6 +43,16 @@ func TestFullCollection(t *testing.T) {
 	if err != nil || len(s.StationFields()) != 1 || s.StationFields()[0]["hostname"] != "Active-Host" {
 		t.Fatalf("optional DHCP failure broke collection: %v", err)
 	}
+	responses["show ip arp"] = ""
+	s, err = Collect(context.Background(), run)
+	if err != nil || s.StationFields()[0]["ip"] != "192.0.2.2" {
+		t.Fatalf("active-host IP fallback failed: %v", err)
+	}
+	responses["show ip arp"] = "192.0.2.99 02:00:00:00:00:02 Home\n"
+	s, err = Collect(context.Background(), run)
+	if err != nil || s.StationFields()[0]["ip"] != "192.0.2.99" {
+		t.Fatalf("ARP precedence lost: %v", err)
+	}
 	responses["show interface Bridge0"] = "mac: 02:00:00:00:00:01\naddress: fe80::1\n"
 	if _, err := Collect(context.Background(), run); err == nil {
 		t.Fatal("IPv6 accepted as IPv4 management address")

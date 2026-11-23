@@ -51,3 +51,21 @@ func TestActiveHostnameFallbackExcludesOfflineHosts(t *testing.T) {
 		t.Fatal("conflicting hostnames accepted")
 	}
 }
+
+func TestActiveHostIPValidation(t *testing.T) {
+	host := "host:\n mac: 02:00:00:00:00:01\n ip: 192.0.2.2\n link: up\n"
+	if got := ParseActiveHostIPs(host); got["02:00:00:00:00:01"] != "192.0.2.2" {
+		t.Fatal(got)
+	}
+	for _, bad := range []string{"0.0.0.0", "255.255.255.255", "224.0.0.1", "127.0.0.1", "fe80::1", "invalid"} {
+		if len(ParseActiveHostIPs(strings.ReplaceAll(host, "192.0.2.2", bad))) != 0 {
+			t.Fatal("invalid client address accepted")
+		}
+	}
+	if len(ParseActiveHostIPs(strings.ReplaceAll(host, "link: up", "link: down"))) != 0 {
+		t.Fatal("offline address accepted")
+	}
+	if len(ParseActiveHostIPs(host+strings.ReplaceAll(host, "192.0.2.2", "192.0.2.3"))) != 0 {
+		t.Fatal("ambiguous address accepted")
+	}
+}

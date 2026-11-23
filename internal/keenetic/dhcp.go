@@ -52,3 +52,26 @@ func parseHostnames(records []map[string]string, active func(map[string]string) 
 	}
 	return out
 }
+
+// ParseActiveHostIPs supplements ARP only with unambiguous link-up hosts.
+// A host's presence here does not establish a wireless association.
+func ParseActiveHostIPs(text string) map[string]string {
+	out := map[string]string{}
+	conflicts := map[string]bool{}
+	for _, host := range Records(text, "host") {
+		mac, err := net.ParseMAC(host["mac"])
+		ip := net.ParseIP(host["ip"]).To4()
+		if host["link"] != "up" || err != nil || len(mac) != 6 || mac[0]&1 != 0 || mac.String() == "00:00:00:00:00:00" || ip == nil || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLoopback() || ip.String() == "255.255.255.255" {
+			continue
+		}
+		id, value := mac.String(), ip.String()
+		if old := out[id]; old != "" && old != value {
+			conflicts[id] = true
+		}
+		out[id] = value
+	}
+	for id := range conflicts {
+		delete(out, id)
+	}
+	return out
+}
