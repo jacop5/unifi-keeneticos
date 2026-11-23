@@ -220,7 +220,10 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 			p.AccessLists = append(p.AccessLists, *acl)
 		}
 		aaa := "aaa." + id + "."
-		if err := validateEnableStatus(cfg, aaa+"wpa3.support", aaa+"wpa3.transition"); err != nil {
+		if err := validateEnableStatus(cfg, aaa+"wpa3.support", aaa+"wpa3.transition", prefix+"l2_isolation", aaa+"11k.status"); err != nil {
+			return p, err
+		}
+		if err := validateBooleanStatus(cfg, prefix+"hide_ssid", aaa+"hide_ssid"); err != nil {
 			return p, err
 		}
 		unsupportedCipher := false
@@ -467,4 +470,15 @@ func singleSAEKey(cfg translate.Cfg, aaa string) bool {
 		}
 	}
 	return true
+}
+
+func validateBooleanStatus(cfg translate.Cfg, keys ...string) error {
+	for _, key := range keys {
+		switch cfg[key] {
+		case "", "true", "false":
+		default:
+			return fmt.Errorf("invalid boolean status for %s", key)
+		}
+	}
+	return nil
 }

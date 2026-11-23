@@ -1241,3 +1241,12 @@ SAE shape without claiming multi-key enforcement. Tests cover the default
 entry and rejected alternatives; only key equality/field presence was inspected
 on the saved private controller capture, never credential contents in output.
 The new rejection edge cases were not applied to hardware.
+
+Hidden-SSID flags now require `true`/`false`, and explicit peer-isolation and
+802.11k switches require `enabled`/`disabled`. Missing fields retain existing
+defaults. Unknown values reject the plan rather than falling through to a
+negative native command (notably disabling peer isolation). Regression tests
+cover malformed values and intact valid translations. This validation does
+not establish client-isolation enforcement; that still needs associated-client
+testing. Locate remains unsupported: the inspected guide provides LED role
+bindings and shutdown control, not a direct native Locate blink operation.
