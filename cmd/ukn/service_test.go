@@ -73,3 +73,47 @@ set -- start
 		})
 	}
 }
+
+func TestEntwareStopWaitsForProcessExit(t *testing.T) {
+	original, err := os.ReadFile("../../packaging/keenetic/S99unifi-keenetic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stuck := range []bool{false, true} {
+		dir := t.TempDir()
+		pid := filepath.Join(dir, "daemon.pid")
+		script := filepath.Join(dir, "service")
+		if err := os.WriteFile(pid, []byte("12345\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		text := strings.ReplaceAll(string(original), "/opt/var/run/unifi-keenetic.pid", pid)
+		if err := os.WriteFile(script, []byte(text), 0700); err != nil {
+			t.Fatal(err)
+		}
+		behavior := `n=$((n+1)); [ "$n" -lt 3 ]`
+		if stuck {
+			behavior = "return 0"
+		}
+		cmd := exec.Command("bash", "-c", `
+n=0
+kill() { `+behavior+`; }
+sleep() { :; }
+start-stop-daemon() { printf 'TERM requested\n'; }
+script=$1
+set -- stop
+. "$script"
+`, "stop-test", script)
+
+		cmd.Env = append(os.Environ(), "UKN_CONFIG="+filepath.Join(dir, "absent-config"))
+		out, err := cmd.CombinedOutput()
+		if (err != nil) != stuck {
+			t.Fatalf("stuck=%v err=%v output=%s", stuck, err, out)
+		}
+		if !strings.Contains(string(out), "TERM requested") {
+			t.Fatal("stop did not request graceful termination")
+		}
+		if stuck && !strings.Contains(string(out), "refusing immediate restart") {
+			t.Fatal("shutdown timeout not explicit")
+		}
+	}
+}

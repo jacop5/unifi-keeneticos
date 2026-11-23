@@ -49,7 +49,18 @@ case "${1:-}" in
   start-stop-daemon -S -b -m -p "$pid" -x "$daemon" -- "$@"
   ;;
  stop)
+  old_pid=''
+  if [ -r "$pid" ]; then
+   old_pid=$(cat "$pid")
+   case "$old_pid" in ''|*[!0-9]*|0|1) printf '%s\n' 'Invalid daemon PID file; refusing stop' >&2; exit 1 ;; esac
+  fi
   start-stop-daemon -K -p "$pid" -x "$daemon" -s TERM || true
+  attempts=0
+  while [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; do
+   [ "$attempts" -lt 15 ] || { printf '%s\n' 'Daemon has not exited; refusing immediate restart' >&2; exit 1; }
+   sleep 1
+   attempts=$((attempts + 1))
+  done
   ;;
  restart)
   "$0" stop

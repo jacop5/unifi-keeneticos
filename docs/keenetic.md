@@ -910,3 +910,11 @@ and only authenticated association rows receive the resulting address. It
 reuses the optional host query without adding another native request. Parser
 and collection tests cover offline/conflicting records, missing ARP and ARP
 precedence. External-DHCP/AP-mode live validation remains outstanding.
+
+The Entware service now waits up to 15 seconds after requesting graceful
+termination before completing `stop`. Consequently `restart` cannot launch
+a replacement while the prior process is still exiting and holding its state
+lock. If the process remains alive, stop/restart fails explicitly; it does not
+send SIGKILL. Tests exercise successful delayed exit and bounded refusal using
+the shipped script with simulated processes. Installed-service restart on
+hardware has not yet been exercised for this change.
