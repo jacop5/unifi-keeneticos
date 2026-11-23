@@ -86,3 +86,18 @@ aaa.3.bss_transition=disabled
 		}
 	}
 }
+
+func TestJSONIgnoredSettingsHaveSeparateMeaning(t *testing.T) {
+	p := keenetic.Plan{Ignored: []string{"wireless.3.dtim_period"}}
+	report := redactedPlan(p, nil)
+	if report["planner_supported"] != true {
+		t.Fatal("ignored diagnostics changed existing apply eligibility")
+	}
+	ignored, ok := report["ignored_settings"].([]string)
+	if !ok || len(ignored) != 1 || ignored[0] != "wireless.3.dtim_period" {
+		t.Fatal("ignored setting missing from JSON")
+	}
+	if empty := redactedPlan(keenetic.Plan{}, nil)["ignored_settings"].([]string); empty == nil {
+		t.Fatal("JSON should emit empty array rather than null")
+	}
+}

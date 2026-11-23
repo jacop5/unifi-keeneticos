@@ -29,6 +29,8 @@ func (c Command) String() string {
 type Plan struct {
 	Commands    []Command
 	Unsupported []string
+	// Known settings without native translation; values are never retained.
+	Ignored     []string
 	AccessLists []AccessList
 	Schedules   []BroadcastSchedule
 }
@@ -107,6 +109,9 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 				// Set the regulatory domain before channel/width changes.
 				add("interface " + master + " country-code " + country)
 			}
+		}
+		if cfg[prefix+"txpower"] != "" {
+			p.Ignored = append(p.Ignored, prefix+"txpower")
 		}
 		if status := cfg[prefix+"status"]; status != "" {
 			action := "up"
@@ -188,6 +193,11 @@ func BuildPlanWithNetworks(text string, slots, networks map[string]string) (Plan
 		}
 		if err := validateEnableStatus(cfg, prefix+"status", "aaa."+id+".status"); err != nil {
 			return p, err
+		}
+		for _, name := range []string{"dtim_period", "uapsd"} {
+			if cfg[prefix+name] != "" {
+				p.Ignored = append(p.Ignored, prefix+name)
+			}
 		}
 		schedule, err := compileSchedule(cfg, prefix, target)
 		if err != nil {

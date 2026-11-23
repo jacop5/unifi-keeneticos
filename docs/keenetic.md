@@ -1340,3 +1340,16 @@ radio changes. Searches for DTIM and U-APSD spellings in the extracted 5.1
 manual found no entries; this is a bounded documentation search, not proof
 that the firmware has no corresponding controls. Those features need a native
 capability investigation before adding translations.
+
+Known untranslated settings now appear as key-only diagnostics in text plans,
+agent logs and the additive JSON `ignored_settings` array. DTIM/U-APSD entries
+are reported only for mapped WLANs; transmit-power entries are reported only
+for radios entering the planner. WLAN-test mode filters radio and unrelated
+WLAN fields before diagnostics. No values are stored in these notices and no
+extra native commands are emitted. These diagnostics preserve existing apply
+eligibility: `planner_supported` still means no blocking unsupported settings,
+not complete fidelity for all controller settings. The scope checker checks
+mutation scope, not implementation of ignored requests. Regression tests cover
+scoping, unchanged command output and separate JSON semantics; race tests, vet
+and both MIPS builds pass. The running Titan agent was not replaced by this
+change and no live settings were applied.

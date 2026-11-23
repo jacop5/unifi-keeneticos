@@ -67,7 +67,7 @@ Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.6
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Client block/kick, locate/reboot and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
-| DTIM period and U-APSD | No Keenetic translation; controller values currently ignored |
+| DTIM period and U-APSD | No Keenetic translation; ignored setting names reported in plans/logs |
 | Service lifecycle and status | Private Titan start/restart/stop and live/stale/unrelated PID status verified; installed-package upgrade remains untested |
 | Offline preflight | Saved configuration/rollback preparation tested against a fresh Titan snapshot and followed by guarded AP6 apply |
 | Executable provenance | `-build-info` verified on Titan with clean revision, architecture and matching binary hash |
@@ -76,7 +76,7 @@ Radio telemetry reports native channel widths without guessing antenna or transm
 
 The latest Titan client run verified counts and hostname ingestion, but its HTTPS check stopped at DNS resolution; earlier successful Wi-Fi-bound HTTPS tests are separate evidence. See the dated [live-test notes](docs/keenetic.md) for the scope of each result.
 
-Unknown controller settings are not comprehensively classified. A successful adoption does not establish support for every control exposed by the selected UniFi model. This daemon never installs Ubiquiti firmware.
+Known unimplemented DTIM, U-APSD and transmit-power requests are listed as ignored in plans and logs. JSON reports expose `ignored_settings`; `planner_supported` means there are no blocking unsupported settings, not that every requested setting is implemented. Unknown controller settings are not comprehensively classified. A successful adoption does not establish support for every control exposed by the selected UniFi model. This daemon never installs Ubiquiti firmware.
 
 Keenetic sessions refuse controller firmware upgrades by default. Optional `-report-upgrade-version` acknowledges an upgrade by reporting and saving the offered version instead. Neither mode downloads firmware or simulates a reboot. The service setting is `REPORT_UPGRADE_VERSION=0` (refuse) or `1` (report only). A controller reboot request is logged; it does not reset uptime or restart the router. The displayed UniFi model/version is a protocol compatibility profile, not the installed Keenetic firmware version.
 

@@ -154,6 +154,9 @@ func main() {
 		for _, unsupported := range plan.Unsupported {
 			fmt.Printf("unsupported: %s\n", unsupported)
 		}
+		for _, setting := range plan.Ignored {
+			fmt.Printf("ignored (no native translation): %s\n", setting)
+		}
 		for _, acl := range plan.AccessLists {
 			fmt.Printf("MAC ACL: %s policy=%s clients=%v (AP pauses during replacement)\n", acl.Target, acl.Policy, acl.MACs)
 		}
@@ -333,6 +336,9 @@ func main() {
 						}
 						for _, setting := range plan.Unsupported {
 							log.Printf("unsupported: %s", setting)
+						}
+						for _, setting := range plan.Ignored {
+							log.Printf("ignored (no native translation): %s", setting)
 						}
 						for _, acl := range plan.AccessLists {
 							log.Printf("MAC ACL: %s policy=%s clients=%d", acl.Target, acl.Policy, len(acl.MACs))

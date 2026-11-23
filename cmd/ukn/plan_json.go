@@ -32,5 +32,5 @@ func redactedPlan(plan keenetic.Plan, changes *int) map[string]any {
 		schedules = append(schedules, map[string]any{"name": schedule.Name, "target": schedule.Target, "actions": actions})
 	}
 	unsupported := append([]string{}, plan.Unsupported...)
-	return map[string]any{"schema_version": 1, "commands": commands, "command_targets": targets, "unsupported": unsupported, "planner_supported": len(unsupported) == 0, "access_lists": acls, "schedules": schedules, "preflight_passed": changes != nil, "preflight_changes": changes}
+	return map[string]any{"schema_version": 1, "commands": commands, "command_targets": targets, "unsupported": unsupported, "ignored_settings": append([]string{}, plan.Ignored...), "planner_supported": len(unsupported) == 0, "access_lists": acls, "schedules": schedules, "preflight_passed": changes != nil, "preflight_changes": changes}
 }
