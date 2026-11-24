@@ -55,17 +55,19 @@ global LED shutdown and call it Locate.
 
 ### P0.2 — Upgrade/recovery readiness
 
-- [ ] Add failure-injection coverage around actual installer/service logic:
-      corrupt package, missing notices, wrong executable, low space,
-      failed copy/rename and failed startup. Check missing corresponding source
-      at the distribution gate; it need not consume router installation storage.
+- [x] Execute the shipped installer in a private fake Entware root with injected
+      corrupt packages, missing notices, unrunnable executables, low space,
+      copy/rename failures, unknown service status and failed recovery restart.
+      Service behavior is simulated; this does not validate the native service.
+      Check missing corresponding source at the distribution gate; it need not
+      consume router installation storage.
 - [x] Stage and verify replacements before stopping the service; preserve existing
       configuration and adoption files. Local failure injection covers corrupt
       packages, failed probes/copies/renames, low space, unsafe targets and caught
       termination. Ordinary failures restore old files and previous running state;
       failed recovery retains private backups and blocks reinstallation.
-- [ ] Complete missing-notice/failed-restart coverage and define operational
-      recovery for forced termination or power loss. No on-device upgrade claim
+- [ ] Define operational recovery for forced termination or power loss.
+      No on-device upgrade claim
       follows from the local harness; successful upgrades leave the service stopped.
 - [ ] Prove upgrade preserves adoption key, slot/network mappings, action policy
       and private permissions without exposing credentials in reports/logs.

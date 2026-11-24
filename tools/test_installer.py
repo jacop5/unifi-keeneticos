@@ -90,14 +90,14 @@ exec "''' + mv + '''" "$@"
     def service(label):
         return '''#!/bin/sh
 case "$1" in
- status) [ -e "$UKN_RUNNING" ] && exit 0; exit 3;;
+ status) [ "$UKN_FAIL" != status ] || exit 4; [ -e "$UKN_RUNNING" ] && exit 0; exit 3;;
  stop)
   echo "''' + label + '''-stop" >> "$UKN_EVENTS"
   [ "$UKN_STOP" != running ] || exit 1
   rm -f "$UKN_RUNNING"
   [ "$UKN_STOP" != stopped ] || exit 1
   ;;
- start) echo "''' + label + '''-start" >> "$UKN_EVENTS"; : > "$UKN_RUNNING";;
+ start) echo "''' + label + '''-start" >> "$UKN_EVENTS"; [ "$UKN_STOP" != restart ] || exit 1; : > "$UKN_RUNNING";;
  *) exit 1;;
 esac
 '''
@@ -222,6 +222,44 @@ esac
         self.assertFalse(self.events.exists())
         self.assertTrue(self.running.exists())
         self.assert_clean()
+
+    def test_missing_notice_preserves_running_installation(self):
+        self.install_old()
+        before = self.snapshot()
+        (self.package / 'NOTICE').unlink()
+        self.run_install(False)
+        self.assertEqual(self.snapshot(), before)
+        self.assertFalse((self.base / 'probed').exists())
+        self.assertFalse(self.events.exists())
+        self.assertTrue(self.running.exists())
+        self.assert_clean()
+
+    def test_unknown_service_status_refuses_replacement(self):
+        self.install_old()
+        before = self.snapshot()
+        self.env['UKN_FAIL'] = 'status'
+        self.run_install(False)
+        self.assertEqual(self.snapshot(), before)
+        self.assertFalse(self.events.exists())
+        self.assertTrue(self.running.exists())
+        self.assert_clean()
+
+    def test_restart_failure_retains_backup_even_after_files_restored(self):
+        self.install_old()
+        before = self.snapshot()
+        self.env.update(UKN_FAIL='commit', UKN_STOP='restart')
+        result = self.run_install(False)
+        self.assertEqual(self.snapshot(), before)
+        self.assertFalse(self.running.exists())
+        self.assertIn('backups retained', result.stderr)
+        backups = list(self.root.glob('.ukn-install.*'))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].stat().st_mode & 0o777, 0o700)
+        self.assertEqual(self.events.read_text().splitlines(), ['old-stop', 'old-start'])
+        self.env.update(UKN_FAIL='', UKN_STOP='')
+        self.run_install(False)
+        self.assertEqual(self.events.read_text().splitlines(), ['old-stop', 'old-start'])
+        self.assertEqual(self.snapshot(), before)
 
     def test_failed_first_install_removes_new_files(self):
         self.env['UKN_FAIL'] = 'commit'
