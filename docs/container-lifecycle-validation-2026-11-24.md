@@ -52,3 +52,32 @@ this lifecycle test. Its temporary agent remains in log-only mode.
 
 MIPS runtime behavior, hardware-installed upgrades, physical reboot, interrupted
 power/storage writes and cross-version recovery/watchdog lifetime remain open.
+
+## Detached watchdog and startup recovery extension
+
+Clean candidate `9b98230` subsequently passed all eight container checks and the
+full offline release gate. The runner now disables inherited image healthchecks
+as well as Docker networking. The two new scenarios use narrowly allowed,
+file-backed synthetic AP mutations; no real interface or router is involved.
+
+The actual `-rollback-probe` crash path created a mode-600 journal, armed its
+watchdog in a separate session, changed the simulated AP and exited with code 77.
+The test verified the watcher's session identity and executable against artifact B.
+It then installed artifact A through the shipped installer. Linux reported the
+old watcher's executable as `/opt/sbin/ukn (deleted)`; its bytes still matched B.
+
+After the real 65-second watchdog delay, the old watcher replayed the inverse
+exactly once, removed the journal and restored the simulated AP. Its persistent
+journal lock retained the same inode across installation and recovery.
+
+A second scenario reused the real persisted journal as normal startup recovery
+input. The simulated native runner rejected and recorded any telemetry request
+while the tentative AP state still existed. Starting the new agent replayed the
+inverse before telemetry, removed the journal and retained the original normal
+journal lock inode. Adopted-state, cache and mapping fixtures and configuration
+permissions remained intact. The agent then stopped cleanly; container removal
+was verified by the runner.
+
+These results establish process/file lifetime and ordering for the tested Linux
+arm64 environment and same-source artifacts. They do not establish compatibility
+with older journal formats, a MIPS kernel, reboot or interrupted storage writes.

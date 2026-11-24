@@ -124,6 +124,8 @@ power requests need a justified conversion to native percentage units.
       The container harness now exercises the actual crash-probe watcher across
       binary replacement and startup replay before telemetry. Hardware reboot
       and cross-source-version compatibility remain separate requirements.
+      Clean `9b98230` passed all eight container checks, persistent lock-inode
+      assertions and the full offline release gate.
       Offline recovery tests cover interrupted replay, retained journals and fresh
       identities for repeated changes. Empty inverse entries are rejected before
       any replay. Journal creation, clearing and recovery now share a persistent
