@@ -4,7 +4,8 @@
 
 Requires an explicitly selected, already-present image with /bin/sh, coreutils,
 start-stop-daemon, awk and sha256sum. Never pulls images or contacts a router or
-controller. Native telemetry is synthetic; Docker networking is disabled.
+external controller. Native telemetry is synthetic; only an in-process loopback
+controller fixture is used and Docker networking is disabled.
 """
 import argparse
 import hashlib
@@ -21,7 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = ['ukn', 'install.sh', 'space-check.sh', 'S99unifi-keenetic',
          'unifi-keenetic.conf', 'LICENSE', 'NOTICE',
          'licenses/Go-BSD-3-Clause.txt', 'licenses/model-catalogue-MIT.txt']
-EXPECTED = ['private-atomic-adoption-state', 'first-install-disabled', 'real-agent-service-start',
+EXPECTED = ['private-atomic-adoption-state', 'durable-adoption-before-controller-ack',
+            'first-install-disabled', 'real-agent-service-start',
             'successful-upgrade-preserves-private-data', 'explicit-restart-after-upgrade',
             'failed-upgrade-restores-and-restarts-real-agent', 'clean-stop-no-native-writes',
             'detached-watchdog-recovers-after-executable-replacement',
@@ -78,7 +80,7 @@ def main():
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     report = dict(schema_version=1, status='running', revision=revision,
                   modified=bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip()),
-                  scope='isolated-container-real-agent-synthetic-native-no-controller',
+                  scope='isolated-container-synthetic-native-loopback-controller-only',
                   image_id=image['Id'], architecture=arch, checks=[],
                   limitations=['same-source artifacts with distinct build IDs, not cross-version compatibility',
                                'no MIPS runtime, physical reboot, power loss or native WLAN enforcement'])
@@ -125,6 +127,8 @@ def main():
         print('Testing installer/service/agent offline, including the real 65-second watchdog deadline', flush=True)
         try:
             subprocess.run([go, 'test', '-c', '-o', str(base / 'device-tests'), './internal/device'],
+                           cwd=ROOT, env=env, check=True, timeout=300)
+            subprocess.run([go, 'test', '-c', '-o', str(base / 'ukn-tests'), './cmd/ukn'],
                            cwd=ROOT, env=env, check=True, timeout=300)
             result = subprocess.run([docker, 'run', '--rm', '--pull=never', '--name', container,
                 '--network', 'none', '--no-healthcheck', '--cap-drop=ALL', '--cap-add=DAC_OVERRIDE', '--security-opt', 'no-new-privileges',

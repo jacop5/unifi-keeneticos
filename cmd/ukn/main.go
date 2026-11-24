@@ -539,11 +539,12 @@ func main() {
 		case <-timer.C:
 		case request := <-requests:
 			timer.Stop()
-			outcome := x.ApplyAdopt(request)
-			for _, event := range outcome.Events {
-				log.Print(event)
+			if err := finishExchangeOutcome(ctx, x, path, &interval, actionHandler); err != nil {
+				log.Fatal(err)
 			}
-			if err := x.S.Save(path); err != nil {
+			outcome := x.ApplyAdopt(request)
+			x.PendingPersistence = &outcome
+			if err := finishExchangeOutcome(ctx, x, path, &interval, actionHandler); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -551,6 +552,11 @@ func main() {
 }
 
 func exchange(ctx context.Context, c *http.Client, x *device.Session, path string, interval *time.Duration, actionHandler func(context.Context, string) error) error {
+	// A controller can already have switched to the new key. Retain it in memory
+	// but do not acknowledge it in another inform until its save succeeds.
+	if err := finishExchangeOutcome(ctx, x, path, interval, actionHandler); err != nil {
+		return err
+	}
 	plain, err := x.Payload(time.Now())
 	if err != nil {
 		return err
@@ -593,6 +599,22 @@ func exchange(ctx context.Context, c *http.Client, x *device.Session, path strin
 	if err != nil {
 		return err
 	}
+	x.PendingPersistence = &outcome
+	return finishExchangeOutcome(ctx, x, path, interval, actionHandler)
+}
+
+func finishExchangeOutcome(ctx context.Context, x *device.Session, path string, interval *time.Duration, actionHandler func(context.Context, string) error) error {
+	outcome := x.PendingPersistence
+	if outcome == nil {
+		return nil
+	}
+	if outcome.Changed {
+		if err := x.S.Save(path); err != nil {
+			return err
+		}
+	}
+	// Clear before dispatch so a later network failure cannot replay actions.
+	x.PendingPersistence = nil
 	for _, e := range outcome.Events {
 		log.Print(e)
 	}
@@ -610,9 +632,6 @@ func exchange(ctx context.Context, c *http.Client, x *device.Session, path strin
 	}
 	if outcome.Immediate {
 		*interval = time.Second
-	}
-	if outcome.Changed {
-		return x.S.Save(path)
 	}
 	return nil
 }

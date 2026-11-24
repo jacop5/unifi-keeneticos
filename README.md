@@ -168,6 +168,10 @@ Adoption-state saves use a unique mode-600 temporary file, synchronize it before
 atomic replacement, and synchronize the parent directory afterward. This also
 avoids following a leftover fixed temporary-file symlink. Keep the state directory
 private. Physical power-loss durability still requires hardware validation.
+If a controller reply changes state and its save fails, the Keenetic agent retries
+that save before another inform or the reply's actions. It retains the new key in
+memory so it can resume after storage recovers; a crash before a successful save
+can still require adoption recovery.
 
 Adopt the pending device in UniFi. For a virtualized controller, set Inform Host Override to an address reachable from the router, not an internal container address.
 

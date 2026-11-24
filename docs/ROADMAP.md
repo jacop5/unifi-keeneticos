@@ -83,6 +83,10 @@ power requests need a justified conversion to native percentage units.
       harness runs these state tests as well as the real-agent lifecycle suite.
       This is not physical power-loss proof.
       Clean `45a7a4a` passed the full offline gate and all nine container checks.
+- [x] Gate outgoing informs and changed-reply actions on successful adoption-state
+      persistence. Retain pending outcomes for local retry; exercise failed saves,
+      no acknowledgement during failure, deferred actions and encrypted resumption
+      with the new key through a loopback controller test.
 - [x] Add a separately invoked network-isolated Linux container harness using
       the actual installer/service and agent. Cover disabled installation,
       start/stop, successful upgrade, explicit restart, failed-upgrade restoration

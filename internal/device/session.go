@@ -103,6 +103,9 @@ func (s State) Save(path string) error {
 
 // Session ties the state to the device description and a boot clock.
 type Session struct {
+	// PendingPersistence is an in-memory controller outcome awaiting a durable
+	// state save. The Keenetic transport retries it before another inform.
+	PendingPersistence *Outcome
 	// GuestMu guards S.Guests (the inform loop and the :8882 portal handler).
 	GuestMu  sync.Mutex
 	S        State
