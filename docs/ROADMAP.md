@@ -71,8 +71,12 @@ global LED shutdown and call it Locate.
       packages, failed probes/copies/renames, low space, unsafe targets and caught
       termination. Ordinary failures restore old files and previous running state;
       failed recovery retains private backups and blocks reinstallation.
-- [ ] Define operational recovery for forced termination or power loss.
-      No on-device upgrade claim
+- [x] Document manual inspection/recovery for forced termination or power loss
+      in [installation-recovery.md](installation-recovery.md). Record synchronized
+      phases and backup/replacement hashes; replace the guarded service first and
+      restore it last. Local forced-termination tests verify retained evidence
+      and blocked startup; completed rollback bypass is scoped to its transaction.
+      No on-device upgrade or power-loss durability claim
       follows from the local harness; successful upgrades leave the service stopped.
 - [ ] Prove upgrade preserves adoption key, slot/network mappings, action policy
       and private permissions without exposing credentials in reports/logs.

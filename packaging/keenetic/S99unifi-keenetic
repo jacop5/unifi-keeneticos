@@ -28,6 +28,19 @@ done
 case "${1:-}" in
  start)
   [ "$ENABLED" = 1 ] || { printf '%s\n' 'unifi-keenetic is disabled'; exit 0; }
+  # An interrupted upgrade must not boot a mixture of old and new files.
+  # Only the installer's completed rollback can bypass its own transaction.
+  recovery=${UKN_INSTALL_RECOVERY:-}
+  for pending in /opt/.ukn-install.*; do
+   [ -e "$pending" ] || [ -L "$pending" ] || continue
+   allowed=0
+   if [ -n "$recovery" ] && [ -d "$recovery" ] && [ "$(cat "$recovery/phase" 2>/dev/null || true)" = restored ]; then
+    if [ "$pending" = "$recovery" ]; then allowed=1; fi
+    if [ "$pending" = /opt/.ukn-install.lock ] && [ "$(cat "$pending/work-directory" 2>/dev/null || true)" = "$recovery" ]; then allowed=1; fi
+   fi
+   [ "$allowed" = 1 ] || { printf '%s\n' 'Unfinished installation data exists; inspect it before starting the agent' >&2; exit 1; }
+  done
+  unset UKN_INSTALL_RECOVERY
   [ -n "$INFORM_URL" ] || { printf '%s\n' 'INFORM_URL is required' >&2; exit 1; }
   for option in "$APPLY" "$WLAN_TEST_ONLY" "$LED_CONTROL" "$REBOOT_CONTROL" "$REPORT_UPGRADE_VERSION" "$EXPERIMENTAL_SAE"; do
    case "$option" in 0|1) ;; *) printf '%s\n' 'Action switches must be 0 or 1' >&2; exit 1 ;; esac

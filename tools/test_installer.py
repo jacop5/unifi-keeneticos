@@ -34,6 +34,7 @@ class InstallerTests(unittest.TestCase):
                         UKN_FAILED_ONCE=str(self.base / 'failed-once'), UKN_PAUSED=str(self.base / 'paused'))
         self.write_exec(self.bin / 'id', '#!/bin/sh\necho 0\n')
         self.write_exec(self.bin / 'ndmc', '#!/bin/sh\nexit 99\n')
+        self.write_exec(self.bin / 'sync', '#!/bin/sh\n[ "$UKN_FAIL" != sync ]\n')
         self.write_exec(self.bin / 'df', '''#!/bin/sh
 printf 'Filesystem blocks Used Available Use%% Mounted\n'
 if [ "$UKN_FAIL" = space ]; then echo 'tmpfs 100 100 0 100% /fake'; else echo 'tmpfs 999999 0 999999 0% /fake'; fi
@@ -43,22 +44,37 @@ if [ "$UKN_FAIL" = space ]; then echo 'tmpfs 100 100 0 100% /fake'; else echo 't
         self.assertIsNotNone(mv)
         self.write_exec(self.bin / 'cp', '''#!/bin/sh
 for last; do :; done
+if [ "$UKN_FAIL" = backup-corrupt ]; then
+ case "$last" in */backup/sbin/ukn)
+  "''' + cp + '''" "$@" || exit 1
+  printf corrupt > "$last"
+  exit 0;;
+ esac
+fi
 case "$UKN_FAIL:$last" in
  stage:*/new/etc/init.d/S99unifi-keenetic|backup:*/backup/sbin/ukn) exit 1;;
 esac
 exec "''' + cp + '''" "$@"
 ''')
+        sha = shutil.which('sha256sum')
+        self.assertIsNotNone(sha)
+        self.write_exec(self.bin / 'sha256sum', '''#!/bin/sh
+if [ "$UKN_FAIL" = backup-hash ]; then
+ case "$1" in */backup/*) exit 1;; esac
+fi
+exec "''' + sha + '''" "$@"
+''')
         self.write_exec(self.bin / 'mv', '''#!/bin/sh
 for last; do :; done
 case "$UKN_FAIL:$1:$last" in
- commit:*:*/etc/init.d/S99unifi-keenetic|recover:*:*/etc/init.d/S99unifi-keenetic)
+ commit:*:*/share/licenses/unifi-keeneticos/NOTICE|recover:*:*/share/licenses/unifi-keeneticos/NOTICE)
   case "$2" in */new/*) if [ ! -e "$UKN_FAILED_ONCE" ]; then : > "$UKN_FAILED_ONCE"; exit 1; fi;; esac;;
 esac
 if [ "$UKN_FAIL" = recover ]; then
  case "$2" in */restore/sbin/ukn) exit 1;; esac
 fi
 if [ "$UKN_FAIL" = signal ]; then
- case "$2" in */new/etc/init.d/S99unifi-keenetic)
+ case "$2" in */new/share/licenses/unifi-keeneticos/NOTICE)
   : > "$UKN_PAUSED"
   while :; do sleep 1; done;;
  esac
@@ -143,7 +159,7 @@ esac
         self.assert_clean()
 
     def test_preflight_and_staging_failures_preserve_running_service(self):
-        for failure in ['probe', 'space', 'stage', 'backup']:
+        for failure in ['probe', 'space', 'stage', 'backup', 'backup-corrupt', 'backup-hash', 'sync']:
             with self.subTest(failure=failure):
                 self.install_old()
                 before = self.snapshot()
@@ -312,6 +328,97 @@ esac
             self.assertTrue(self.running.exists())
             self.assertEqual(self.events.read_text().splitlines(), ['old-stop', 'old-start'])
             self.assert_clean()
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.communicate(timeout=5)
+
+    def test_shipped_service_allows_only_completed_rollback(self):
+        config = self.root / 'etc/unifi-keenetic.conf'
+        config.write_text("ENABLED=1\nINFORM_URL='http://192.0.2.1:8080/inform'\n")
+        service = self.root / 'etc/init.d/S99unifi-keenetic'
+        shipped = (ROOT / 'packaging/keenetic/S99unifi-keenetic').read_text()
+        self.write_exec(service, shipped.replace('/opt', str(self.root)))
+        bindir = self.root / 'bin'
+        bindir.mkdir()
+        marker = self.base / 'daemon-started'
+        self.write_exec(bindir / 'start-stop-daemon',
+                        '#!/bin/sh\n[ "${UKN_INSTALL_RECOVERY+x}" != x ] || exit 98\n'
+                        'touch "' + str(marker) + '"\n')
+        work = self.root / '.ukn-install.fixture'
+        work.mkdir()
+        lock = self.root / '.ukn-install.lock'
+        lock.mkdir()
+        (lock / 'work-directory').write_text(str(work) + '\n')
+        env = dict(self.env, UKN_INSTALL_RECOVERY=str(work))
+        for phase, extra, pointer, allowed in [
+                ('committing', False, work, False),
+                ('installed', False, work, False),
+                ('restored', True, work, False),
+                ('restored', False, self.base / 'other', False),
+                ('restored', False, work, True)]:
+            with self.subTest(phase=phase, extra=extra, pointer=pointer):
+                (work / 'phase').write_text(phase + '\n')
+                (lock / 'work-directory').write_text(str(pointer) + '\n')
+                other = self.root / '.ukn-install.other'
+                if extra:
+                    other.mkdir()
+                result = subprocess.run(['sh', str(service), 'start'], env=env,
+                                        capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode == 0, allowed, result.stderr)
+                self.assertEqual(marker.exists(), allowed)
+                if other.exists():
+                    other.rmdir()
+                if marker.exists():
+                    marker.unlink()
+
+    def test_sigkill_retains_verified_preimage_and_guard_blocks_start(self):
+        self.install_old()
+        config = self.root / 'etc/unifi-keenetic.conf'
+        config.write_text("ENABLED=1\nINFORM_URL='http://192.0.2.1:8080/inform'\n")
+        before = self.snapshot()
+        shipped = (ROOT / 'packaging/keenetic/S99unifi-keenetic').read_text()
+        self.write_exec(self.package / 'S99unifi-keenetic', shipped.replace('/opt', str(self.root)))
+        self.manifest()
+        self.env['UKN_FAIL'] = 'signal'
+        process = subprocess.Popen(['sh', 'install.sh'], cwd=self.package, env=self.env,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   text=True, start_new_session=True)
+        try:
+            deadline = time.monotonic() + 5
+            while not (self.base / 'paused').exists() and process.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue((self.base / 'paused').exists(), 'fixture never reached interrupted commit')
+            os.killpg(process.pid, signal.SIGKILL)
+            process.communicate(timeout=5)
+            self.assertNotEqual(process.returncode, 0)
+            lock = self.root / '.ukn-install.lock'
+            work = Path((lock / 'work-directory').read_text().strip())
+            self.assertEqual((work / 'phase').read_text().strip(), 'committing')
+            self.assertEqual((work / 'service-before').read_text().strip(), 'running')
+            self.assertEqual(int((lock / 'pid').read_text()), process.pid)
+            self.assertEqual((work / 'targets').read_text().splitlines()[0], 'etc/init.d/S99unifi-keenetic')
+            hashes = dict(line.split(None, 1)[::-1] for line in (work / 'backup-hashes').read_text().splitlines())
+            for relative, digest in hashes.items():
+                backup = (work / 'backup' / relative).read_bytes()
+                self.assertEqual(hashlib.sha256(backup).hexdigest(), digest)
+                self.assertEqual(backup, before[relative][0])
+            self.assertEqual((self.root / 'sbin/ukn').read_bytes(), (self.package / 'ukn').read_bytes())
+            self.assertEqual((self.root / 'etc/init.d/S99unifi-keenetic').read_bytes(), (self.package / 'S99unifi-keenetic').read_bytes())
+            self.assertFalse(self.running.exists())
+            marker = self.base / 'unexpected-daemon-start'
+            bindir = self.root / 'bin'
+            bindir.mkdir()
+            self.write_exec(bindir / 'start-stop-daemon', '#!/bin/sh\ntouch "' + str(marker) + '"\n')
+            result = subprocess.run(['sh', str(self.root / 'etc/init.d/S99unifi-keenetic'), 'start'],
+                                    env=self.env, capture_output=True, text=True, timeout=5)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('Unfinished installation', result.stderr)
+            self.assertFalse(marker.exists())
+            after = self.snapshot()
+            self.env['UKN_FAIL'] = ''
+            self.run_install(False)
+            self.assertEqual(self.snapshot(), after)
         finally:
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGKILL)
