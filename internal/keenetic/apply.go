@@ -52,6 +52,11 @@ func ApplyChangesWatched(ctx context.Context, run Runner, changes []Change, jour
 		} else if !os.IsNotExist(err) {
 			return err
 		}
+		// Idempotence is not evidence of WLAN operation or controller health.
+		// Nothing changed, so a failed check needs neither journal nor rollback.
+		if err := health(ctx); err != nil {
+			return fmt.Errorf("unchanged plan health check failed: %w", err)
+		}
 		return nil
 	}
 	if err := SaveUndo(journal, changes); err != nil {

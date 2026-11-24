@@ -1829,3 +1829,18 @@ boot time. Service tests cover default-off, invalid switches and test-mode
 conflicts; offline status/planning modes reject the action flag. Full race
 tests, vet and both MIPS builds pass. Physical reboot/startup recovery remains
 unverified, and the running Titan agent/configuration are unchanged.
+
+### Health checks for unchanged plans (offline, 2026-11-24)
+
+A plan with no prepared changes previously returned success before invoking
+its health callback. It now runs that callback after confirming no rollback
+journal is pending. Thus configuration equality alone cannot confirm that the
+mapped WLANs and controller communication meet the caller's health checks.
+No mutation, watchdog or new recovery journal is needed for this path; a failed
+health check returns an error without attempting rollback of unchanged settings.
+
+Tests run an unchanged administratively enabled AP plan against absent/present
+WLAN snapshots, proving failure/success with no mutation or watcher calls and
+no journal creation. Existing journals remain untouched and block the health
+callback. Wrapped deadline errors preserve retry classification. Full race
+tests, vet and both MIPS builds pass. No live router or agent changes were made.
