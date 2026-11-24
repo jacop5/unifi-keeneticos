@@ -77,6 +77,15 @@ power requests need a justified conversion to native percentage units.
 
 ### P0.2 — Upgrade/recovery readiness
 
+- [x] Add a separately invoked network-isolated Linux container harness using
+      the actual installer/service and agent. Cover disabled installation,
+      start/stop, successful upgrade, explicit restart, failed-upgrade restoration
+      and private state/config/mapping preservation. Native telemetry is synthetic;
+      same-source artifacts have different build IDs. Hardware/cross-version
+      behavior is still unverified by this harness.
+- [x] Include all staged files and existing replacement-target backups in the
+      install space check before retaining 16 MiB headroom. Boundary tests cover
+      first install, upgrade and preserved existing configuration.
 - [x] Execute the shipped installer in a private fake Entware root with injected
       corrupt packages, missing notices, unrunnable executables, low space,
       copy/rename failures, unknown service status and failed recovery restart.

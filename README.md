@@ -125,7 +125,7 @@ chmod +x ./ukn
 sh ./install.sh
 ```
 
-The installer stages and verifies replacements, backs up existing files, and runs a read-only probe of the staged executable before stopping a running agent. It installs `/opt/sbin/ukn` and `/opt/etc/init.d/S99unifi-keenetic`, preserves existing configuration and adoption state, and leaves the service **stopped** (a new configuration is also **disabled**). Start it explicitly after reviewing configuration. Probe output contains network/client identifiers; do not publish it unredacted.
+The installer checks space for staged replacements and old-file backups plus 16 MiB headroom, verifies copies, and runs a read-only probe of the staged executable before stopping a running agent. It installs `/opt/sbin/ukn` and `/opt/etc/init.d/S99unifi-keenetic`, preserves existing configuration and adoption state, and leaves the service **stopped** (a new configuration is also **disabled**). Start it explicitly after reviewing configuration. Probe output contains network/client identifiers; do not publish it unredacted.
 
 Ordinary installation failures and caught termination signals attempt to restore previous files and restart an agent that was running. Failed recovery retains private backups and blocks another installation pending review. An existing service must support status codes 0 (running) and 3 (stopped). The guarded service is replaced first and refuses enabled startup while installation markers remain; rollback restores it last. Forced termination or power loss may leave `/opt/.ukn-install.*` recovery data; follow the [installation recovery notes](docs/installation-recovery.md) before retrying. These paths have local failure-injection coverage; installed upgrades and power-loss recovery still require spare-device testing.
 
@@ -133,6 +133,15 @@ Ordinary installation failures and caught termination signals attempt to restore
 backup/current file matches without changing files or contacting router services.
 Use a known-good executable. Its JSON is a diagnostic snapshot, not an automated
 recovery decision or a complete package-integrity check.
+
+For an optional isolated installer/service test, run
+`python3 tools/check-container-lifecycle.py --image YOUR_LOCAL_LINUX_IMAGE`.
+It requires an existing Linux arm64/amd64 image with a shell, coreutils, awk,
+SHA-256 and `start-stop-daemon`; it never pulls an image. The disposable container
+has networking disabled and synthetic native telemetry. It exercises the shipped
+installer/service and real agent, including failed-upgrade recovery, and writes
+`dist/validation/container-lifecycle.json`. It does not replace MIPS, reboot,
+power-loss or real-controller acceptance tests.
 
 Configure `/opt/etc/unifi-keenetic.conf`:
 
