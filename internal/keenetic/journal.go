@@ -17,8 +17,9 @@ import (
 )
 
 type rollbackJournal struct {
-	ID       string
-	Commands []Command
+	ID         string
+	Commands   []Command
+	Recovering bool `json:",omitempty"`
 }
 
 // Keep this inode across transactions: removing a lock file permits two owners
@@ -60,6 +61,10 @@ func lockJournal(ctx context.Context, path string) (*os.File, error) {
 // SaveUndo must finish before the first router mutation. The private journal
 // contains WLAN keys and is removed only after confirmation or full recovery.
 func SaveUndo(path string, changes []Change) error {
+	return saveUndo(path, changes, nil)
+}
+
+func saveUndo(path string, changes []Change, owner *journalOwner) error {
 	if len(changes) == 0 {
 		return fmt.Errorf("empty rollback journal")
 	}
@@ -107,7 +112,13 @@ func SaveUndo(path string, changes []Change) error {
 	if err = f.Close(); err != nil {
 		return err
 	}
-	return syncDir(path)
+	if err := syncDir(path); err != nil {
+		return err
+	}
+	if owner != nil {
+		*owner = journalOwner{path: path, digest: sha256.Sum256(b)}
+	}
+	return nil
 }
 
 func syncDir(path string) error {
@@ -186,6 +197,17 @@ func recoverUndo(ctx context.Context, path, digest string, run Runner) error {
 			return fmt.Errorf("empty rollback command")
 		}
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !journal.Recovering {
+		// Change the durable identity before any inverse. A failed recovery
+		// retains all commands, but the old live transaction is now fenced out.
+		journal.Recovering = true
+		if err := markRecovering(path, journal); err != nil {
+			return err
+		}
+	}
 	guardCache := map[string]bool{}
 	for i, c := range journal.Commands {
 		if err := ctx.Err(); err != nil {
@@ -196,4 +218,29 @@ func recoverUndo(ctx context.Context, path, digest string, run Runner) error {
 		}
 	}
 	return clearUndo(path)
+}
+
+func markRecovering(path string, journal rollbackJournal) error {
+	b, err := json.Marshal(journal)
+	if err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(filepath.Dir(path), ".rollback-recovering-*")
+	if err != nil {
+		return err
+	}
+	defer func() { f.Close(); os.Remove(f.Name()) }()
+	if _, err := f.Write(b); err != nil {
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(f.Name(), path); err != nil {
+		return err
+	}
+	return syncDir(path)
 }

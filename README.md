@@ -172,7 +172,7 @@ ukn -url http://CONTROLLER_IP:8080/inform \
 
 Before mutations, the daemon captures inverse commands and writes a private recovery journal. Changes must pass WLAN/controller checks before confirmation; an independent watchdog attempts recovery after 65 seconds. Rollback is a recovery mechanism, not a guarantee against losing access. Stop the foreground process to finish testing; omitting `-apply` returns to log-only operation.
 
-Journal creation, clearing and recovery share a private persistent `.lock` file. Detached watchers check the transaction identity while holding this lock, so startup recovery and another watcher cannot replay the journal simultaneously. Keep the lock file in place even when no rollback is pending. Older agent binaries do not participate in this locking protocol; mixed-version watchdog and slow-transaction behavior still need lifecycle validation.
+Journal creation, native transaction commands, confirmation and recovery share a private persistent `.lock` file. Detached watchers check the transaction identity while holding this lock. Recovery durably marks the journal before replay, preventing the old transaction from continuing or confirming even if recovery fails. Failed recovery retains every inverse for startup retry. Keep the lock file in place even when no rollback is pending. Offline tests cover these races; native timing and mixed-version watchdog behavior still need lifecycle validation. Older binaries do not participate in this protocol.
 
 The tested changes affect running configuration. The port does not issue a startup-config save. Reboot persistence of provisioned router settings is not verified.
 

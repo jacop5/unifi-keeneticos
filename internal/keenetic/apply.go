@@ -59,31 +59,29 @@ func ApplyChangesWatched(ctx context.Context, run Runner, changes []Change, jour
 		}
 		return nil
 	}
-	if err := SaveUndo(journal, changes); err != nil {
+	var owner journalOwner
+	if err := saveUndo(journal, changes, &owner); err != nil {
 		return err
 	}
 	if arm != nil {
 		if err := arm(journal); err != nil {
-			return errors.Join(fmt.Errorf("could not arm rollback watchdog"), ClearUndo(journal))
+			return errors.Join(fmt.Errorf("could not arm rollback watchdog"), owner.clearBefore(time.Time{}))
 		}
 	}
-	tx, err := Begin(ctx, run, changes, 60*time.Second)
+	tx, err := Begin(ctx, owner.runner(run), changes, 60*time.Second)
 	if err != nil {
 		// Retry from the persisted journal, including inverses that might have
 		// failed during the transaction's immediate rollback.
 		recovery, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		return errors.Join(err, RecoverUndo(recovery, journal, run))
+		return errors.Join(err, owner.recover(recovery, run))
 	}
 	if err := health(ctx); err != nil {
 		rollbackErr := tx.Rollback()
 		if rollbackErr == nil {
-			rollbackErr = ClearUndo(journal)
+			rollbackErr = owner.clearBefore(time.Time{})
 		}
 		return errors.Join(fmt.Errorf("post-change health check failed: %w", err), rollbackErr)
 	}
-	if err := tx.Confirm(); err != nil {
-		return err
-	}
-	return ClearUndo(journal)
+	return tx.confirm(func() error { return owner.clearBefore(tx.deadline) })
 }

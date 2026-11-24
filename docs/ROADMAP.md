@@ -78,7 +78,10 @@ global LED shutdown and call it Locate.
       any replay. Journal creation, clearing and recovery now share a persistent
       kernel lock; detached watchers check identity inside that lock. Offline
       tests cover cross-process exclusion, canceled waits and stale identities.
-      Still audit detached replay against slow active transactions, and migration
+      Native transaction commands and confirmation also check journal ownership
+      under that lock. Recovery marks the journal before replay, fencing out old
+      commands even on failure; offline tests cover health-check races, replacement
+      journals and forward deadlines. Still validate native timing and migration
       from older binaries whose watchers do not use the journal lock.
 - [ ] Run installation and physical reboot only on a spare router with a recovery
       path. Do not use the Titan main router as the first installed-upgrade test.

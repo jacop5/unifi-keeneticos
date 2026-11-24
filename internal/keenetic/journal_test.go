@@ -4,9 +4,11 @@ package keenetic
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -105,7 +107,12 @@ func TestInterruptedRecoveryRetainsSequenceForNextStart(t *testing.T) {
 		t.Fatalf("interruption not retained: %v calls=%d", err, calls)
 	}
 	after, err := os.ReadFile(path)
-	if err != nil || !bytes.Equal(before, after) {
+	if err != nil {
+		t.Fatal(err)
+	}
+	var initial, retained rollbackJournal
+	if json.Unmarshal(before, &initial) != nil || json.Unmarshal(after, &retained) != nil ||
+		initial.ID != retained.ID || !reflect.DeepEqual(initial.Commands, retained.Commands) || !retained.Recovering {
 		t.Fatal("lost recovery sequence")
 	}
 	var retried []string

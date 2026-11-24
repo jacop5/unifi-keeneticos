@@ -39,11 +39,22 @@ func Begin(ctx context.Context, run Runner, changes []Change, timeout time.Durat
 	t := &Transaction{run: run, changes: append([]Change(nil), changes...), deadline: time.Now().Add(timeout)}
 	t.mu.Lock()
 	t.timer = time.AfterFunc(timeout, func() { _ = t.Rollback() })
+	forwardCtx, cancel := context.WithDeadline(ctx, t.deadline)
+	defer cancel()
 	for i, c := range t.changes {
+		if err := forwardCtx.Err(); err != nil {
+			rollbackErr := t.rollbackLocked()
+			t.mu.Unlock()
+			return t, errors.Join(err, rollbackErr)
+		}
 		// Include the current command in rollback: a failed execution may still
 		// have partially changed router state.
 		t.applied = i + 1
-		if _, err := run(ctx, c.Forward.Text); err != nil {
+		_, err := run(forwardCtx, c.Forward.Text)
+		if err == nil {
+			err = forwardCtx.Err()
+		}
+		if err != nil {
 			rollbackErr := t.rollbackLocked()
 			t.mu.Unlock()
 			return t, errors.Join(fmt.Errorf("configuration command %d failed", i+1), rollbackErr)
@@ -79,6 +90,12 @@ func (t *Transaction) rollbackLocked() error {
 }
 func (t *Transaction) Rollback() error { t.mu.Lock(); defer t.mu.Unlock(); return t.rollbackLocked() }
 func (t *Transaction) Confirm() error {
+	return t.confirm(nil)
+}
+
+// Keep the transaction mutex before acquiring the journal lock in commit. The
+// timeout rollback takes locks in that order too; reversing it can deadlock.
+func (t *Transaction) confirm(commit func() error) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.done {
@@ -86,6 +103,11 @@ func (t *Transaction) Confirm() error {
 	}
 	if !time.Now().Before(t.deadline) {
 		return errors.Join(fmt.Errorf("confirmation deadline expired"), t.rollbackLocked())
+	}
+	if commit != nil {
+		if err := commit(); err != nil {
+			return errors.Join(err, t.rollbackLocked())
+		}
 	}
 	t.timer.Stop()
 	t.done = true
