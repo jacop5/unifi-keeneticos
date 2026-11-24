@@ -2,9 +2,10 @@
 
 Updated 2026-11-24. This is the implementation/test order, not a claim that the
 port is complete. Baseline for this plan: repository revision `3985993`.
-The latest hardware-verified temporary Titan agent is `dc0fba5`, log-only;
-[recovery validation](recovery-validation-2026-11-24.md) records the scoped live
-results. Revalidate its process/network state before another live run.
+The current temporary Titan agent is `632f35b`, log-only;
+[controller validation](controller-validation-2026-11-24.md) records its scoped
+live results. [Recovery validation](recovery-validation-2026-11-24.md) used
+`dc0fba5`. Revalidate process/network state before another live run.
 
 ## Working rules
 
@@ -105,15 +106,15 @@ cleanup evidence. Keep raw configurations/credentials private.
 
 | Case | Current evidence | Next decisive check |
 | --- | --- | --- |
-| WPA2, 2.4 and 5 GHz | Prior authentication/DHCP/Wi-Fi-bound HTTPS passes | Repeat on candidate with traffic demonstrably bound to Wi-Fi |
+| WPA2, 2.4 and 5 GHz | `632f35b`: 5 GHz WPA2 authentication, DHCP ACK and Wi-Fi-bound HTTPS with explicit endpoint resolution; earlier 2.4 GHz passes | Repeat 2.4 GHz on candidate; system DNS still needs separate verification |
 | WPA3-only | Titan 5 GHz WPA3 authentication passed | 2.4 GHz and traffic; interoperability on available clients |
 | WPA2/WPA3 transition | Titan Mac negotiated WPA3 | A WPA2-only client must also connect; test both bands |
 | Hidden SSID | Translation/unit coverage | Native hidden flag and explicit client join, then exact restore |
 | Open / OWE | Translation and disabled-slot native command tests | Real client association and correct encryption/PMF; never claim OWE from an open connection |
-| Pause/resume and schedules | Controller/native transitions passed | Repeat on candidate, including timer boundaries and restart while paused |
-| Automatic reconnect | Not observed; manual same-client rejoin passed | Controlled client selection, client-side reason/state evidence and bounded observation; avoid changing main-network preferences implicitly |
+| Pause/resume and schedules | `632f35b`: controller pause/resume confirmed on both bands; earlier schedule transitions passed | Repeat schedules on candidate, including timer boundaries and restart while paused |
+| Automatic reconnect | Latest Mac run selected main AP0 after pause, rather than returning to test AP6 | Controlled client selection and bounded observation; preserve main-network preferences |
 | Controller interruption | Real 503 rollback/retry previously passed | Repeat on candidate with status-report outcome and history verified |
-| Idempotent provisioning | Health-on-unchanged fix tested offline | No configuration writes, but operational/controller checks still required |
+| Idempotent provisioning | SSID quote normalization fixed and verified on Titan; two credential writes persist after an applied profile | Establish safe comparison of native credential representation; then prove zero writes while retaining operational/controller checks |
 | Inactive WLAN / radio-off | Verification logic tested offline | Spare-device validation; no shared-radio toggling on the main router |
 | Client policy | Empty allow-list blocked join and removal restored it | Individual entries and two-client isolation/RSSI behavior |
 | Reboot control | Default-off policy/dispatch tests only | Spare-device reboot, service return and native startup-config behavior |

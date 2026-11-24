@@ -61,7 +61,8 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | WLAN schedules | Native weekly timers and guarded recovery; controller blackout, automatic stop/start, and pause/resume verified on both Hero test bands |
 | Radio channel, width and administrative state | Translation, explicit configuration readback and rollback tested offline; excluded from live main-router tests |
 | Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
-| Automatic client reconnect after WLAN pause | Not observed in the Titan/Mac test; manual rejoin worked after resume; cause unresolved |
+| Automatic client reconnect after WLAN pause | Latest Titan/Mac test selected a main AP0 network instead of returning to test AP6; automatic return to the test WLAN remains unverified |
+| Idempotent provisioning | Equivalent quoted/unquoted SSIDs no longer rewrite; native credential representation still causes repeated credential writes; see [pinned controller validation](docs/controller-validation-2026-11-24.md) |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
 | Fast roaming | Explicit disable implemented; experimental opt-in for matched dual-band WPA2 with explicit native domain, guarded AP6 provisioning and 5 GHz WPA2 client authentication with FT enabled verified on Titan; actual FT reassociation/roaming unverified |
 | BSS transition (802.11v) | Enabled requests explicitly unsupported; per-AP 802.11k RRM is not treated as equivalent |
