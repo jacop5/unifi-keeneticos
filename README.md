@@ -139,7 +139,9 @@ For an optional isolated installer/service test, run
 It requires an existing Linux arm64/amd64 image with a shell, coreutils, awk,
 SHA-256 and `start-stop-daemon`; it never pulls an image. The disposable container
 has networking disabled and synthetic native telemetry. It exercises the shipped
-installer/service and real agent, including failed-upgrade recovery, and writes
+installer/service and real agent, including failed-upgrade recovery, a detached
+watchdog across executable replacement, and startup recovery before telemetry.
+It includes the real 65-second watchdog delay and writes
 `dist/validation/container-lifecycle.json`. It does not replace MIPS, reboot,
 power-loss or real-controller acceptance tests.
 

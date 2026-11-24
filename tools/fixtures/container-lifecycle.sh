@@ -114,3 +114,73 @@ assert_stopped
 assert_preserved
 test ! -e /work/forbidden-native-command
 printf 'PASS clean-stop-no-native-writes\n'
+normal_lock_inode=$(stat -c %i "$state/rollback.json.lock")
+
+# The actual crash probe arms its own setsid watchdog, writes a real journal,
+# changes only the synthetic AP and exits before confirmation.
+: > /work/allow-rollback-probe
+if /opt/sbin/ukn -state "$state" -rollback-probe WifiMaster0/AccessPoint5 -crash-probe > /work/crash-probe.log 2>&1; then
+ exit 1
+else
+ code=$?
+fi
+[ "$code" = 77 ]
+test -e /work/fake-ap-ssid
+test -f "$state/rollback-probe.json"
+[ "$(stat -c %a "$state/rollback-probe.json")" = 600 ]
+cp -p "$state/rollback-probe.json" /work/saved-rollback.json
+probe_lock_inode=$(stat -c %i "$state/rollback-probe.json.lock")
+watch_pid=''
+for command in /proc/[0-9]*/cmdline; do
+ [ -r "$command" ] || continue
+ args=$(tr '\000' ' ' < "$command" 2>/dev/null || true)
+ case "$args" in
+  "/opt/sbin/ukn -rollback-watch $state/rollback-probe.json -rollback-id "*)
+   candidate=${command#/proc/}
+   candidate=${candidate%/cmdline}
+   [ -z "$watch_pid" ] || exit 1
+   watch_pid=$candidate;;
+ esac
+done
+test -n "$watch_pid"
+[ "$(awk '{ print $6 }' /proc/"$watch_pid"/stat)" = "$watch_pid" ]
+cmp -s /proc/"$watch_pid"/exe /test/package-b/ukn
+sh /test/package-a/install.sh > /work/watchdog-upgrade.log 2>&1
+assert_stopped
+cmp -s /opt/sbin/ukn /test/package-a/ukn
+[ "$(readlink /proc/"$watch_pid"/exe)" = '/opt/sbin/ukn (deleted)' ]
+cmp -s /proc/"$watch_pid"/exe /test/package-b/ukn
+printf 'Waiting for the actual detached watchdog deadline\n'
+n=0
+while [ -e "$state/rollback-probe.json" ]; do
+ n=$((n+1)); [ "$n" -lt 85 ] || exit 1
+ sleep 1
+done
+test ! -e /work/fake-ap-ssid
+[ "$(stat -c %i "$state/rollback-probe.json.lock")" = "$probe_lock_inode" ]
+[ "$(wc -l < /work/inverse-calls | tr -d '[:space:]')" = 1 ]
+assert_clean
+assert_preserved
+test ! -e /work/forbidden-native-command
+printf 'PASS detached-watchdog-recovers-after-executable-replacement\n'
+
+# Reuse a real persisted journal to verify normal startup recovers before its
+# first telemetry request. Telemetry before the inverse is a fixture failure.
+cp -p /work/saved-rollback.json "$state/rollback.json"
+: > /work/fake-ap-ssid
+: > /work/require-recovery-before-telemetry
+"$service" start
+wait_running
+n=0
+while [ -e "$state/rollback.json" ]; do
+ n=$((n+1)); [ "$n" -lt 50 ] || exit 1
+ sleep 0.1
+done
+test ! -e /work/fake-ap-ssid
+[ "$(stat -c %i "$state/rollback.json.lock")" = "$normal_lock_inode" ]
+[ "$(wc -l < /work/inverse-calls | tr -d '[:space:]')" = 2 ]
+assert_preserved
+"$service" stop
+assert_stopped
+test ! -e /work/forbidden-native-command
+printf 'PASS startup-recovers-pending-journal-before-telemetry\n'

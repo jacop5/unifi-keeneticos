@@ -23,16 +23,39 @@ FILES = ['ukn', 'install.sh', 'space-check.sh', 'S99unifi-keenetic',
          'licenses/Go-BSD-3-Clause.txt', 'licenses/model-catalogue-MIT.txt']
 EXPECTED = ['first-install-disabled', 'real-agent-service-start',
             'successful-upgrade-preserves-private-data', 'explicit-restart-after-upgrade',
-            'failed-upgrade-restores-and-restarts-real-agent', 'clean-stop-no-native-writes']
+            'failed-upgrade-restores-and-restarts-real-agent', 'clean-stop-no-native-writes',
+            'detached-watchdog-recovers-after-executable-replacement',
+            'startup-recovers-pending-journal-before-telemetry']
 NATIVE = '''#!/bin/sh
 set -eu
 [ "$1" = -c ] || exit 99
+case "$2" in
+ show*)
+  if [ -e /work/require-recovery-before-telemetry ] && [ -e /work/fake-ap-ssid ]; then
+   : > /work/forbidden-native-command
+   exit 99
+  fi;;
+esac
 case "$2" in
  'show version') printf 'hw_id: KN-1810\\n';;
  'show system') printf 'hostname: UKN-Container-Lab\\nuptime: 123\\n';;
  'show interface Bridge0') printf 'id: Bridge0\\naddress: 192.0.2.1\\nmac: 02:00:00:00:00:01\\nmask: 255.255.255.0\\n';;
  'show interface WifiMaster0') printf 'id: WifiMaster0\\nchannel: 6\\n';;
  'show interface WifiMaster1') printf 'id: WifiMaster1\\nchannel: 36\\n';;
+ 'show interface WifiMaster0/AccessPoint5')
+  printf 'id: WifiMaster0/AccessPoint5\\nstate: down\\n'
+  if [ -e /work/fake-ap-ssid ]; then printf 'ssid: ukn-rollback-probe\\n'; fi;;
+ 'show running-config')
+  printf 'interface WifiMaster0/AccessPoint5\\n'
+  if [ -e /work/fake-ap-ssid ]; then printf '    ssid ukn-rollback-probe\\n'; fi
+  printf '    down\\n!\\n';;
+ 'interface WifiMaster0/AccessPoint5 ssid ukn-rollback-probe')
+  [ -e /work/allow-rollback-probe ] || exit 99
+  : > /work/fake-ap-ssid;;
+ 'interface WifiMaster0/AccessPoint5 no ssid')
+  [ -e /work/allow-rollback-probe ] || exit 99
+  printf 'inverse\\n' >> /work/inverse-calls
+  rm -f /work/fake-ap-ssid;;
  'show associations'|'show ip arp'|'show interface'|'show ip dhcp bindings'|'show ip hotspot') :;;
  *) : > /work/forbidden-native-command; exit 99;;
 esac
@@ -99,10 +122,10 @@ def main():
         (base / 'state.json').write_text(json.dumps(dict(key=secrets.token_hex(16), adopted=True,
             gcm=True, cfgversion='synthetic-adopted-config', inform_url='http://127.0.0.1:9/inform',
             version='6.8.2.15592', mgmt_cfg='', led=False, locating=False)))
-        print('Testing actual installer, service and agent with Docker networking disabled', flush=True)
+        print('Testing installer/service/agent offline, including the real 65-second watchdog deadline', flush=True)
         try:
             result = subprocess.run([docker, 'run', '--rm', '--pull=never', '--name', container,
-                '--network', 'none', '--cap-drop=ALL', '--cap-add=DAC_OVERRIDE', '--security-opt', 'no-new-privileges',
+                '--network', 'none', '--no-healthcheck', '--cap-drop=ALL', '--cap-add=DAC_OVERRIDE', '--security-opt', 'no-new-privileges',
                 '--pids-limit', '64', '--memory', '256m', '--cpus', '2',
                 '--mount', 'type=bind,source=' + str(base) + ',target=/test,readonly',
                 '--entrypoint', '/bin/sh', image['Id'], '/test/run.sh'],

@@ -121,6 +121,9 @@ power requests need a justified conversion to native percentage units.
       applying-mode lifecycle coverage is still required.
 - [ ] Check startup recovery, watchdog executable lifetime and journal persistence
       across agent replacement and device reboot.
+      The container harness now exercises the actual crash-probe watcher across
+      binary replacement and startup replay before telemetry. Hardware reboot
+      and cross-source-version compatibility remain separate requirements.
       Offline recovery tests cover interrupted replay, retained journals and fresh
       identities for repeated changes. Empty inverse entries are rejected before
       any replay. Journal creation, clearing and recovery now share a persistent
