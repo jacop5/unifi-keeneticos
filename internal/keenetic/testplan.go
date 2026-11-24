@@ -40,7 +40,7 @@ func BuildWLANTestPlanWithFT(text string, slots, domains map[string]string) (Pla
 				keys = append(keys, key)
 			}
 		}
-		if strings.HasPrefix(key, "vlan.") || strings.HasPrefix(key, "bridge.") || strings.HasPrefix(key, "macacl.") || strings.HasPrefix(key, "stamgr.") {
+		if strings.HasPrefix(key, "vlan.") || strings.HasPrefix(key, "bridge.") || strings.HasPrefix(key, "macacl.") || strings.HasPrefix(key, "stamgr.") || strings.HasPrefix(key, "qos.") {
 			keys = append(keys, key)
 		}
 	}

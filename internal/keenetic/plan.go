@@ -191,11 +191,12 @@ func BuildPlanWithOptions(text string, slots map[string]string, options PlannerO
 		if err := validateEnableStatus(cfg, prefix+"status", "aaa."+id+".status"); err != nil {
 			return p, err
 		}
-		for _, name := range []string{"dtim_period", "uapsd"} {
+		for _, name := range []string{"dtim_period", "uapsd", "minrate_data", "mgmt_rate", "beacon_rate", "minrate_cck_rates.status"} {
 			if cfg[prefix+name] != "" {
 				p.Ignored = append(p.Ignored, prefix+name)
 			}
 		}
+		p.Ignored = append(p.Ignored, ignoredQoSLimits(cfg, cfg[prefix+"devname"])...)
 		schedule, err := compileSchedule(cfg, prefix, target)
 		if err != nil {
 			return p, err

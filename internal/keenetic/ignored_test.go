@@ -39,3 +39,47 @@ wireless.99.uapsd=enabled
 		t.Fatal("diagnostics changed native commands")
 	}
 }
+
+func TestUntranslatedRatesAndShapingAreVisibleWithoutChangingCommands(t *testing.T) {
+	base := strings.ReplaceAll(wlan, "Home WiFi", "UKN-Test-Ignored") + "wireless.1.devname=wifi0ap6\n"
+	extra := `wireless.1.minrate_data=12000
+wireless.1.mgmt_rate=12000
+wireless.1.beacon_rate=6000
+wireless.1.minrate_cck_rates.status=false
+qos.status=enabled
+qos.vap.7.devname=wifi0ap6
+qos.vap.7.dwnlink.maxspeed=12345
+qos.vap.7.uplink.0.maxspeed=6789
+qos.vap.7.uplink.23.maxspeed=private-invalid-value
+qos.vap.8.devname=wifi1ap0
+qos.vap.8.dwnlink.maxspeed=unrelated-private-value
+qos.vap.8.uplink.1.maxspeed=9999
+`
+	want := []string{"wireless.1.minrate_data", "wireless.1.mgmt_rate", "wireless.1.beacon_rate",
+		"wireless.1.minrate_cck_rates.status", "qos.vap.7.dwnlink.maxspeed",
+		"qos.vap.7.uplink.0.maxspeed", "qos.vap.7.uplink.23.maxspeed"}
+	slots := map[string]string{"1": "WifiMaster0/AccessPoint6"}
+	for _, build := range []struct {
+		name string
+		plan func(string, map[string]string) (Plan, error)
+	}{{"normal", BuildPlan}, {"connected-test", BuildWLANTestPlan}} {
+		t.Run(build.name, func(t *testing.T) {
+			baseline, err := build.plan(base, slots)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p, err := build.plan(base+extra, slots)
+			if err != nil || !reflect.DeepEqual(p.Ignored, want) {
+				t.Fatalf("ignored=%v err=%v", p.Ignored, err)
+			}
+			if !reflect.DeepEqual(p.Commands, baseline.Commands) || len(p.Unsupported) != 0 {
+				t.Fatal("reporting changed native planning")
+			}
+			disabled := strings.ReplaceAll(extra, "qos.status=enabled", "qos.status=disabled")
+			p, err = build.plan(base+disabled, slots)
+			if err != nil || !reflect.DeepEqual(p.Ignored, want[:4]) {
+				t.Fatalf("disabled shaping reported as requested: %v %v", p.Ignored, err)
+			}
+		})
+	}
+}

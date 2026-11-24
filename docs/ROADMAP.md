@@ -50,6 +50,11 @@ alone do not implement guest authorization, restricted networks, or a portal.
 Local tests cover normal/scoped planning, paused guest requests, malformed flags,
 and refusal before apply preparation. This is a compatibility guard, not guest support.
 
+Minimum data/management/beacon rates, CCK-rate selection, and enabled per-client
+bandwidth requests matched by VAP are now reported as ignored setting names in
+normal and scoped test plans. Their values are not retained in diagnostics and
+they produce no native commands. Native rate and shaping support remains open.
+
 ## P0 tasks
 
 ### P0.1 — One offline command and candidate evidence
