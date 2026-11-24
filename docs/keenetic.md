@@ -1678,3 +1678,33 @@ credential omission, private permissions, temporary-file cleanup and a built
 CLI helper with a native-runner sentinel proving query/action isolation. Full
 race tests, vet and both MIPS builds pass. This change has not been deployed
 to the Titan yet; the current lab agent and Wi-Fi configuration are unchanged.
+
+### Provisioning report live verification (2026-11-24)
+
+Clean revision `26532b6` was staged with free-space/hash checks and verified
+build provenance. One retired test executable, confirmed unused by process
+inspection, was removed to meet staging headroom; the active build and backups
+were retained. A fresh native backup preceded this test. Querying before the
+report existed returned phase unknown without fabricating a confirmation.
+
+The new lab agent first ran log-only against the original profile: its report
+showed unsupported BSS transition, apply disabled, test-only scope and the known
+ignored DTIM/U-APSD keys. Temporarily disabling BSS transition on the dedicated
+profile changed the report to log-only, still with no confirmation. A four-change
+AP6-only preflight passed. Guarded application reported applying without a
+last-confirmed field; only after native/controller health confirmation and
+journal clearing did it report confirmed with a version/time.
+
+After restart in log-only mode, the original controller profile was restored
+and verified against the saved field values. The latest report then showed
+the newer received version as unsupported with apply disabled, preserving the
+previous confirmed version/time. Its file mode was 0600. The controller's
+received-version echo remained independent of this native outcome report.
+This verifies these live phases and history retention, not hardware execution
+of every failure/retry phase (those retain offline regression coverage).
+
+Complete native before/after configurations match after ANSI/CR/comment
+normalization, both SHA-256
+`fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
+Both primary WLANs and shared radios are included. The controller is connected,
+no rollback journal remains, and the new build remains the log-only lab agent.
