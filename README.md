@@ -57,7 +57,7 @@ Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.6
 | Minimum RSSI | Per-band requests map only to owned AP slots; native threshold/rollback verified on disabled Hero slots on both bands; client enforcement not yet verified |
 | WMM | Controller provisioning and native readback confirmed on both Hero test bands; disabled-slot rollback verified; traffic-priority behavior not measured |
 | WLAN schedules | Native weekly timers and guarded recovery; controller blackout, automatic stop/start, and pause/resume verified on both Hero test bands |
-| Radio channel, width and administrative state | Implemented; deliberately excluded from connected Wi-Fi tests |
+| Radio channel, width and administrative state | Translation, explicit configuration readback and rollback tested offline; excluded from live main-router tests |
 | Regulatory country | Implemented with neutral radio transition and exact country inverse; offline tests only, excluded from connected Wi-Fi tests |
 | Automatic client reconnect after WLAN pause | Not observed in the Titan/Mac test; manual rejoin worked after resume; cause unresolved |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |

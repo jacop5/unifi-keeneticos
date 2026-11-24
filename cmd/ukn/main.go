@@ -436,6 +436,9 @@ func main() {
 								if err := keenetic.VerifyWLANSettings(plan, string(running)); err != nil {
 									return err
 								}
+								if err := keenetic.VerifyRadioSettings(plan, string(running)); err != nil {
+									return err
+								}
 								if err := keenetic.VerifyCountryCodes(plan, string(running)); err != nil {
 									return err
 								}

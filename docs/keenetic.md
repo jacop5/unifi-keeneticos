@@ -1730,3 +1730,28 @@ extension forms, existing 2.4 GHz/auto/160 behavior, malformed/wrong-band
 requests and exact native width inverses. Test-mode regression confirms radio
 commands remain excluded. Full race tests, vet and both MIPS builds pass.
 No live radio change was attempted; the running Titan agent is unchanged.
+
+### Radio configuration readback gate (offline, 2026-11-24)
+
+Guarded provisioning now checks explicit radio channel, width form and final
+administrative state in native running configuration before confirmation.
+Previously the health path checked WLAN settings and regulatory country but
+had no equivalent channel/width comparison. Only planned WifiMaster0/1 settings
+are checked; AP-only and country-only plans add no channel/width assertion.
+Automatic-channel requests accept an absent channel or explicit `channel auto`,
+and ignore channel-width/auto-rescan subcommands when identifying a fixed
+channel. Ambiguous repeated settings fail verification.
+
+The check uses configured values, not an inference from negotiated client
+bandwidth. An omitted/default width cannot prove an explicit requested width;
+that case fails conservatively and needs model-specific validation before
+claiming support. Inverses remain based on the exact preimage, including native
+default resets. This does not establish current RF performance or regulatory
+availability.
+
+Tests cover matching/mismatched channels, extension forms, administrative
+state, missing/ambiguous values and auto-channel distinctions. A simulated
+native runner acknowledges channel/width commands without applying them;
+readback failure triggers exact width/channel rollback and clears its journal.
+Full race tests, vet and both MIPS builds pass. No live radio settings changed;
+the running Titan agent remains unchanged and log-only.
