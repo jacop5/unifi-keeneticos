@@ -1797,3 +1797,35 @@ Tests cover mode/plan changes, immutable historical ignored-setting snapshots,
 ordered/deduplicated targets, credential/client omission and legacy behavior.
 Full race tests, vet and both MIPS builds pass. This metadata extension has not
 been deployed to the Titan; no live configuration or running agent changed.
+
+### Explicit controller reboot control (offline implementation)
+
+Controller reboot remains disabled by default. `-reboot-control` or service
+`REBOOT_CONTROL=1` opts into `system reboot 5`, using the documented native
+five-second delayed restart (CLI section 3.187.28). It is independent of LED,
+WLAN apply and firmware version-reporting options. WLAN-test mode rejects this
+configuration in both the CLI and service, and the backend policy independently
+refuses it. The current Titan lab therefore cannot enable it in its test scope.
+
+Dispatch refuses a reboot when this instance's rollback journal exists or its
+state cannot be established. An accepted reboot request cancels the agent loop
+so a new provisioning transaction cannot start during the delay; normal state
+and listener cleanup follows. A rejected native command does not stop the
+agent. Unsupported action text has no general native-command fallback.
+Encrypted controller reboot/restart replies are normalized to this allow-list;
+firmware upgrades never dispatch reboot, including version-only acknowledgement.
+Physical-device uptime is not simulated or reset by reply handling.
+
+No startup configuration is saved by this action. Native reboot loads the saved
+startup settings; any controller reapplication depends on persistent service
+startup, APPLY and controller connectivity. A temporary /tmp lab binary does
+not provide that persistence. Successful dispatch is not evidence of a completed
+physical restart. No native reboot command has been issued during these tests.
+
+Tests use fake native runners and encrypted local-controller replies to verify
+explicit opt-in, test-scope refusal, pending-journal refusal, native failure,
+loop cancellation, reboot aliases, upgrade independence and unchanged emulated
+boot time. Service tests cover default-off, invalid switches and test-mode
+conflicts; offline status/planning modes reject the action flag. Full race
+tests, vet and both MIPS builds pass. Physical reboot/startup recovery remains
+unverified, and the running Titan agent/configuration are unchanged.

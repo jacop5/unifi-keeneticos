@@ -39,6 +39,7 @@ func main() {
 	probeMode := flag.String("rollback-probe-mode", "ssid", "unused-slot rollback probe: ssid, owe, acl, wpa3, transition, rssi, wmm, ft, schedule, schedule-binding, schedule-active or schedule-start")
 	crashProbe := flag.Bool("crash-probe", false, "with -rollback-probe, exit before confirmation to test detached recovery")
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
+	rebootControl := flag.Bool("reboot-control", false, "allow controller-requested physical reboot; unavailable in WLAN test mode")
 	ledControl := flag.Bool("led-control", false, "allow controller LED on/off commands independently of WLAN apply; no reboot or locate")
 	reportUpgradeVersion := flag.Bool("report-upgrade-version", false, "acknowledge controller upgrades by reporting their version only; never download firmware or reboot (default: refuse)")
 	wlanTestOnly := flag.Bool("wlan-test-only", false, "restrict planning to UKN-Test SSIDs on non-primary slots; exclude all radio changes")
@@ -54,9 +55,12 @@ func main() {
 	experimentalSAE := flag.Bool("experimental-sae", false, "advertise only the controller SAE radio capability for WPA3 testing; client interoperability unverified")
 	jsonPlan := flag.Bool("plan-json", false, "with -plan, print a redacted structured plan without router access")
 	flag.Parse()
+	if *rebootControl && *wlanTestOnly {
+		log.Fatal("-reboot-control cannot be used in WLAN test mode")
+	}
 	offlineModes := map[string]bool{
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
-		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl,
+		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl, "reboot-control": *rebootControl,
 		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild, "provision-status": *showProvisionStatus,
 	}
 	if err := validateOfflineMode(*preflightRunning, *planFile, offlineModes); err != nil {
@@ -334,12 +338,11 @@ func main() {
 	}
 	client := &http.Client{Timeout: 15 * time.Second}
 	var actionHandler func(context.Context, string) error
-	if *ledControl {
-		actionHandler = func(ctx context.Context, action string) error {
-			c, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			return keenetic.LEDAction(c, keenetic.Local, action)
-		}
+	if *ledControl || *rebootControl {
+		actionHandler = nativeActionHandler(keenetic.Local, keenetic.ActionPolicy{LED: *ledControl, Reboot: *rebootControl, WLANTestOnly: *wlanTestOnly}, journal, stop)
+	}
+	if *rebootControl {
+		log.Print("controller native reboot control enabled")
 	}
 	interval := 10 * time.Second
 	for ctx.Err() == nil {
@@ -364,7 +367,7 @@ func main() {
 			if informErr != nil {
 				log.Printf("inform: %v", informErr)
 			}
-			if informErr == nil && provisioning.ready(x.S.CfgVersion, time.Now()) {
+			if ctx.Err() == nil && informErr == nil && provisioning.ready(x.S.CfgVersion, time.Now()) {
 				plannedVersion := x.S.CfgVersion
 				cfg, err := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
 				if err == nil {
@@ -548,7 +551,7 @@ func exchange(ctx context.Context, c *http.Client, x *device.Session, path strin
 		} else if err := actionHandler(ctx, action); err != nil {
 			log.Printf("controller action %s: %v", action, err)
 		} else {
-			log.Printf("controller action completed: %s", action)
+			log.Printf("controller action dispatched: %s", action)
 		}
 	}
 	if outcome.Interval > 0 {

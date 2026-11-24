@@ -92,7 +92,7 @@ func TestProvisionStatusCLIIsReadOnlyAndRejectsActions(t *testing.T) {
 	if err := r.record("v1", "log-only", nil, time.Time{}); err != nil {
 		t.Fatal(err)
 	}
-	for _, conflict := range []string{"", "-apply", "-probe", "-models", "-build-info", "-rollback-probe", "-plan"} {
+	for _, conflict := range []string{"", "-apply", "-reboot-control", "-probe", "-models", "-build-info", "-rollback-probe", "-plan"} {
 		args := []string{"-test.run=^TestProvisionStatusCLIHelper$", "--", "-state", dir, "-provision-status"}
 		if conflict != "" {
 			args = append(args, conflict)

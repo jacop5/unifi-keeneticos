@@ -26,7 +26,7 @@ func TestOfflinePreflightRequiresReversibleOwnedTargets(t *testing.T) {
 }
 
 func TestOfflinePreflightRejectsConflictingModesBeforeDispatch(t *testing.T) {
-	for _, mode := range []string{"rollback-watch", "rollback-probe", "crash-probe", "apply", "led-control", "probe", "terminal-probe", "models", "provision-status"} {
+	for _, mode := range []string{"rollback-watch", "rollback-probe", "crash-probe", "apply", "led-control", "probe", "terminal-probe", "models", "provision-status", "reboot-control"} {
 		if err := validateOfflineMode("native.cfg", "controller.cfg", map[string]bool{mode: true}); err == nil {
 			t.Fatalf("conflicting %s accepted", mode)
 		}
