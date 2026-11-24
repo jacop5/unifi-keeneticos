@@ -70,6 +70,7 @@ func ApplyPlanWatchedWithReceipts(ctx context.Context, run Runner, plan Plan, jo
 		}
 	}
 	pending := map[string]credentialBinding{}
+	log.Printf("native plan prepared: changes=%d credential_receipts_reused=%d", len(changes), len(reused))
 	checkedHealth := health
 	if receipts != nil && (len(written) > 0 || len(reused) > 0) {
 		checkedHealth = func(c context.Context) error {
