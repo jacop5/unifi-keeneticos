@@ -240,7 +240,7 @@ func preimageSettings(plan Plan, running string) ([]Change, error) {
 			}
 		}
 		inverse := Command{Text: "interface " + fields[1] + " " + undo, Secret: c.Secret}
-		if c.Text == inverse.Text {
+		if c.Text == inverse.Text || sameStringSetting(fields[2], undo, family) {
 			continue
 		}
 		changes = append(changes, Change{Forward: c, Undo: inverse})
@@ -257,4 +257,32 @@ func preimageSettings(plan Plan, running string) ([]Change, error) {
 		changes = append(changes, Change{Forward: Command{Text: "interface " + master + " " + countryResume[master]}, Undo: Command{Text: "interface " + master + " down"}})
 	}
 	return changes, nil
+}
+
+// NDM omits optional quotes when rendering simple strings. Compare only the
+// string-valued families whose syntax we generate; never normalize arbitrary
+// commands or interpret Go/shell escape sequences as native CLI escapes.
+func sameStringSetting(want, previous, family string) bool {
+	if family != "ssid" && family != "authentication wpa-psk" {
+		return false
+	}
+	decode := func(setting string) (string, bool) {
+		value, ok := strings.CutPrefix(setting, family+" ")
+		if !ok || value == "" {
+			return "", false
+		}
+		if strings.HasPrefix(value, `"`) {
+			if len(value) < 2 || !strings.HasSuffix(value, `"`) {
+				return "", false
+			}
+			value = value[1 : len(value)-1]
+		}
+		if _, err := quoted(value); err != nil {
+			return "", false
+		}
+		return value, true
+	}
+	a, okA := decode(want)
+	b, okB := decode(previous)
+	return okA && okB && a == b
 }
