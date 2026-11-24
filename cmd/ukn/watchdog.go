@@ -47,17 +47,7 @@ func watchRollback(path, id string) error {
 		return fmt.Errorf("invalid rollback identity")
 	}
 	time.Sleep(65 * time.Second)
-	current, err := journalID(path)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if current != id {
-		return nil
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return keenetic.RecoverUndo(ctx, path, keenetic.Local)
+	return keenetic.RecoverUndoMatching(ctx, path, id, keenetic.Local)
 }

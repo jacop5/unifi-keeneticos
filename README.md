@@ -172,6 +172,8 @@ ukn -url http://CONTROLLER_IP:8080/inform \
 
 Before mutations, the daemon captures inverse commands and writes a private recovery journal. Changes must pass WLAN/controller checks before confirmation; an independent watchdog attempts recovery after 65 seconds. Rollback is a recovery mechanism, not a guarantee against losing access. Stop the foreground process to finish testing; omitting `-apply` returns to log-only operation.
 
+Journal creation, clearing and recovery share a private persistent `.lock` file. Detached watchers check the transaction identity while holding this lock, so startup recovery and another watcher cannot replay the journal simultaneously. Keep the lock file in place even when no rollback is pending. Older agent binaries do not participate in this locking protocol; mixed-version watchdog and slow-transaction behavior still need lifecycle validation.
+
 The tested changes affect running configuration. The port does not issue a startup-config save. Reboot persistence of provisioned router settings is not verified.
 
 WLAN credentials are redacted in logs and stored in private files, but `ndmc -c` can expose them briefly in local process arguments. The experimental interactive terminal runner is not used for provisioning.

@@ -75,9 +75,11 @@ global LED shutdown and call it Locate.
       across agent replacement and device reboot.
       Offline recovery tests cover interrupted replay, retained journals and fresh
       identities for repeated changes. Empty inverse entries are rejected before
-      any replay. Concurrent detached-watchdog/startup recovery still needs an
-      explicit serialization/identity audit; the daemon state lock alone does not
-      cover detached watchers.
+      any replay. Journal creation, clearing and recovery now share a persistent
+      kernel lock; detached watchers check identity inside that lock. Offline
+      tests cover cross-process exclusion, canceled waits and stale identities.
+      Still audit detached replay against slow active transactions, and migration
+      from older binaries whose watchers do not use the journal lock.
 - [ ] Run installation and physical reboot only on a spare router with a recovery
       path. Do not use the Titan main router as the first installed-upgrade test.
 
