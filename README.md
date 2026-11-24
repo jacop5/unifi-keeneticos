@@ -164,6 +164,11 @@ Then start or stop it:
 
 The packaged service starts in **log-only mode**: it reports status and receives controller configuration but does not apply it. `ukn -models` lists available identities; `-model CODE` selects one. Default persistent state is `/opt/var/lib/unifi-keenetic`. `STATE_DIR` and `PID_FILE` can select separate absolute paths; isolated instances also need distinct listener ports and controller identities. `status` checks process identity, not controller or WLAN health. `ukn -build-info` reports the actual executable build separately from its UniFi compatibility version.
 
+Adoption-state saves use a unique mode-600 temporary file, synchronize it before
+atomic replacement, and synchronize the parent directory afterward. This also
+avoids following a leftover fixed temporary-file symlink. Keep the state directory
+private. Physical power-loss durability still requires hardware validation.
+
 Adopt the pending device in UniFi. For a virtualized controller, set Inform Host Override to an address reachable from the router, not an internal container address.
 
 ## Controlled provisioning tests

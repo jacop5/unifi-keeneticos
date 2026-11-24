@@ -77,6 +77,11 @@ power requests need a justified conversion to native percentage units.
 
 ### P0.2 — Upgrade/recovery readiness
 
+- [x] Harden shared adoption-state persistence: unique private stages, file sync,
+      atomic rename and directory sync; cover legacy temp symlinks, failed
+      replacement and concurrent complete-record writes. The Linux container
+      harness runs these state tests as well as the real-agent lifecycle suite.
+      This is not physical power-loss proof.
 - [x] Add a separately invoked network-isolated Linux container harness using
       the actual installer/service and agent. Cover disabled installation,
       start/stop, successful upgrade, explicit restart, failed-upgrade restoration

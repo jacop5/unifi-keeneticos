@@ -47,6 +47,8 @@ assert_preserved() {
 test ! -e /opt/sbin/ukn
 mkdir -p /opt/etc/init.d /work /work/preimage
 ln -s /test/ndmc /usr/sbin/ndmc
+/test/device-tests -test.run='^(TestStateSaveIgnoresLegacyTempSymlinkAndRepairsPermissions|TestFailedStateReplacementCleansPrivateStage|TestConcurrentStateSavesKeepCompletePrivateRecords)$'
+printf 'PASS private-atomic-adoption-state\n'
 sh /test/package-a/install.sh > /work/first-install.log 2>&1
 assert_clean
 assert_stopped

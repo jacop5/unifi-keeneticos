@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = ['ukn', 'install.sh', 'space-check.sh', 'S99unifi-keenetic',
          'unifi-keenetic.conf', 'LICENSE', 'NOTICE',
          'licenses/Go-BSD-3-Clause.txt', 'licenses/model-catalogue-MIT.txt']
-EXPECTED = ['first-install-disabled', 'real-agent-service-start',
+EXPECTED = ['private-atomic-adoption-state', 'first-install-disabled', 'real-agent-service-start',
             'successful-upgrade-preserves-private-data', 'explicit-restart-after-upgrade',
             'failed-upgrade-restores-and-restarts-real-agent', 'clean-stop-no-native-writes',
             'detached-watchdog-recovers-after-executable-replacement',
@@ -124,6 +124,8 @@ def main():
             version='6.8.2.15592', mgmt_cfg='', led=False, locating=False)))
         print('Testing installer/service/agent offline, including the real 65-second watchdog deadline', flush=True)
         try:
+            subprocess.run([go, 'test', '-c', '-o', str(base / 'device-tests'), './internal/device'],
+                           cwd=ROOT, env=env, check=True, timeout=300)
             result = subprocess.run([docker, 'run', '--rm', '--pull=never', '--name', container,
                 '--network', 'none', '--no-healthcheck', '--cap-drop=ALL', '--cap-add=DAC_OVERRIDE', '--security-opt', 'no-new-privileges',
                 '--pids-limit', '64', '--memory', '256m', '--cpus', '2',

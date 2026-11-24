@@ -2,6 +2,7 @@
 // Modified by unifi-keeneticos contributors, 2026-11-21:
 // preserve backend hardware telemetry and prevent simulated firmware/reboot
 // state changes when running on physical Keenetic hardware.
+// Modified 2026-11-24: synchronize private atomic adoption-state replacement.
 
 // Package device is the device side of the inform protocol: the state a
 // UniFi AP keeps (key, cipher, cfgversion, adopted), the payload it sends,
@@ -70,11 +71,34 @@ func (s State) Save(path string) error {
 	if err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
+	// Stage privately under a unique name. A leftover public file or symlink at
+	// the old fixed .tmp name must not receive adoption credentials.
+	directory, err := os.Open(filepath.Dir(path))
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	defer directory.Close()
+	f, err := os.CreateTemp(filepath.Dir(path), ".state-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	defer os.Remove(tmp)
+	defer f.Close()
+	if _, err := f.Write(b); err != nil {
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	// An error here means replacement happened but durability is uncertain.
+	return directory.Sync()
 }
 
 // Session ties the state to the device description and a boot clock.
