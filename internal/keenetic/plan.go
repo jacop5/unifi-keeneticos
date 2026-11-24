@@ -144,29 +144,12 @@ func BuildPlanWithOptions(text string, slots map[string]string, options PlannerO
 				add("interface " + master + " channel " + channel)
 			}
 		}
-		mode := cfg[prefix+"ieee_mode"]
-		if mode != "" {
-			matched := false
-			for _, width := range []string{"160", "80", "40", "20"} {
-				if strings.HasSuffix(mode, "ht"+width) {
-					ndmWidth := width
-					if width == "40" {
-						ndmWidth = "40-above"
-						channel, _ := strconv.Atoi(cfg[prefix+"channel"])
-						if (master == "WifiMaster0" && channel > 7) || (master == "WifiMaster1" && channel > 0 && channel%8 == 0) {
-							ndmWidth = "40-below"
-						}
-					}
-					if width == "80" {
-						ndmWidth = "40-above/80"
-					}
-					add("interface " + master + " channel width " + ndmWidth)
-					matched = true
-					break
-				}
-			}
-			if !matched {
+		if mode := cfg[prefix+"ieee_mode"]; mode != "" {
+			width, ok := nativeRadioWidth(mode, master, cfg[prefix+"channel"])
+			if !ok {
 				p.Unsupported = append(p.Unsupported, prefix+"ieee_mode")
+			} else {
+				add("interface " + master + " channel width " + width)
 			}
 		}
 	}

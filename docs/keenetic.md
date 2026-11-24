@@ -1708,3 +1708,25 @@ normalization, both SHA-256
 `fa4f5b86b2a08da4663f7ebbacd2b411b07fa8a5c6279847e7db573f5866b4de`.
 Both primary WLANs and shared radios are included. The controller is connected,
 no rollback journal remains, and the new build remains the log-only lab agent.
+
+### Radio width pairing correction (offline, 2026-11-24)
+
+The former 80 MHz mapping always selected `40-above/80`, and its 40 MHz
+modulo rule missed upper-band secondary-below primaries such as 153/161.
+Translation now uses the 5 GHz primary-channel pair direction for both widths,
+including the shifted upper-band grid. The standard pair ranges are reflected
+in [hostapd operating classes](https://android.googlesource.com/platform/external/wpa_supplicant_8/+/12405a05cf6e16c11db301d4a7a71131737d3643/src/common/ieee802_11_common.c);
+the native CLI guide section 3.32.24 documents `40-above/80` and `40-below/80`.
+Automatic channel selection retains the existing above-extension preference.
+Actual channel/width availability remains a native hardware/regulatory decision.
+
+Only recognized controller mode families with exact width suffixes are accepted;
+arbitrary names ending in ht20/ht80 and wrong-band modes no longer generate
+width changes. The 2.4 GHz band rejects 80/160 MHz requests. This maps width,
+not an instruction to change the native PHY generation.
+
+Regression cases cover the standard 5 GHz primary pairs, both 40/80 MHz
+extension forms, existing 2.4 GHz/auto/160 behavior, malformed/wrong-band
+requests and exact native width inverses. Test-mode regression confirms radio
+commands remain excluded. Full race tests, vet and both MIPS builds pass.
+No live radio change was attempted; the running Titan agent is unchanged.

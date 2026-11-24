@@ -73,7 +73,7 @@ Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.6
 | Local provisioning status | Private read-only report; log-only/unsupported/applying/confirmed and confirmation retention verified on Titan |
 | Executable provenance | `-build-info` verified on Titan with clean revision, architecture and matching binary hash |
 
-Radio telemetry reports native channel widths without guessing antenna or transmit-power capabilities. UniFi's device overview was verified live at 40 MHz on 2.4 GHz and 80 MHz on 5 GHz, matching the Hero's native measurements. VLAN configurations require explicit bridge mappings and complete membership information; they never fall back to Home. See [VLAN setup](docs/keenetic.md#vlan-wlan-binding).
+Radio telemetry reports native channel widths without guessing antenna or transmit-power capabilities. Radio `ieee_mode` translation selects channel width; it does not force a PHY generation such as 802.11n/ac/ax. UniFi's device overview was verified live at 40 MHz on 2.4 GHz and 80 MHz on 5 GHz, matching the Hero's native measurements. VLAN configurations require explicit bridge mappings and complete membership information; they never fall back to Home. See [VLAN setup](docs/keenetic.md#vlan-wlan-binding).
 
 The latest Titan client run verified counts and hostname ingestion, but its HTTPS check stopped at DNS resolution; earlier successful Wi-Fi-bound HTTPS tests are separate evidence. See the dated [live-test notes](docs/keenetic.md) for the scope of each result.
 
