@@ -301,6 +301,16 @@ Inspect a saved controller configuration without accessing the router:
 indexes to AP interfaces, for example `{"1":"WifiMaster0/AccessPoint0"}`.
 Credential commands are redacted in this output.
 
+Preflight treats optional SSID quoting as equivalent, but native credentials
+need separate handling. The Titan exports `authentication wpa-psk ns3 <value>`;
+those two arguments must not compare equal to the literal passphrase
+`"ns3 <value>"`. Ambiguous multi-argument credentials remain changes, so repeated
+credential writes are still a known limitation. The
+[KeeneticOS 5.1 CLI manual](https://storage.googleapis.com/docs.help.keenetic.com/cli/5.1/en/cli_manual_kn-1810.pdf)
+describes passphrase/raw-key input in section 3.32.14 and shows the `ns3` form in
+its configuration examples. No credential decryption or guessed equivalence is
+implemented.
+
 Run `./ukn -probe` on the router for a read-only status collection. Probe
 output includes network addresses and client identifiers; treat it as private.
 

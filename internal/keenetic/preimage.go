@@ -276,6 +276,11 @@ func sameStringSetting(want, previous, family string) bool {
 				return "", false
 			}
 			value = value[1 : len(value)-1]
+		} else if family == "authentication wpa-psk" && strings.ContainsAny(value, " \t") {
+			// Native exports use multi-argument encodings such as `ns3 blob`.
+			// That is not the literal passphrase "ns3 blob". Only an unquoted
+			// single argument is eligible for plain-string equivalence.
+			return "", false
 		}
 		if _, err := quoted(value); err != nil {
 			return "", false

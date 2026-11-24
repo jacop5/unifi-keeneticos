@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 package keenetic
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestPreimageStringQuotingDoesNotCauseReprovision(t *testing.T) {
 	const ap = "WifiMaster0/AccessPoint6"
 	for _, family := range []string{"ssid", "authentication wpa-psk"} {
 		for _, value := range []string{"UKN-Test-Example", "Test Network", "Réseau 日本語", "a'b$();!literal"} {
+			if family == "authentication wpa-psk" && strings.Contains(value, " ") {
+				continue // Multi-argument native credential syntax is ambiguous.
+			}
 			for _, reverse := range []bool{false, true} {
 				want, previous := `"`+value+`"`, value
 				if reverse {
@@ -33,6 +39,9 @@ func TestPreimageStringComparisonRetainsRealChanges(t *testing.T) {
 		{`ssid "broken`, `ssid broken`},
 		{`ssid "a\tb"`, `ssid a\tb`},
 		{`authentication wpa-psk "new-private-fixture"`, `authentication wpa-psk old-private-fixture`},
+		{`authentication wpa-psk "ns3 synthetic-blob"`, `authentication wpa-psk ns3 synthetic-blob`},
+		{`authentication wpa-psk "ns2 synthetic-blob"`, `authentication wpa-psk ns2 synthetic-blob`},
+		{`authentication wpa-psk "ordinary space"`, `authentication wpa-psk ordinary space`},
 		{`no authentication wpa-psk`, `authentication wpa-psk private-fixture`},
 	} {
 		p := Plan{Commands: []Command{{Text: "interface " + ap + " " + row.want, Secret: true}}}

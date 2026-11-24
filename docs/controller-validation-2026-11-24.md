@@ -52,3 +52,9 @@ representation without guessing equality, distinguish system-DNS behavior from
 the Wi-Fi data path, and test automatic return with controlled client selection.
 This run does not validate WPA3/OWE, FT roaming, schedules, installation, reboot,
 power-loss recovery or every feature of this candidate.
+
+Follow-up inspection of the saved on-router snapshot confirmed a two-argument
+`ns3` credential form on both test APs; only the syntax marker and argument count
+were returned. A subsequent comparator fix rejects equivalence between this
+form and a quoted literal passphrase. That follow-up is not an additional live
+apply test of candidate `632f35b`, and does not resolve repeated credential writes.
