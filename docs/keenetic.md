@@ -950,6 +950,11 @@ bands. These constraints need an explicit ownership/migration design before
 using the manager as a backend; an extra per-AP SSID cannot simply be replaced
 by another same-bridge manager object on overlapping bands.
 
+[Read-only Titan validation](wifi-system-investigation-2026-11-24.md) resolved
+the existing manager WLANs to the primary AP0 interfaces; the test AP6 slots
+were not listed. No manager settings were changed, and this is not a BSS
+transition or roaming behavior pass.
+
 Hostname enrichment also optionally reads `show ip hotspot` as a fallback
 when a matching unexpired DHCP lease supplies no name. Only link-up hosts
 with valid IPv4/MAC identities and unambiguous hostnames qualify. DHCP names

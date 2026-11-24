@@ -133,6 +133,14 @@ pending recovery and failed confirmation. Initial write and restart reuse passed
 on Titan; native drift and installed lifecycle validation remain open;
 ordinary offline CLI preflight remains conservative without receipt state.
 
+The [Wi-Fi-system investigation](wifi-system-investigation-2026-11-24.md) adds
+a read-only WLAN/band/AP membership diagnostic, verified on Titan. The documented
+manager BSS control has broader scope than an AP command, with automatic AP
+allocation and bridge/band constraints. Default BSS requests remain rejected;
+future manager support needs explicit ownership, exact membership and rollback
+semantics, including combined 802.11k/11v behavior. No main Wi-Fi changes were
+used for this investigation.
+
 ## Investigation prerequisites
 
 - Interactive native command discovery needs the separate KeeneticOS account;

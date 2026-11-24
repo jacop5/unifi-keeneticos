@@ -54,7 +54,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | Private rollback journal, inverse commands, watchdog, startup recovery | Implemented; immediate failure and detached crash recovery verified on Titan |
 | Controller outage recovery | Real injected HTTP 503 rolled back; same-version retry confirmed after controller connectivity returned |
 | WPA3 personal, transition mode and PMF | WPA3-only and WPA2/WPA3 transition-mode guarded provisioning with 5 GHz Mac WPA3 authentication verified on Titan; WPA2-only clients in transition mode remain untested |
-| Hidden SSID, peer isolation, RRM | Implemented and unit-tested; not comprehensively tested live |
+| Peer isolation, per-AP RRM | Implemented and unit-tested; not comprehensively tested live |
 | Explicit open / Enhanced Open (OWE), 64-hex WPA2 keys | Translation and rollback unit-tested; OWE/PMF commands verified only on disabled Hero slots, not with an associated client |
 | Per-WLAN MAC allow/deny lists | Native list/rollback verified on disabled Hero slot; empty allow-list blocked a Titan test-client join and removing it restored authentication; individual-entry enforcement untested |
 | Minimum RSSI | Per-band requests map only to owned AP slots; native threshold/rollback verified on disabled Hero slots on both bands; client enforcement not yet verified |
@@ -66,7 +66,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | Idempotent provisioning | SSID normalization verified; Titan receipt test confirmed two initial writes followed by zero prepared changes and two credential-record reuses after restart; native drift validation remains pending ([report](docs/credential-receipt-validation-2026-11-24.md)) |
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
 | Fast roaming | Explicit disable implemented; experimental opt-in for matched dual-band WPA2 with explicit native domain, guarded AP6 provisioning and 5 GHz WPA2 client authentication with FT enabled verified on Titan; actual FT reassociation/roaming unverified |
-| BSS transition (802.11v) | Enabled requests explicitly unsupported; per-AP 802.11k RRM is not treated as equivalent |
+| BSS transition (802.11v) | Enabled requests remain unsupported; per-AP 802.11k is not equivalent; read-only Wi-Fi-system membership diagnostic verified ([findings](docs/wifi-system-investigation-2026-11-24.md)) |
 | VLAN/uplink creation, mesh, guest portal, scanning, traffic shaping | Not ported; unmapped VLANs are explicitly rejected |
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Controller reboot | Opt-in native dispatch with test-scope/recovery guards; mock/encrypted-controller tests pass; physical reboot unverified |
