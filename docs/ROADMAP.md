@@ -55,6 +55,12 @@ bandwidth requests matched by VAP are now reported as ignored setting names in
 normal and scoped test plans. Their values are not retained in diagnostics and
 they produce no native commands. Native rate and shaping support remains open.
 
+The [rate-control investigation](rate-control-investigation-2026-11-24.md)
+records documented radio/interface/host scope and hash-verified firmware export
+inventories. No minimum-rate/DTIM/U-APSD mapping was established. Host-wide shaping
+needs resource ownership and association-lifetime handling before VAP translation;
+power requests need a justified conversion to native percentage units.
+
 ## P0 tasks
 
 ### P0.1 — One offline command and candidate evidence
