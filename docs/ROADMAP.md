@@ -2,8 +2,9 @@
 
 Updated 2026-11-24. This is the implementation/test order, not a claim that the
 port is complete. Baseline for this plan: repository revision `3985993`.
-The last hardware-verified temporary Titan agent was `26532b6`, log-only;
-its current process/network state must be revalidated before another live run.
+The latest hardware-verified temporary Titan agent is `dc0fba5`, log-only;
+[recovery validation](recovery-validation-2026-11-24.md) records the scoped live
+results. Revalidate its process/network state before another live run.
 
 ## Working rules
 
@@ -87,6 +88,11 @@ global LED shutdown and call it Locate.
       telemetry collection or adoption-state loading. CLI subprocess tests cover
       telemetry/adoption failures, failed recovery, competing daemons and a
       read-only probe that leaves the journal untouched.
+      Candidate `dc0fba5` passed immediate disabled-slot rollback on both Titan
+      bands, detached crash recovery on 5 GHz, startup recovery before malformed
+      adoption state on 2.4 GHz and native refusal of a competing daemon. Full
+      configuration restoration was verified on-device. Installed upgrade and
+      reboot lifecycle remain open; see the linked validation report above.
 - [ ] Run installation and physical reboot only on a spare router with a recovery
       path. Do not use the Titan main router as the first installed-upgrade test.
 
