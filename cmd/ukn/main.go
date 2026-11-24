@@ -23,6 +23,7 @@ import (
 
 	"github.com/antoniocosta/unifi-openwrt/internal/device"
 	"github.com/antoniocosta/unifi-openwrt/internal/inform"
+	"github.com/antoniocosta/unifi-openwrt/internal/installation"
 	"github.com/antoniocosta/unifi-openwrt/internal/keenetic"
 	"github.com/antoniocosta/unifi-openwrt/internal/models"
 )
@@ -35,6 +36,7 @@ func main() {
 	stateDir := flag.String("state", "/opt/var/lib/unifi-keenetic", "private persistent state directory")
 	probe := flag.Bool("probe", false, "collect router status and exit without contacting a controller")
 	wifiSystemStatus := flag.Bool("wifi-system-status", false, "read native Wi-Fi-system WLAN/AP membership; no controller or configuration changes")
+	installationStatus := flag.String("installation-status", "", "inspect retained installer data under this Entware root (normally /opt); read-only, no recovery")
 	terminalProbe := flag.Bool("terminal-probe", false, "test read-only NDM terminal execution and exit")
 	rollbackProbe := flag.String("rollback-probe", "", "test rollback on an unused disabled AP slot, then exit")
 	probeMode := flag.String("rollback-probe-mode", "ssid", "unused-slot rollback probe: ssid, owe, acl, wpa3, transition, rssi, wmm, ft, schedule, schedule-binding, schedule-active or schedule-start")
@@ -63,7 +65,8 @@ func main() {
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
 		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl, "reboot-control": *rebootControl,
 		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild, "provision-status": *showProvisionStatus,
-		"wifi-system-status": *wifiSystemStatus,
+		"wifi-system-status":  *wifiSystemStatus,
+		"installation-status": *installationStatus != "",
 	}
 	if err := validateOfflineMode(*preflightRunning, *planFile, offlineModes); err != nil {
 		log.Fatal(err)
@@ -72,6 +75,24 @@ func main() {
 		if err := validateOfflineMode("requested", *planFile, offlineModes, "-plan-json"); err != nil {
 			log.Fatal(err)
 		}
+	}
+	if *installationStatus != "" {
+		if *planFile != "" || *jsonPlan || *preflightRunning != "" {
+			log.Fatal("-installation-status cannot be combined with planning")
+		}
+		for name, enabled := range offlineModes {
+			if name != "installation-status" && enabled {
+				log.Fatalf("-installation-status conflicts with -%s", name)
+			}
+		}
+		report, err := installation.Inspect(*installationStatus)
+		if err != nil {
+			log.Fatal("cannot inspect installation root")
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	if *showProvisionStatus {
 		if *planFile != "" || *jsonPlan || *preflightRunning != "" {

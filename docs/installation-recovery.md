@@ -2,6 +2,18 @@
 
 Do not delete `/opt/.ukn-install.*` or start the daemon blindly after an interrupted installation. Keep private copies of the lock and work directory before attempting recovery. Backups can contain configuration secrets; do not upload them to an issue.
 
+Run a known-good executable with `ukn -installation-status /opt` for a read-only
+JSON snapshot. If the installed executable is damaged, use a verified separately
+staged executable. This mode does not load adoption state, contact the controller
+or native CLI, start services, or change any files. It reports marker presence,
+recognized transaction metadata, backup verification and current file matches.
+It does not print hashes, file contents, historical PIDs or arbitrary metadata.
+Unknown/older transaction formats require manual inspection. `metadata_valid`
+means recognized structure, not authenticated data or successful recovery.
+An installer can change files during inspection; treat the result as a snapshot,
+never authorization to restore or delete markers. No markers also does not prove
+that a package is installed correctly.
+
 The installer records these files in its private work directory:
 
 - `phase`: prepared, stopping, stopped, committing, installed, or restored. It records progress, not proof that every operation completed.

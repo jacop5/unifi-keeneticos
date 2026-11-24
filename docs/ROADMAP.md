@@ -89,6 +89,11 @@ they produce no native commands. Native rate and shaping support remains open.
       and blocked startup; completed rollback bypass is scoped to its transaction.
       No on-device upgrade or power-loss durability claim
       follows from the local harness; successful upgrades leave the service stopped.
+- [x] Add `-installation-status /opt`: read-only structural inspection and
+      backup/current hash comparison with fixed status labels, no configuration
+      contents or hashes in output. Offline tests cover malformed/partial data,
+      unsafe paths, symlinks, special files, changed files and state-free CLI use.
+      This does not implement automatic restoration or prove native execution.
 - [ ] Prove upgrade preserves adoption key, slot/network mappings, action policy
       and private permissions without exposing credentials in reports/logs.
 - [ ] Check startup recovery, watchdog executable lifetime and journal persistence

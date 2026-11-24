@@ -129,6 +129,11 @@ The installer stages and verifies replacements, backs up existing files, and run
 
 Ordinary installation failures and caught termination signals attempt to restore previous files and restart an agent that was running. Failed recovery retains private backups and blocks another installation pending review. An existing service must support status codes 0 (running) and 3 (stopped). The guarded service is replaced first and refuses enabled startup while installation markers remain; rollback restores it last. Forced termination or power loss may leave `/opt/.ukn-install.*` recovery data; follow the [installation recovery notes](docs/installation-recovery.md) before retrying. These paths have local failure-injection coverage; installed upgrades and power-loss recovery still require spare-device testing.
 
+`ukn -installation-status /opt` inspects retained installer metadata and verifies
+backup/current file matches without changing files or contacting router services.
+Use a known-good executable. Its JSON is a diagnostic snapshot, not an automated
+recovery decision or a complete package-integrity check.
+
 Configure `/opt/etc/unifi-keenetic.conf`:
 
 ```sh
