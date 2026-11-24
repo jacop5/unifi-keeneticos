@@ -74,7 +74,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
 | DTIM period and U-APSD | No Keenetic translation; ignored setting names reported in plans/logs |
 | Minimum data/management/beacon rates and CCK selection | No Keenetic translation; requested setting names reported as ignored |
-| Service lifecycle and status | Private Titan start/restart/stop and live/stale/unrelated PID status verified; installed-package upgrade remains untested |
+| Service lifecycle and status | Private Titan start/restart/stop and live/stale/unrelated PID status verified; real-agent installer upgrades/recovery pass in an isolated Linux container; hardware installed-package upgrade remains untested |
 | Offline preflight | Saved configuration/rollback preparation tested against a fresh Titan snapshot and followed by guarded AP6 apply |
 | Local provisioning status | Private read-only report; log-only/unsupported/applying/confirmed and confirmation retention verified on Titan |
 | Executable provenance | `-build-info` verified on Titan with clean revision, architecture and matching binary hash |

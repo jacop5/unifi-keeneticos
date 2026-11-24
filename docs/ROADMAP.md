@@ -83,6 +83,8 @@ power requests need a justified conversion to native percentage units.
       and private state/config/mapping preservation. Native telemetry is synthetic;
       same-source artifacts have different build IDs. Hardware/cross-version
       behavior is still unverified by this harness.
+      Clean candidate `0d0063f` passed all six checks and the full offline gate;
+      see [container lifecycle validation](container-lifecycle-validation-2026-11-24.md).
 - [x] Include all staged files and existing replacement-target backups in the
       install space check before retaining 16 MiB headroom. Boundary tests cover
       first install, upgrade and preserved existing configuration.
