@@ -329,8 +329,11 @@ future writes rather than an unchecked skip.
 
 The ordinary CLI preflight does not load these records and its change count is
 conservative. The library's `CredentialReceipts.Preimage` supports a read-only,
-receipt-aware check. The implementation has offline regression/race coverage;
-native write-suppression and cache lifecycle validation remain pending.
+receipt-aware check. [Titan validation](credential-receipt-validation-2026-11-24.md)
+confirmed initial writes followed by zero prepared native changes and two reused
+records after an agent restart. Native drift, re-adoption and installed/power-loss
+lifecycle validation remain pending; corresponding offline regression/race tests
+cover the software paths.
 
 Run `./ukn -probe` on the router for a read-only status collection. Probe
 output includes network addresses and client identifiers; treat it as private.

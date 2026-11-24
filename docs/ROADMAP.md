@@ -2,10 +2,12 @@
 
 Updated 2026-11-24. This is the implementation/test order, not a claim that the
 port is complete. Baseline for this plan: repository revision `3985993`.
-The current temporary Titan agent is `632f35b`, log-only;
-[controller validation](controller-validation-2026-11-24.md) records its scoped
-live results, with [2.4 GHz and hidden-SSID checks](band-hidden-validation-2026-11-24.md)
-on the same candidate. [Recovery validation](recovery-validation-2026-11-24.md) used
+The current temporary Titan agent is `9911433`, log-only;
+[credential receipt validation](credential-receipt-validation-2026-11-24.md)
+confirmed a zero-change restart with both credential records reused.
+[Controller validation](controller-validation-2026-11-24.md) and
+[2.4 GHz/hidden-SSID checks](band-hidden-validation-2026-11-24.md) used `632f35b`.
+[Recovery validation](recovery-validation-2026-11-24.md) used
 `dc0fba5`. Revalidate process/network state before another live run.
 
 ## Working rules
@@ -115,7 +117,7 @@ cleanup evidence. Keep raw configurations/credentials private.
 | Pause/resume and schedules | `632f35b`: controller pause/resume confirmed on both bands; earlier schedule transitions passed | Repeat schedules on candidate, including timer boundaries and restart while paused |
 | Automatic reconnect | Latest Mac run selected main AP0 after pause, rather than returning to test AP6 | Controlled client selection and bounded observation; preserve main-network preferences |
 | Controller interruption | Real 503 rollback/retry previously passed | Repeat on candidate with status-report outcome and history verified |
-| Idempotent provisioning | SSID normalization verified on Titan; confirmation-bound HMAC credential receipts implemented with offline coverage | Prove native write suppression, restart reuse and drift invalidation while retaining operational/controller checks |
+| Idempotent provisioning | `9911433`: two initial writes, then zero prepared changes and two records reused after restart; health/controller checks confirmed | Live drift invalidation, re-adoption and installed lifecycle; retain health checks on no-op plans |
 | Inactive WLAN / radio-off | Verification logic tested offline | Spare-device validation; no shared-radio toggling on the main router |
 | Client policy | Empty allow-list blocked join and removal restored it | Individual entries and two-client isolation/RSSI behavior |
 | Reboot control | Default-off policy/dispatch tests only | Spare-device reboot, service return and native startup-config behavior |
@@ -127,7 +129,8 @@ credential, AP/SSID, adoption key and observed native representation after a
 confirmed write. It rechecks drift after health, uses private atomic storage,
 and does not learn from failed/rolled-back, canceled or log-only operations.
 Offline tests cover restart reuse, drift, pause/resume, invalid cache files,
-pending recovery and failed confirmation. Hardware validation remains open;
+pending recovery and failed confirmation. Initial write and restart reuse passed
+on Titan; native drift and installed lifecycle validation remain open;
 ordinary offline CLI preflight remains conservative without receipt state.
 
 ## Investigation prerequisites
