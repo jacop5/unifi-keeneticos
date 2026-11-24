@@ -227,6 +227,16 @@ func BuildPlanWithOptions(text string, slots map[string]string, options PlannerO
 			p.AccessLists = append(p.AccessLists, *acl)
 		}
 		aaa := "aaa." + id + "."
+		if err := validateBooleanStatus(cfg, aaa+"is_guest"); err != nil {
+			return p, err
+		}
+		// A guest flag requests access restrictions, not just a named SSID.
+		// Until guest firewall/portal policy is ported, do not create an
+		// ordinary LAN WLAN in its place (even when it is initially paused).
+		if cfg[aaa+"is_guest"] == "true" {
+			p.Unsupported = append(p.Unsupported, prefix+"guest-policy")
+			continue
+		}
 		if err := validateEnableStatus(cfg, aaa+"wpa3.support", aaa+"wpa3.transition", prefix+"l2_isolation", aaa+"11k.status"); err != nil {
 			return p, err
 		}

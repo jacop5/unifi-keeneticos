@@ -44,6 +44,12 @@ identified. It is not a prerequisite for modern WPA2/WPA3 acceptance. Locate is
 also pending a native operation with equivalent semantics; do not substitute a
 global LED shutdown and call it Locate.
 
+Explicit `aaa.N.is_guest=true` requests are rejected as `wireless.N.guest-policy`
+until guest enforcement is implemented. Peer isolation and existing VLAN binding
+alone do not implement guest authorization, restricted networks, or a portal.
+Local tests cover normal/scoped planning, paused guest requests, malformed flags,
+and refusal before apply preparation. This is a compatibility guard, not guest support.
+
 ## P0 tasks
 
 ### P0.1 — One offline command and candidate evidence

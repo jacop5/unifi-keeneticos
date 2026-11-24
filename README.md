@@ -67,7 +67,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | VLAN WLAN binding | Implemented with explicit `-networks` mappings to existing native bridges; automated tests only, no live VLAN traffic verification |
 | Fast roaming | Explicit disable implemented; experimental opt-in for matched dual-band WPA2 with explicit native domain, guarded AP6 provisioning and 5 GHz WPA2 client authentication with FT enabled verified on Titan; actual FT reassociation/roaming unverified |
 | BSS transition (802.11v) | Enabled requests remain unsupported; per-AP 802.11k is not equivalent; read-only Wi-Fi-system membership diagnostic verified ([findings](docs/wifi-system-investigation-2026-11-24.md)) |
-| VLAN/uplink creation, mesh, guest portal, scanning, traffic shaping | Not ported; unmapped VLANs are explicitly rejected |
+| VLAN/uplink creation, mesh, guest policy/portal, scanning, traffic shaping | Not ported; unmapped VLANs and explicit guest WLAN requests are rejected |
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Controller reboot | Opt-in native dispatch with test-scope/recovery guards; mock/encrypted-controller tests pass; physical reboot unverified |
 | Client block/kick, locate and other controller actions | Not implemented on Keenetic; logged rather than executed |
