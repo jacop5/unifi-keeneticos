@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type rollbackJournal struct {
@@ -19,6 +20,14 @@ type rollbackJournal struct {
 // SaveUndo must finish before the first router mutation. The private journal
 // contains WLAN keys and is removed only after confirmation or full recovery.
 func SaveUndo(path string, changes []Change) error {
+	if len(changes) == 0 {
+		return fmt.Errorf("empty rollback journal")
+	}
+	for _, change := range changes {
+		if strings.TrimSpace(change.Undo.Text) == "" {
+			return fmt.Errorf("empty rollback command")
+		}
+	}
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("pending rollback journal exists")
 	} else if !os.IsNotExist(err) {
@@ -83,10 +92,17 @@ func RecoverUndo(ctx context.Context, path string, run Runner) error {
 	if err = json.Unmarshal(b, &journal); err != nil || journal.ID == "" || len(journal.Commands) == 0 {
 		return fmt.Errorf("invalid rollback journal")
 	}
+	// Validate the entire sequence before executing any inverse. A malformed
+	// later entry must not leave the router partially recovered.
+	for _, c := range journal.Commands {
+		if strings.TrimSpace(c.Text) == "" {
+			return fmt.Errorf("empty rollback command")
+		}
+	}
 	guardCache := map[string]bool{}
 	for i, c := range journal.Commands {
-		if c.Text == "" {
-			return fmt.Errorf("empty rollback command")
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		if err := runUndo(ctx, run, c, guardCache); err != nil {
 			return fmt.Errorf("rollback command %d failed", i+1)

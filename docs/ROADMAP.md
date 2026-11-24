@@ -73,6 +73,11 @@ global LED shutdown and call it Locate.
       and private permissions without exposing credentials in reports/logs.
 - [ ] Check startup recovery, watchdog executable lifetime and journal persistence
       across agent replacement and device reboot.
+      Offline recovery tests cover interrupted replay, retained journals and fresh
+      identities for repeated changes. Empty inverse entries are rejected before
+      any replay. Concurrent detached-watchdog/startup recovery still needs an
+      explicit serialization/identity audit; the daemon state lock alone does not
+      cover detached watchers.
 - [ ] Run installation and physical reboot only on a spare router with a recovery
       path. Do not use the Titan main router as the first installed-upgrade test.
 

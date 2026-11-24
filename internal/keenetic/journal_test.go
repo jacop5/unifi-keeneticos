@@ -2,6 +2,7 @@
 package keenetic
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -37,5 +38,91 @@ func TestRecoveryJournal(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatal("journal not cleared")
+	}
+}
+
+func TestMalformedJournalDoesNotPartiallyRecover(t *testing.T) {
+	for _, data := range []string{
+		`{"ID":"fixture","Commands":[{"Text":"undo-first"},{"Text":""}]}`,
+		`{"ID":"fixture","Commands":[{"Text":"undo-first"},{"Text":"  \t"}]}`,
+		`{"ID":"fixture","Commands":[{"Text":"undo-first"},{}]}`,
+		`{"ID":"fixture","Commands":[{"Text":"undo-first"}`,
+	} {
+		t.Run(data, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "undo.json")
+			if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			err := RecoverUndo(context.Background(), path, func(context.Context, string) ([]byte, error) {
+				calls++
+				return nil, nil
+			})
+			if err == nil || calls != 0 {
+				t.Fatalf("invalid journal executed %d commands: %v", calls, err)
+			}
+			retained, err := os.ReadFile(path)
+			if err != nil || string(retained) != data {
+				t.Fatal("invalid journal not retained unchanged")
+			}
+		})
+	}
+}
+
+func TestSaveUndoRejectsUnrecoverableSequence(t *testing.T) {
+	for _, changes := range [][]Change{nil, {{Undo: Command{Text: "undo"}}, {Undo: Command{Text: " \t"}}}} {
+		path := filepath.Join(t.TempDir(), "undo.json")
+		if err := SaveUndo(path, changes); err == nil {
+			t.Fatal("invalid undo accepted")
+		}
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatal("invalid sequence created a journal")
+		}
+	}
+}
+
+func TestInterruptedRecoveryRetainsSequenceForNextStart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "undo.json")
+	changes := []Change{{Undo: Command{Text: "restore-final"}}, {Undo: Command{Text: "restore-first"}}}
+	if err := SaveUndo(path, changes); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	calls := 0
+	err = RecoverUndo(ctx, path, func(ctx context.Context, command string) ([]byte, error) {
+		calls++
+		if command == "restore-first" {
+			cancel()
+			return nil, nil
+		}
+		return nil, ctx.Err()
+	})
+	if !errors.Is(err, context.Canceled) || calls != 1 {
+		t.Fatalf("interruption not retained: %v calls=%d", err, calls)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("lost recovery sequence")
+	}
+	var retried []string
+	if err := RecoverUndo(context.Background(), path, func(_ context.Context, command string) ([]byte, error) {
+		retried = append(retried, command)
+		return nil, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(retried) != 2 || retried[0] != "restore-first" || retried[1] != "restore-final" {
+		t.Fatal(retried)
+	}
+	if err := SaveUndo(path, changes); err != nil {
+		t.Fatal(err)
+	}
+	next, err := os.ReadFile(path)
+	if err != nil || bytes.Equal(next, before) {
+		t.Fatal("identical changes reused the old journal identity")
 	}
 }
