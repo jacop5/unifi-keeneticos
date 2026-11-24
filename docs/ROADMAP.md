@@ -59,8 +59,14 @@ global LED shutdown and call it Locate.
       corrupt package, missing notices, wrong executable, low space,
       failed copy/rename and failed startup. Check missing corresponding source
       at the distribution gate; it need not consume router installation storage.
-- [ ] Preserve the previous executable/service/config until replacement succeeds;
-      define recovery after failures following service stop.
+- [x] Stage and verify replacements before stopping the service; preserve existing
+      configuration and adoption files. Local failure injection covers corrupt
+      packages, failed probes/copies/renames, low space, unsafe targets and caught
+      termination. Ordinary failures restore old files and previous running state;
+      failed recovery retains private backups and blocks reinstallation.
+- [ ] Complete missing-notice/failed-restart coverage and define operational
+      recovery for forced termination or power loss. No on-device upgrade claim
+      follows from the local harness; successful upgrades leave the service stopped.
 - [ ] Prove upgrade preserves adoption key, slot/network mappings, action policy
       and private permissions without exposing credentials in reports/logs.
 - [ ] Check startup recovery, watchdog executable lifetime and journal persistence

@@ -122,7 +122,9 @@ chmod +x ./ukn
 sh ./install.sh
 ```
 
-The installer runs a read-only probe, installs `/opt/sbin/ukn` and `/opt/etc/init.d/S99unifi-keenetic`, preserves an existing configuration, and leaves a new service **disabled**. Probe output contains network/client identifiers; do not publish it unredacted.
+The installer stages and verifies replacements, backs up existing files, and runs a read-only probe of the staged executable before stopping a running agent. It installs `/opt/sbin/ukn` and `/opt/etc/init.d/S99unifi-keenetic`, preserves existing configuration and adoption state, and leaves the service **stopped** (a new configuration is also **disabled**). Start it explicitly after reviewing configuration. Probe output contains network/client identifiers; do not publish it unredacted.
+
+Ordinary installation failures and caught termination signals attempt to restore previous files and restart an agent that was running. Failed recovery retains private backups and blocks another installation pending review. An existing service must support status codes 0 (running) and 3 (stopped). Forced termination or power loss may leave `/opt/.ukn-install.*` recovery data; inspect it before retrying. These paths have local failure-injection coverage; installed upgrades and power-loss recovery still require spare-device testing.
 
 Configure `/opt/etc/unifi-keenetic.conf`:
 
