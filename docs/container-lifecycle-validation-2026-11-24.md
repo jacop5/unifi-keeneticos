@@ -102,3 +102,28 @@ returned to the caller; the new state may already be visible at that point.
 
 No live router or controller state was changed during this validation. Hardware
 storage durability remains open.
+
+## Persistence failure and controller acknowledgement
+
+Clean candidate `8833382` passed the full offline release gate and all ten
+container checks. The additional Linux check runs the actual encrypted exchange
+code against an in-process loopback controller fixture; Docker networking remains
+disabled and no external controller or router is contacted.
+
+The fixture sends a new adoption key, GCM negotiation and an LED action, then
+blocks state-file replacement. The first exchange returns a persistence error;
+the next attempt retries the local save without sending another HTTP inform.
+Neither attempt dispatches the action or changes the inform interval. The new
+key and outcome remain pending in memory.
+
+After the filesystem obstacle is removed, the agent saves the new state before
+the next encrypted inform. The controller fixture verifies the key is already
+on disk when that inform arrives. The deferred action runs once, and another
+successful exchange does not replay it. Adoption event logging and changed-reply
+actions now occur after a successful state save. The SSH adoption path also
+saves before publishing its adoption events.
+
+The pending outcome is not durable independently of the state file. A process
+crash before storage recovers can still lose the negotiated key and require
+adoption recovery. This test does not establish physical power-loss behavior or
+atomicity across all controller-configuration files.

@@ -87,6 +87,10 @@ power requests need a justified conversion to native percentage units.
       persistence. Retain pending outcomes for local retry; exercise failed saves,
       no acknowledgement during failure, deferred actions and encrypted resumption
       with the new key through a loopback controller test.
+      Clean `8833382` passed the full offline gate and all ten container checks.
+- [ ] Bind saved controller configuration to its received version; inject
+      `system_cfg` write failures and prove stale configuration cannot be applied
+      or acknowledged as a newly stored configuration.
 - [x] Add a separately invoked network-isolated Linux container harness using
       the actual installer/service and agent. Cover disabled installation,
       start/stop, successful upgrade, explicit restart, failed-upgrade restoration
