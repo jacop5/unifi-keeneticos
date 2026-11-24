@@ -53,6 +53,10 @@ the Wi-Fi data path, and test automatic return with controlled client selection.
 This run does not validate WPA3/OWE, FT roaming, schedules, installation, reboot,
 power-loss recovery or every feature of this candidate.
 
+The subsequent [2.4 GHz and hidden-SSID run](band-hidden-validation-2026-11-24.md)
+used the same candidate, verified the other band and a Wi-Fi-bound DNS path,
+and distinguished the earlier negative DNS response from a Wi-Fi-only failure.
+
 Follow-up inspection of the saved on-router snapshot confirmed a two-argument
 `ns3` credential form on both test APs; only the syntax marker and argument count
 were returned. A subsequent comparator fix rejects equivalence between this

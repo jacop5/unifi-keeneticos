@@ -4,7 +4,8 @@ Updated 2026-11-24. This is the implementation/test order, not a claim that the
 port is complete. Baseline for this plan: repository revision `3985993`.
 The current temporary Titan agent is `632f35b`, log-only;
 [controller validation](controller-validation-2026-11-24.md) records its scoped
-live results. [Recovery validation](recovery-validation-2026-11-24.md) used
+live results, with [2.4 GHz and hidden-SSID checks](band-hidden-validation-2026-11-24.md)
+on the same candidate. [Recovery validation](recovery-validation-2026-11-24.md) used
 `dc0fba5`. Revalidate process/network state before another live run.
 
 ## Working rules
@@ -106,10 +107,10 @@ cleanup evidence. Keep raw configurations/credentials private.
 
 | Case | Current evidence | Next decisive check |
 | --- | --- | --- |
-| WPA2, 2.4 and 5 GHz | `632f35b`: 5 GHz WPA2 authentication, DHCP ACK and Wi-Fi-bound HTTPS with explicit endpoint resolution; earlier 2.4 GHz passes | Repeat 2.4 GHz on candidate; system DNS still needs separate verification |
+| WPA2, 2.4 and 5 GHz | `632f35b`: native authentication, DHCP ACK and Wi-Fi-bound HTTPS on both bands; 2.4 GHz DNS also bound to Wi-Fi succeeded | Continue security-mode/client coverage; do not generalize to every DNS endpoint or controller option |
 | WPA3-only | Titan 5 GHz WPA3 authentication passed | 2.4 GHz and traffic; interoperability on available clients |
 | WPA2/WPA3 transition | Titan Mac negotiated WPA3 | A WPA2-only client must also connect; test both bands |
-| Hidden SSID | Translation/unit coverage | Native hidden flag and explicit client join, then exact restore |
+| Hidden SSID | `632f35b`: native hidden flag, explicit known-SSID 2.4 GHz WPA2 join, DHCP/DNS/HTTPS and exact restoration passed | Passive scan/beacon contents and 5 GHz hidden-client coverage |
 | Open / OWE | Translation and disabled-slot native command tests | Real client association and correct encryption/PMF; never claim OWE from an open connection |
 | Pause/resume and schedules | `632f35b`: controller pause/resume confirmed on both bands; earlier schedule transitions passed | Repeat schedules on candidate, including timer boundaries and restart while paused |
 | Automatic reconnect | Latest Mac run selected main AP0 after pause, rather than returning to test AP6 | Controlled client selection and bounded observation; preserve main-network preferences |

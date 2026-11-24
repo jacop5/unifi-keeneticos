@@ -43,6 +43,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | --- | --- |
 | Adoption, saved controller key, AES-GCM informs | Verified live on Hero and Titan; retained across agent restart; controller restart/reconnection verified on both |
 | SSID, WPA2 personal, LAN bridge membership | Verified live on explicit non-primary AP slots |
+| Hidden SSID | Native hiding flag and explicit 2.4 GHz WPA2 client join with DHCP, Wi-Fi-bound DNS/HTTPS and restoration verified; passive beacon/scan behavior unverified ([report](docs/band-hidden-validation-2026-11-24.md)) |
 | WLAN pause/resume | Verified live; controller omission of paused WLANs handled in test-only mode |
 | Client authentication, DHCP and internet access | Titan 2.4/5 GHz Mac authentication, router-issued IPv4 leases and Wi-Fi-bound HTTPS verified; automatic reconnection remains unverified |
 | Client IP, band, signal, width, rates and throughput | Observed in UniFi and compared with NDM data |
