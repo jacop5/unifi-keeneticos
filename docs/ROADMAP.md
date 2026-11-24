@@ -83,6 +83,10 @@ global LED shutdown and call it Locate.
       commands even on failure; offline tests cover health-check races, replacement
       journals and forward deadlines. Still validate native timing and migration
       from older binaries whose watchers do not use the journal lock.
+      Normal daemon startup now locks state and recovers pending changes before
+      telemetry collection or adoption-state loading. CLI subprocess tests cover
+      telemetry/adoption failures, failed recovery, competing daemons and a
+      read-only probe that leaves the journal untouched.
 - [ ] Run installation and physical reboot only on a spare router with a recovery
       path. Do not use the Titan main router as the first installed-upgrade test.
 

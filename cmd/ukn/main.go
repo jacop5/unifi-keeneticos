@@ -229,6 +229,28 @@ func main() {
 		fmt.Println("NDM terminal probe passed")
 		return
 	}
+	journal := filepath.Join(*stateDir, "rollback.json")
+	if !*probe {
+		if *informURL == "" {
+			log.Fatal("-url is required")
+		}
+		if err := os.MkdirAll(*stateDir, 0700); err != nil {
+			log.Fatal(err)
+		}
+		stateLock, err := keenetic.LockState(*stateDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer stateLock.Close()
+		// Pending recovery must precede telemetry and adoption-state loading:
+		// failures there must not strand the router in an unconfirmed state.
+		recoverCtx, recoverCancel := context.WithTimeout(ctx, 30*time.Second)
+		err = keenetic.RecoverUndo(recoverCtx, journal, keenetic.Local)
+		recoverCancel()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	collect := func() (*keenetic.Snapshot, error) {
 		c, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -248,17 +270,6 @@ func main() {
 		}
 		return
 	}
-	if *informURL == "" {
-		log.Fatal("-url is required")
-	}
-	if err := os.MkdirAll(*stateDir, 0700); err != nil {
-		log.Fatal(err)
-	}
-	stateLock, err := keenetic.LockState(*stateDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stateLock.Close()
 	path := filepath.Join(*stateDir, "state.json")
 	st, found, err := device.Load(path)
 	if err != nil {
@@ -297,13 +308,6 @@ func main() {
 	}
 	x.Dev.ModelDisplay = profile.Display
 	x.RestoreFromMgmtCfg()
-	journal := filepath.Join(*stateDir, "rollback.json")
-	recoverCtx, recoverCancel := context.WithTimeout(ctx, 30*time.Second)
-	if err := keenetic.RecoverUndo(recoverCtx, journal, keenetic.Local); err != nil {
-		recoverCancel()
-		log.Fatal(err)
-	}
-	recoverCancel()
 	slots := map[string]string{}
 	if *slotsFile != "" {
 		b, err := os.ReadFile(*slotsFile)
