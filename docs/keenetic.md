@@ -927,6 +927,29 @@ Regression coverage confirms unsupported requests cannot prepare application
 and that separate 802.11k translation remains intact. Native 802.11v control
 and client roaming behavior remain unfinished.
 
+Inspect Wi-Fi-system membership on the router with:
+
+```sh
+ukn -wifi-system-status
+```
+
+This read-only command queries `show mws wlan` and `show interface`, resolves
+native AP aliases and emits schema-1 JSON. It does not contact the controller,
+load adoption state, create state files or change configuration. Action and
+planning modes cannot be combined with it. Output includes native WLAN IDs,
+bands, explicit enabled/schedule status and canonical AP interface IDs. Missing
+flags are `null`; unresolved or ambiguous AP names are counted without exposing
+their values. WPS data, PINs, credentials and other unselected fields are omitted.
+Treat the remaining network identifiers as private diagnostics.
+
+Membership is not permission to change a WLAN and does not establish actual
+BSS-transition behavior. The CLI guide's sections 3.129.1–3.129.3 describe
+automatic AP selection by band, bridge-level binding and reassembly when a
+binding changes. Multiple Wi-Fi-system WLANs on one bridge require disjoint
+bands. These constraints need an explicit ownership/migration design before
+using the manager as a backend; an extra per-AP SSID cannot simply be replaced
+by another same-bridge manager object on overlapping bands.
+
 Hostname enrichment also optionally reads `show ip hotspot` as a fallback
 when a matching unexpired DHCP lease supplies no name. Only link-up hosts
 with valid IPv4/MAC identities and unambiguous hostnames qualify. DHCP names

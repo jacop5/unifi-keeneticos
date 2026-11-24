@@ -34,6 +34,7 @@ func main() {
 	sshListen := flag.String("ssh-listen", ":2222", "controller-only SSH adoption listener; empty disables")
 	stateDir := flag.String("state", "/opt/var/lib/unifi-keenetic", "private persistent state directory")
 	probe := flag.Bool("probe", false, "collect router status and exit without contacting a controller")
+	wifiSystemStatus := flag.Bool("wifi-system-status", false, "read native Wi-Fi-system WLAN/AP membership; no controller or configuration changes")
 	terminalProbe := flag.Bool("terminal-probe", false, "test read-only NDM terminal execution and exit")
 	rollbackProbe := flag.String("rollback-probe", "", "test rollback on an unused disabled AP slot, then exit")
 	probeMode := flag.String("rollback-probe-mode", "ssid", "unused-slot rollback probe: ssid, owe, acl, wpa3, transition, rssi, wmm, ft, schedule, schedule-binding, schedule-active or schedule-start")
@@ -62,6 +63,7 @@ func main() {
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
 		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl, "reboot-control": *rebootControl,
 		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild, "provision-status": *showProvisionStatus,
+		"wifi-system-status": *wifiSystemStatus,
 	}
 	if err := validateOfflineMode(*preflightRunning, *planFile, offlineModes); err != nil {
 		log.Fatal(err)
@@ -85,6 +87,26 @@ func main() {
 			log.Fatal(err)
 		}
 		if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *wifiSystemStatus {
+		if *planFile != "" {
+			log.Fatal("-wifi-system-status cannot be combined with planning")
+		}
+		for name, enabled := range offlineModes {
+			if name != "wifi-system-status" && enabled {
+				log.Fatalf("-wifi-system-status conflicts with -%s", name)
+			}
+		}
+		c, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		inventory, err := keenetic.CollectWiFiSystem(c, keenetic.Local)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(inventory); err != nil {
 			log.Fatal(err)
 		}
 		return
