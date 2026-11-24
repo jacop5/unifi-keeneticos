@@ -104,6 +104,10 @@ power requests need a justified conversion to native percentage units.
       This does not implement automatic restoration or prove a real upgrade.
 - [ ] Prove upgrade preserves adoption key, slot/network mappings, action policy
       and private permissions without exposing credentials in reports/logs.
+      A [temporary log-only upgrade](logonly-upgrade-validation-2026-11-24.md)
+      from `9911433` to `62b1285` preserved adoption/cache/slots byte-for-byte and
+      remained connected with application disabled. Installed-package and
+      applying-mode lifecycle coverage is still required.
 - [ ] Check startup recovery, watchdog executable lifetime and journal persistence
       across agent replacement and device reboot.
       Offline recovery tests cover interrupted replay, retained journals and fresh
