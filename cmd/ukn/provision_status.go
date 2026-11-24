@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/antoniocosta/unifi-openwrt/internal/keenetic"
@@ -13,18 +15,25 @@ import (
 
 // This is a local historical diagnostic, not controller protocol state or a
 // current-health assertion. Never store raw errors, commands or system_cfg.
+type provisionScope struct {
+	WLANTestOnly bool     `json:"wlan_test_only"`
+	Interfaces   []string `json:"interfaces"`
+	Ignored      []string `json:"ignored_settings"`
+}
+
 type provisionStatus struct {
-	SchemaVersion        int        `json:"schema_version"`
-	Phase                string     `json:"phase"`
-	ReceivedVersion      string     `json:"received_cfgversion,omitempty"`
-	ApplyEnabled         bool       `json:"apply_enabled"`
-	WLANTestOnly         bool       `json:"wlan_test_only"`
-	Unsupported          []string   `json:"unsupported"`
-	Ignored              []string   `json:"ignored_settings"`
-	UpdatedAt            *time.Time `json:"updated_at,omitempty"`
-	LastConfirmedVersion string     `json:"last_confirmed_cfgversion,omitempty"`
-	LastConfirmedAt      *time.Time `json:"last_confirmed_at,omitempty"`
-	RetryAt              *time.Time `json:"retry_at,omitempty"`
+	SchemaVersion        int             `json:"schema_version"`
+	Phase                string          `json:"phase"`
+	ReceivedVersion      string          `json:"received_cfgversion,omitempty"`
+	ApplyEnabled         bool            `json:"apply_enabled"`
+	WLANTestOnly         bool            `json:"wlan_test_only"`
+	Unsupported          []string        `json:"unsupported"`
+	Ignored              []string        `json:"ignored_settings"`
+	UpdatedAt            *time.Time      `json:"updated_at,omitempty"`
+	LastConfirmedVersion string          `json:"last_confirmed_cfgversion,omitempty"`
+	LastConfirmedAt      *time.Time      `json:"last_confirmed_at,omitempty"`
+	LastConfirmedScope   *provisionScope `json:"last_confirmed_scope,omitempty"`
+	RetryAt              *time.Time      `json:"retry_at,omitempty"`
 }
 
 func emptyProvisionStatus() provisionStatus {
@@ -85,6 +94,7 @@ func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, r
 	if phase == "confirmed" {
 		r.report.LastConfirmedVersion = version
 		r.report.LastConfirmedAt = &now
+		r.report.LastConfirmedScope = confirmedScope(plan, r.testOnly)
 	}
 	b, err := json.MarshalIndent(r.report, "", "  ")
 	if err != nil {
@@ -104,4 +114,27 @@ func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, r
 		return err
 	}
 	return os.Rename(name, r.path)
+}
+
+// Store only native target identifiers, never credentials or SSID values.
+func confirmedScope(plan *keenetic.Plan, testOnly bool) *provisionScope {
+	targets := map[string]bool{}
+	for _, c := range plan.Commands {
+		parts := strings.SplitN(c.Text, " ", 3)
+		if len(parts) == 3 && parts[0] == "interface" {
+			targets[parts[1]] = true
+		}
+	}
+	for _, a := range plan.AccessLists {
+		targets[a.Target] = true
+	}
+	for _, s := range plan.Schedules {
+		targets[s.Target] = true
+	}
+	result := &provisionScope{WLANTestOnly: testOnly, Interfaces: []string{}, Ignored: append([]string{}, plan.Ignored...)}
+	for target := range targets {
+		result.Interfaces = append(result.Interfaces, target)
+	}
+	sort.Strings(result.Interfaces)
+	return result
 }

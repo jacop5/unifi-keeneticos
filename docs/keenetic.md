@@ -1778,3 +1778,22 @@ mismatches and native quoting. Full race tests passed; focused added coverage,
 vet and both MIPS builds also pass. This is offline verification logic, not
 live proof of radio-disable/PHY behavior. No shared radio or primary WLAN was
 changed, and the current Titan lab agent remains unchanged and log-only.
+
+### Historical confirmation scope
+
+Provision reports now include additive `last_confirmed_scope` metadata on new
+confirmations: that apply's test-only flag, sorted native interface identifiers
+and known ignored settings. These are copied from the confirmed plan and are
+preserved across later plans, failures and mode changes. Current-run flags and
+ignored settings remain separate. Thus a historical AP6-only test confirmation
+does not acquire the scope of a later unrestricted/log-only invocation.
+
+The interface list records planned targets, including ACL/schedule targets;
+it is not a claim that every setting on those interfaces was managed. No SSID
+values, credentials, raw commands or client identities are stored. Reports from
+older builds have unknown historical scope (the field remains absent); current
+flags are not used to infer it. Schema version 1 remains additive-compatible.
+Tests cover mode/plan changes, immutable historical ignored-setting snapshots,
+ordered/deduplicated targets, credential/client omission and legacy behavior.
+Full race tests, vet and both MIPS builds pass. This metadata extension has not
+been deployed to the Titan; no live configuration or running agent changed.

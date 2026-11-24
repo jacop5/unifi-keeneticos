@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -132,5 +133,59 @@ func TestProvisionReportCannotConfirmDisabledOrUnsupportedApply(t *testing.T) {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatal("invalid confirmation wrote a report")
 		}
+	}
+}
+
+func TestConfirmedScopeSurvivesDifferentRunAndPlan(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "status.json")
+	r := provisionReporter{path: path, report: emptyProvisionStatus(), apply: true, testOnly: true}
+	plan := keenetic.Plan{
+		Commands:    []keenetic.Command{{Text: "interface WifiMaster0/AccessPoint6 authentication wpa-psk private-key", Secret: true}, {Text: "interface Bridge0 include WifiMaster0/AccessPoint6"}},
+		AccessLists: []keenetic.AccessList{{Target: "WifiMaster0/AccessPoint6", MACs: []string{"02:00:00:00:00:01"}}},
+		Schedules:   []keenetic.BroadcastSchedule{{Target: "WifiMaster1/AccessPoint6"}},
+		Ignored:     []string{"wireless.3.dtim_period"},
+	}
+	if err := r.record("v1", "confirmed", &plan, time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	plan.Ignored[0] = "wireless.4.uapsd"
+	if r.report.LastConfirmedScope.Ignored[0] != "wireless.3.dtim_period" {
+		t.Fatal("confirmation aliases mutable plan")
+	}
+	old, err := readProvisionStatus(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restarted := provisionReporter{path: path, report: old, apply: false, testOnly: false}
+	if err := restarted.record("v2", "log-only", &keenetic.Plan{}, time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := readProvisionStatus(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.WLANTestOnly || got.LastConfirmedScope == nil || !got.LastConfirmedScope.WLANTestOnly {
+		t.Fatal("current scope overwrote historical test scope")
+	}
+	want := []string{"Bridge0", "WifiMaster0/AccessPoint6", "WifiMaster1/AccessPoint6"}
+	if !reflect.DeepEqual(got.LastConfirmedScope.Interfaces, want) || !reflect.DeepEqual(got.LastConfirmedScope.Ignored, []string{"wireless.3.dtim_period"}) {
+		t.Fatal("confirmation scope lost")
+	}
+	data, _ := os.ReadFile(path)
+	for _, private := range []string{"private-key", "02:00:00:00:00:01"} {
+		if strings.Contains(string(data), private) {
+			t.Fatal("scope leaked private command/client data")
+		}
+	}
+}
+
+func TestLegacyConfirmationDoesNotInferHistoricalScope(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "status.json")
+	if err := os.WriteFile(path, []byte(`{"schema_version":1,"phase":"confirmed","wlan_test_only":true,"last_confirmed_cfgversion":"v1"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := readProvisionStatus(path)
+	if err != nil || got.LastConfirmedScope != nil {
+		t.Fatal("legacy historical scope fabricated")
 	}
 }
