@@ -1755,3 +1755,26 @@ native runner acknowledges channel/width commands without applying them;
 readback failure triggers exact width/channel rollback and clears its journal.
 Full race tests, vet and both MIPS builds pass. No live radio settings changed;
 the running Titan agent remains unchanged and log-only.
+
+### Disabled-parent WLAN verification (offline, 2026-11-24)
+
+The operational WLAN verifier previously required an administratively enabled
+mapped AP to appear even when its parent radio was explicitly planned down.
+It now checks requested radio administrative states against radio snapshots
+and permits that child's absence only for a matching, explicitly disabled
+parent. A missing child on an enabled/unspecified parent still fails. Other
+bands are not waived by the first radio's disable request.
+
+Native WLAN configuration readback now independently checks configured SSID
+and AP administrative state, including inactive WLANs. Quoted and unquoted
+native SSID representations are compared by value; malformed/ambiguous names
+and missing or conflicting administrative states fail. Thus an inactive child
+cannot hide an ignored rename or administrative-state command. The existing
+security/bridge checks remain part of guarded confirmation.
+
+Regression tests cover translated controller radio-disable requests, missing/
+wrong radio measurements, active-other-band requirements, inactive SSID/state
+mismatches and native quoting. Full race tests passed; focused added coverage,
+vet and both MIPS builds also pass. This is offline verification logic, not
+live proof of radio-disable/PHY behavior. No shared radio or primary WLAN was
+changed, and the current Titan lab agent remains unchanged and log-only.

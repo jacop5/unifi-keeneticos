@@ -8,13 +8,21 @@ import (
 )
 
 // VerifyWLANs checks every explicitly enabled mapped AP, not merely whether
-// an unrelated pre-existing WLAN is still operational.
+// an unrelated pre-existing WLAN is still operational. A verified parent-radio
+// disable permits child absence; VerifyWLANSettings must still check its config.
 func VerifyWLANs(plan Plan, s *Snapshot) error {
 	ssids := map[string]string{}
 	states := map[string]string{}
+	radioStates := map[string]string{}
 	for _, c := range plan.Commands {
 		fields := strings.SplitN(c.Text, " ", 3)
-		if len(fields) != 3 || !strings.Contains(fields[1], "/AccessPoint") {
+		if len(fields) != 3 || fields[0] != "interface" {
+			continue
+		}
+		if (fields[1] == "WifiMaster0" || fields[1] == "WifiMaster1") && (fields[2] == "up" || fields[2] == "down") {
+			radioStates[fields[1]] = fields[2]
+		}
+		if !strings.Contains(fields[1], "/AccessPoint") {
 			continue
 		}
 		if strings.HasPrefix(fields[2], "ssid ") {
@@ -26,6 +34,17 @@ func VerifyWLANs(plan Plan, s *Snapshot) error {
 		}
 		if fields[2] == "up" || fields[2] == "down" {
 			states[fields[1]] = fields[2]
+		}
+	}
+	for id, state := range radioStates {
+		found := false
+		for _, radio := range s.Radios {
+			if radio["id"] == id && radio["state"] == state {
+				found = true
+			}
+		}
+		if !found {
+			return fmt.Errorf("radio administrative state does not match plan")
 		}
 	}
 	for id, state := range states {
@@ -42,7 +61,10 @@ func VerifyWLANs(plan Plan, s *Snapshot) error {
 			}
 		}
 		if state == "up" && !found {
-			return fmt.Errorf("enabled mapped AP is not operational")
+			parent, _, _ := strings.Cut(id, "/")
+			if radioStates[parent] != "down" {
+				return fmt.Errorf("enabled mapped AP is not operational")
+			}
 		}
 	}
 	return nil
@@ -113,6 +135,48 @@ func VerifyWLANSettings(plan Plan, running string) error {
 		lines, exists := blocks[fields[1]]
 		if !exists {
 			return fmt.Errorf("mapped WLAN missing from native readback")
+		}
+		if fields[2] == "up" || fields[2] == "down" {
+			state, count := "", 0
+			for _, line := range lines {
+				if line == "up" || line == "down" {
+					state = line
+					count++
+				}
+			}
+			if count != 1 || state != fields[2] {
+				return fmt.Errorf("native WLAN administrative state does not match plan")
+			}
+		}
+		if fields[2] == "no ssid" || strings.HasPrefix(fields[2], "ssid ") {
+			decode := func(value string) (string, error) {
+				if strings.HasPrefix(value, "\"") {
+					return strconv.Unquote(value)
+				}
+				return value, nil
+			}
+			want := ""
+			if fields[2] != "no ssid" {
+				var err error
+				want, err = decode(strings.TrimPrefix(fields[2], "ssid "))
+				if err != nil {
+					return fmt.Errorf("invalid planned SSID representation")
+				}
+			}
+			actual, count := "", 0
+			for _, line := range lines {
+				if strings.HasPrefix(line, "ssid ") {
+					var err error
+					actual, err = decode(strings.TrimPrefix(line, "ssid "))
+					if err != nil {
+						return fmt.Errorf("invalid native SSID representation")
+					}
+					count++
+				}
+			}
+			if count > 1 || actual != want {
+				return fmt.Errorf("native WLAN SSID does not match plan")
+			}
 		}
 		setting := strings.TrimPrefix(fields[2], "no ")
 		enabled := setting == fields[2]
