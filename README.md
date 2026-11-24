@@ -35,6 +35,8 @@ Their existing notices and the [model catalogue's MIT notice](internal/models/NO
 
 Live Hero and Titan testing used **UniFi OS Server 5.1.42 / UniFi Network 10.5.67** in OrbStack. Do not infer CPU byte order from `uname -m`: both tested routers report `mips`. Verify the actual binary format/Entware architecture for your device. Other models, layouts and firmware versions are unverified.
 
+See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies and acceptance gates. Run `python3 tools/check-release.py --require-clean` on a committed candidate for offline tests, both MIPS packages, architecture/manifests and vendored-source rebuild checks. Reports/logs go to `dist/validation/`; dependencies must already be cached. This command performs no deployment.
+
 ## Feature status on Keenetic
 
 | Feature | Status |
