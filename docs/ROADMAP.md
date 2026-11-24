@@ -82,6 +82,7 @@ power requests need a justified conversion to native percentage units.
       replacement and concurrent complete-record writes. The Linux container
       harness runs these state tests as well as the real-agent lifecycle suite.
       This is not physical power-loss proof.
+      Clean `45a7a4a` passed the full offline gate and all nine container checks.
 - [x] Add a separately invoked network-isolated Linux container harness using
       the actual installer/service and agent. Cover disabled installation,
       start/stop, successful upgrade, explicit restart, failed-upgrade restoration

@@ -81,3 +81,24 @@ was verified by the runner.
 These results establish process/file lifetime and ordering for the tested Linux
 arm64 environment and same-source artifacts. They do not establish compatibility
 with older journal formats, a MIPS kernel, reboot or interrupted storage writes.
+
+## Adoption-state persistence extension
+
+Clean candidate `45a7a4a` passed the full offline release gate and all nine
+container checks. The added check runs the real device-package filesystem tests
+as a Linux arm64 test executable before installation/lifecycle scenarios.
+
+Adoption saves now create a unique mode-600 staging file, synchronize its data,
+close it, atomically replace the destination and synchronize the parent directory.
+The fixed legacy `.tmp` path is not opened or deleted. This shared device-package
+change applies to both backends; the stored JSON schema remains unchanged.
+
+Race-enabled host tests and Linux container tests verify a legacy temporary
+symlink does not receive credentials or damage its target, a public destination
+is replaced privately, rename failure cleans up the new stage, and concurrent
+saves leave complete records without leaked stages. These are filesystem/privacy
+tests, not interrupted-power tests. A directory-sync error after replacement is
+returned to the caller; the new state may already be visible at that point.
+
+No live router or controller state was changed during this validation. Hardware
+storage durability remains open.
