@@ -49,6 +49,7 @@ func main() {
 	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
 	ftDomainsFile := flag.String("experimental-ft-domains", "", "JSON SSID-to-native-MDID map for experimental matched dual-band WPA2 FT; no UniFi interoperability claim")
 	preflightRunning := flag.String("preflight-running", "", "with -plan, validate rollback preparation against a saved native running-config; no router access")
+	showProvisionStatus := flag.Bool("provision-status", false, "read local historical provisioning status and exit; no router or controller access")
 	showBuild := flag.Bool("build-info", false, "print local executable build metadata as JSON and exit; no router or controller access")
 	experimentalSAE := flag.Bool("experimental-sae", false, "advertise only the controller SAE radio capability for WPA3 testing; client interoperability unverified")
 	jsonPlan := flag.Bool("plan-json", false, "with -plan, print a redacted structured plan without router access")
@@ -56,7 +57,7 @@ func main() {
 	offlineModes := map[string]bool{
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
 		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl,
-		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild,
+		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild, "provision-status": *showProvisionStatus,
 	}
 	if err := validateOfflineMode(*preflightRunning, *planFile, offlineModes); err != nil {
 		log.Fatal(err)
@@ -65,6 +66,24 @@ func main() {
 		if err := validateOfflineMode("requested", *planFile, offlineModes, "-plan-json"); err != nil {
 			log.Fatal(err)
 		}
+	}
+	if *showProvisionStatus {
+		if *planFile != "" || *jsonPlan || *preflightRunning != "" {
+			log.Fatal("-provision-status cannot be combined with planning")
+		}
+		for name, enabled := range offlineModes {
+			if name != "provision-status" && enabled {
+				log.Fatalf("-provision-status conflicts with -%s", name)
+			}
+		}
+		report, err := readProvisionStatus(filepath.Join(*stateDir, "provision-status.json"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	if *showBuild {
 		info, _ := debug.ReadBuildInfo()
@@ -247,6 +266,18 @@ func main() {
 	if !found || st.Version == "" {
 		st.Version = profile.Version
 	}
+	statusPath := filepath.Join(*stateDir, "provision-status.json")
+	previousStatus, statusErr := readProvisionStatus(statusPath)
+	if statusErr != nil {
+		log.Printf("provision status: %v", statusErr)
+	}
+	reporter := provisionReporter{path: statusPath, report: previousStatus, apply: *apply, testOnly: *wlanTestOnly}
+	recordProvision := func(version, phase string, plan *keenetic.Plan, retry time.Time) {
+		if err := reporter.record(version, phase, plan, retry); err != nil {
+			log.Printf("provision status: %v", err)
+		}
+	}
+	recordProvision(st.CfgVersion, "starting", nil, time.Time{})
 	mac, err := net.ParseMAC(s.Home["mac"])
 	if err != nil {
 		log.Fatal(err)
@@ -340,6 +371,7 @@ func main() {
 					plan, err := buildPlan(string(cfg), slots)
 					if err != nil {
 						log.Printf("configuration plan: %v", err)
+						recordProvision(plannedVersion, "plan-rejected", nil, time.Time{})
 						provisioning.complete(plannedVersion)
 					} else {
 						for _, command := range plan.Commands {
@@ -354,7 +386,15 @@ func main() {
 						for _, acl := range plan.AccessLists {
 							log.Printf("MAC ACL: %s policy=%s clients=%d", acl.Target, acl.Policy, len(acl.MACs))
 						}
+						phase := "log-only"
+						if *apply {
+							phase = "not-adopted"
+						}
 						applyEligible := *apply && x.S.Adopted
+						if len(plan.Unsupported) != 0 {
+							applyEligible = false
+							phase = "unsupported"
+						}
 						if applyEligible && *wlanTestOnly {
 							c, cancel := context.WithTimeout(ctx, 15*time.Second)
 							running, err := keenetic.Local(c, "show running-config")
@@ -365,9 +405,11 @@ func main() {
 							if err != nil {
 								log.Printf("test ownership check: %v", err)
 								applyEligible = false
+								phase = "ownership-rejected"
 							}
 						}
 						if applyEligible {
+							recordProvision(plannedVersion, "applying", &plan, time.Time{})
 							applyCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
 							err := keenetic.ApplyPlanWatched(applyCtx, keenetic.Local, plan, journal, func(checkCtx context.Context) error {
 								timer := time.NewTimer(5 * time.Second)
@@ -417,14 +459,19 @@ func main() {
 								if provisioning.failed(plannedVersion, err, time.Now()) {
 									log.Printf("transient apply failure; retry in %s", provisioning.delay)
 								}
+								recordProvision(plannedVersion, "apply-failed", &plan, provisioning.at)
 							} else {
 								provisioning.complete(plannedVersion)
 								log.Print("configuration applied and confirmed")
+								recordProvision(plannedVersion, "confirmed", &plan, time.Time{})
 							}
 						} else {
+							recordProvision(plannedVersion, phase, &plan, time.Time{})
 							provisioning.complete(plannedVersion)
 						}
 					}
+				} else {
+					recordProvision(plannedVersion, "config-unavailable", nil, time.Time{})
 				}
 			}
 		}

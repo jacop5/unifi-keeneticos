@@ -1644,3 +1644,37 @@ supported. The evidence bundle and source asset are retained locally, not
 redistributed in this repository. No JavaScript was executed. This inspection
 provided no established native translation for DTIM/U-APSD; interactive command
 discovery still needs the separate KeeneticOS login. No router settings changed.
+
+### Local provisioning outcome report
+
+The protocol session echoes a received controller `cfgversion` before native
+application. That echo is independent of whether the Keenetic plan was
+log-only, unsupported, rejected, failed or confirmed. A new private
+`STATE_DIR/provision-status.json` records the local decision separately;
+`ukn -provision-status [-state PATH]` reads its typed JSON and exits before
+native collection or controller access. Conflicting action/planning flags are
+rejected. Missing reports return schema 1 with phase `unknown`.
+
+Report phases include starting, config-unavailable, plan-rejected, unsupported,
+log-only, not-adopted, ownership-rejected, applying, apply-failed and confirmed.
+The version identifies the configuration processed for that decision. Reports
+carry apply/test-only mode, known unsupported/ignored setting names, timestamps,
+retry time when scheduled, and the last confirmed version/time. Only the
+successful guarded-apply path advances confirmation. Later failures, log-only
+runs and restarts preserve that historical confirmation. Unsupported plans are
+classified before the native apply path. Raw errors, credentials, commands,
+client entries and controller configuration are not stored in this report.
+
+Updates use a mode-0600 temporary file and rename. Diagnostic-write failures
+are logged without changing native transaction or controller protocol state.
+The report does not replace a rollback journal, inspect current liveness,
+track external/manual configuration changes or establish complete translation.
+In particular, test-mode confirmations concern the scoped plan, and ignored
+settings remain explicitly listed. A crash can leave an old applying snapshot;
+its timestamp is historical even if detached recovery has since completed.
+
+Tests exercise receipt/confirmation separation, failures/retries/restarts,
+credential omission, private permissions, temporary-file cleanup and a built
+CLI helper with a native-runner sentinel proving query/action isolation. Full
+race tests, vet and both MIPS builds pass. This change has not been deployed
+to the Titan yet; the current lab agent and Wi-Fi configuration are unchanged.
