@@ -46,7 +46,11 @@ func (o journalOwner) runner(run Runner) Runner {
 }
 
 func (o journalOwner) clearBefore(deadline time.Time) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	return o.clear(context.Background(), deadline)
+}
+
+func (o journalOwner) clear(parent context.Context, deadline time.Time) error {
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	if !deadline.IsZero() {
 		var deadlineCancel context.CancelFunc

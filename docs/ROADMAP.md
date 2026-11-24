@@ -115,18 +115,20 @@ cleanup evidence. Keep raw configurations/credentials private.
 | Pause/resume and schedules | `632f35b`: controller pause/resume confirmed on both bands; earlier schedule transitions passed | Repeat schedules on candidate, including timer boundaries and restart while paused |
 | Automatic reconnect | Latest Mac run selected main AP0 after pause, rather than returning to test AP6 | Controlled client selection and bounded observation; preserve main-network preferences |
 | Controller interruption | Real 503 rollback/retry previously passed | Repeat on candidate with status-report outcome and history verified |
-| Idempotent provisioning | SSID quote normalization fixed and verified on Titan; two credential writes persist after an applied profile | Establish safe comparison of native credential representation; then prove zero writes while retaining operational/controller checks |
-
-Credential readback investigation confirmed the native two-argument `ns3` form.
-The string comparator now excludes ambiguous bare multi-argument credentials;
-they cannot be equated to a quoted literal passphrase. Any future receipt-based
-optimization must bind the exact requested credential, AP/SSID and observed
-native representation after a confirmed write, invalidate on drift, retain
-private atomic storage, and never learn from failed/rolled-back or log-only
-operations. A skipped write must still pass operational/controller checks.
+| Idempotent provisioning | SSID normalization verified on Titan; confirmation-bound HMAC credential receipts implemented with offline coverage | Prove native write suppression, restart reuse and drift invalidation while retaining operational/controller checks |
 | Inactive WLAN / radio-off | Verification logic tested offline | Spare-device validation; no shared-radio toggling on the main router |
 | Client policy | Empty allow-list blocked join and removal restored it | Individual entries and two-client isolation/RSSI behavior |
 | Reboot control | Default-off policy/dispatch tests only | Spare-device reboot, service return and native startup-config behavior |
+
+Credential readback investigation confirmed the native two-argument `ns3` form.
+The comparator excludes equivalence with a quoted literal passphrase. New
+receipt-based optimization binds device identity, the exact requested
+credential, AP/SSID, adoption key and observed native representation after a
+confirmed write. It rechecks drift after health, uses private atomic storage,
+and does not learn from failed/rolled-back, canceled or log-only operations.
+Offline tests cover restart reuse, drift, pause/resume, invalid cache files,
+pending recovery and failed confirmation. Hardware validation remains open;
+ordinary offline CLI preflight remains conservative without receipt state.
 
 ## Investigation prerequisites
 

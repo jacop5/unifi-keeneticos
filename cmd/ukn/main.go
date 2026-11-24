@@ -416,9 +416,13 @@ func main() {
 							}
 						}
 						if applyEligible {
+							receipts, receiptErr := keenetic.NewCredentialReceipts(filepath.Join(*stateDir, "credential-receipts.json"), x.S.Key, x.Dev.MAC.String())
+							if receiptErr != nil {
+								log.Print("credential receipts unavailable; credential writes remain enabled")
+							}
 							recordProvision(plannedVersion, "applying", &plan, time.Time{})
 							applyCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
-							err := keenetic.ApplyPlanWatched(applyCtx, keenetic.Local, plan, journal, func(checkCtx context.Context) error {
+							err := keenetic.ApplyPlanWatchedWithReceipts(applyCtx, keenetic.Local, plan, journal, func(checkCtx context.Context) error {
 								timer := time.NewTimer(5 * time.Second)
 								defer timer.Stop()
 								select {
@@ -462,7 +466,7 @@ func main() {
 									return fmt.Errorf("controller configuration changed during provisioning")
 								}
 								return nil
-							}, armWatchdog)
+							}, armWatchdog, receipts)
 							cancel()
 							if err != nil {
 								log.Printf("apply: %v", err)

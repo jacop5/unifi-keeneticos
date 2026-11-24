@@ -304,12 +304,33 @@ Credential commands are redacted in this output.
 Preflight treats optional SSID quoting as equivalent, but native credentials
 need separate handling. The Titan exports `authentication wpa-psk ns3 <value>`;
 those two arguments must not compare equal to the literal passphrase
-`"ns3 <value>"`. Ambiguous multi-argument credentials remain changes, so repeated
-credential writes are still a known limitation. The
+`"ns3 <value>"`. Ambiguous multi-argument credentials remain changes in a
+state-independent preflight. The
 [KeeneticOS 5.1 CLI manual](https://storage.googleapis.com/docs.help.keenetic.com/cli/5.1/en/cli_manual_kn-1810.pdf)
 describes passphrase/raw-key input in section 3.32.14 and shows the `ns3` form in
 its configuration examples. No credential decryption or guessed equivalence is
 implemented.
+
+The daemon now records a confirmed credential write in private
+`credential-receipts.json`. It stores HMAC fingerprints keyed by the adoption
+key, binding the device MAC, AP, requested SSID/credential and observed native
+representation. Matching receipts can suppress a repeated credential write;
+missing, invalid or stale records force application. Drift is checked again
+after health checks. Adoption-key, device/SSID/credential changes or native
+readback changes invalidate a match. Explicit authentication removal removes
+its record; pausing a WLAN retains an unchanged record.
+
+Records are saved atomically with mode 0600 only after guarded confirmation.
+Failed, rolled-back, canceled and log-only operations do not create records.
+This records an acknowledged native write and subsequent checks; it does not
+decrypt a password or substitute for client authentication testing. Failure to
+save optional records leaves the confirmed configuration intact and causes
+future writes rather than an unchecked skip.
+
+The ordinary CLI preflight does not load these records and its change count is
+conservative. The library's `CredentialReceipts.Preimage` supports a read-only,
+receipt-aware check. The implementation has offline regression/race coverage;
+native write-suppression and cache lifecycle validation remain pending.
 
 Run `./ukn -probe` on the router for a read-only status collection. Probe
 output includes network addresses and client identifiers; treat it as private.
