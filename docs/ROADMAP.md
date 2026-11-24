@@ -93,7 +93,9 @@ they produce no native commands. Native rate and shaping support remains open.
       backup/current hash comparison with fixed status labels, no configuration
       contents or hashes in output. Offline tests cover malformed/partial data,
       unsafe paths, symlinks, special files, changed files and state-free CLI use.
-      This does not implement automatic restoration or prove native execution.
+      Native Titan execution and synthetic mixed-file hashing passed; see
+      [installation inspector validation](installation-inspector-validation-2026-11-24.md).
+      This does not implement automatic restoration or prove a real upgrade.
 - [ ] Prove upgrade preserves adoption key, slot/network mappings, action policy
       and private permissions without exposing credentials in reports/logs.
 - [ ] Check startup recovery, watchdog executable lifetime and journal persistence
