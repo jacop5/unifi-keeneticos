@@ -89,6 +89,10 @@ Clean `50bf98c` passed the full offline release gate; see
       immediate exit; make repeated starts preserve an existing verified process.
       Add real-agent container cases for invalid saved state and idempotent start.
       The bounded check does not establish full initialization/controller health.
+      Clean `d724e0a` passed the full offline gate and all thirteen container checks.
+- [ ] Strengthen same-executable instance ownership checks for stale PID reuse
+      across different state directories before treating status/stop as belonging
+      to the selected instance.
 - [x] Harden shared adoption-state persistence: unique private stages, file sync,
       atomic rename and directory sync; cover legacy temp symlinks, failed
       replacement and concurrent complete-record writes. The Linux container

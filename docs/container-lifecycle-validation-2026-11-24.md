@@ -127,3 +127,25 @@ The pending outcome is not durable independently of the state file. A process
 crash before storage recovers can still lose the negotiated key and require
 adoption recovery. This test does not establish physical power-loss behavior or
 atomicity across all controller-configuration files.
+
+## Bounded service process-establishment checks — 2026-11-25
+
+Clean candidate `d724e0a` passed the full offline release gate and all thirteen
+container checks. The shipped service now uses its existing executable/PID/zombie
+criteria during enabled startup, waits up to five seconds to establish that
+process and checks again after one second. A valid already-running process is
+kept rather than launched again.
+
+Two new real-agent container scenarios verify a second start preserves the same
+PID and an invalid saved-state file makes startup return failure when the daemon
+exits immediately. Restoring the private state fixture permits a subsequent start;
+the upgrade, failed-upgrade restart and detached-watchdog checks still pass.
+
+Option-only tests mock process observation independently of argument validation;
+status tests retain simulated live/stale/unrelated/zombie PID coverage, and the
+container exercises the real Linux process observer. Installation-marker tests
+continue to cover admission separately from process liveness.
+
+These checks do not wait for all native initialization or establish controller/WLAN
+health, nor do they guarantee the daemon remains alive after the observation
+window. Native BusyBox/MIPS startup and hardware boot validation remain open.
