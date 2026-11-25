@@ -90,9 +90,11 @@ Clean `50bf98c` passed the full offline release gate; see
       Add real-agent container cases for invalid saved state and idempotent start.
       The bounded check does not establish full initialization/controller health.
       Clean `d724e0a` passed the full offline gate and all thirteen container checks.
-- [ ] Strengthen same-executable instance ownership checks for stale PID reuse
-      across different state directories before treating status/stop as belonging
-      to the selected instance.
+- [x] Check the service's explicit state-directory argument before claiming or
+      stopping a same-executable process. Reject malformed/overridden/diagnostic
+      command lines; signal the checked numeric PID instead of rereading a mutable
+      PID file. Test two real instances with a deliberately misdirected PID file.
+      This does not provide atomic PID-generation signalling.
 - [x] Harden shared adoption-state persistence: unique private stages, file sync,
       atomic rename and directory sync; cover legacy temp symlinks, failed
       replacement and concurrent complete-record writes. The Linux container

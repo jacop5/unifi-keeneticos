@@ -81,6 +81,32 @@ printf 'PASS real-agent-service-start\n'
 [ "$(cat /opt/var/run/unifi-keenetic.pid)" = "$before_pid" ]
 printf 'PASS already-running-start-keeps-process\n'
 
+# Simulate a stale PID file that names another live instance of the same ELF.
+mkdir -p /work/other-state
+cp -p /test/state.json /work/other-state/state.json
+start-stop-daemon -S -b -m -p /work/other.pid -x /opt/sbin/ukn -- -state /work/other-state -url http://127.0.0.1:9/inform -ssh-listen ''
+sleep 1
+other_pid=$(cat /work/other.pid)
+test "$(readlink /proc/"$other_pid"/exe)" = /opt/sbin/ukn
+cp -p /opt/var/run/unifi-keenetic.pid /work/selected.pid
+cp /work/other.pid /opt/var/run/unifi-keenetic.pid
+assert_stopped
+if "$service" stop > /work/other-instance-stop.log 2>&1; then
+ printf 'Service stop claimed an unrelated state instance\n' >&2
+ exit 1
+fi
+kill -0 "$other_pid"
+test "$(readlink /proc/"$other_pid"/exe)" = /opt/sbin/ukn
+cp /work/selected.pid /opt/var/run/unifi-keenetic.pid
+wait_running
+kill -TERM "$other_pid"
+n=0
+while [ "$(readlink /proc/"$other_pid"/exe 2>/dev/null || true)" = /opt/sbin/ukn ]; do
+ n=$((n+1)); [ "$n" -lt 50 ] || exit 1
+ sleep 0.1
+done
+printf 'PASS same-executable-other-state-is-not-stopped\n'
+
 sh /test/package-b/install.sh > /work/successful-upgrade.log 2>&1
 assert_clean
 assert_stopped

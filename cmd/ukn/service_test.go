@@ -43,6 +43,7 @@ func TestEntwareServiceOptions(t *testing.T) {
 		{"invalid SAE", "EXPERIMENTAL_SAE=yes\n", false, nil},
 		{"custom state", "STATE_DIR='/tmp/private state'\nPID_FILE='/tmp/private pid/agent.pid'\n", true, []string{"-state", "/tmp/private state"}},
 		{"relative state", "STATE_DIR=relative\n", false, nil},
+		{"newline state", "STATE_DIR='/tmp/first\nsecond'\n", false, nil},
 		{"empty pid", "PID_FILE=''\n", false, nil},
 		{"test apply", "APPLY=1\nWLAN_TEST_ONLY=1\nSLOTS='" + slots + "'\n", true, []string{"-apply", "-wlan-test-only", "-slots", slots}},
 		{"reboot opt-in", "REBOOT_CONTROL=1\n", true, []string{"-reboot-control"}},
@@ -113,26 +114,29 @@ func TestEntwareStopWaitsForProcessExit(t *testing.T) {
 		if err := os.WriteFile(config, []byte("PID_FILE='"+pid+"'\n"), 0600); err != nil {
 			t.Fatal(err)
 		}
+		proc := filepath.Join(dir, "proc")
+		os.MkdirAll(filepath.Join(proc, "12345"), 0700)
+		status := "State:\tS (sleeping)\n"
 		if mode == "zombie" {
-			proc := filepath.Join(dir, "proc")
-			os.MkdirAll(filepath.Join(proc, "12345"), 0700)
-			if err := os.WriteFile(filepath.Join(proc, "12345", "status"), []byte("State:\tZ (zombie)\n"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			text = strings.ReplaceAll(text, "/proc/", proc+"/")
+			status = "State:\tZ (zombie)\n"
 		}
+		if err := os.WriteFile(filepath.Join(proc, "12345", "status"), []byte(status), 0600); err != nil {
+			t.Fatal(err)
+		}
+		os.WriteFile(filepath.Join(proc, "12345", "cmdline"), []byte("/opt/sbin/ukn\x00-state\x00/opt/var/lib/unifi-keenetic\x00"), 0600)
+		text = strings.ReplaceAll(text, "/proc/", proc+"/")
 		if err := os.WriteFile(script, []byte(text), 0700); err != nil {
 			t.Fatal(err)
 		}
-		behavior := `n=$((n+1)); [ "$n" -lt 3 ]`
+		behavior := `n=$((n+1)); [ "$n" -lt 5 ]`
 		if mode != "exits" {
 			behavior = "return 0"
 		}
 		cmd := exec.Command("bash", "-c", `
 n=0
-kill() { `+behavior+`; }
+kill() { if [ "$1" = -TERM ]; then printf 'TERM requested\n'; return 0; fi; `+behavior+`; }
 sleep() { :; }
-start-stop-daemon() { printf 'TERM requested\n'; }
+readlink() { printf '%s' /opt/sbin/ukn; }
 script=$1
 set -- stop
 . "$script"
@@ -143,7 +147,7 @@ set -- stop
 		if (err != nil) != stuck {
 			t.Fatalf("stuck=%v err=%v output=%s", stuck, err, out)
 		}
-		if !strings.Contains(string(out), "TERM requested") {
+		if mode != "zombie" && !strings.Contains(string(out), "TERM requested") {
 			t.Fatal("stop did not request graceful termination")
 		}
 		if stuck && !strings.Contains(string(out), "refusing immediate restart") {
@@ -157,7 +161,7 @@ func TestEntwareStatusRejectsStaleAndUnrelatedPIDs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, mode := range []string{"running", "missing", "invalid", "zombie", "unrelated"} {
+	for _, mode := range []string{"running", "spaces", "missing", "invalid", "zombie", "unrelated", "other-state", "missing-state", "late-state", "override", "diagnostic", "watchdog", "truncated"} {
 		dir := t.TempDir()
 		pid := filepath.Join(dir, "pid")
 		proc := filepath.Join(dir, "proc")
@@ -181,7 +185,31 @@ func TestEntwareStatusRejectsStaleAndUnrelatedPIDs(t *testing.T) {
 			}
 		}
 		config := filepath.Join(dir, "config")
-		os.WriteFile(config, []byte("PID_FILE='"+pid+"'\n"), 0600)
+		stateDir := "/opt/var/lib/unifi-keenetic"
+		if mode == "spaces" {
+			stateDir = "/tmp/state with spaces"
+		}
+		os.WriteFile(config, []byte("PID_FILE='"+pid+"'\nSTATE_DIR='"+stateDir+"'\n"), 0600)
+		args := []string{"/opt/sbin/ukn", "-state", stateDir}
+		switch mode {
+		case "other-state":
+			args[2] = "/tmp/other-state"
+		case "missing-state":
+			args = args[:1]
+		case "late-state":
+			args = []string{"/opt/sbin/ukn", "-url", "http://127.0.0.1:9/inform", "-state", stateDir}
+		case "override":
+			args = append(args, "-state=/tmp/other-state")
+		case "diagnostic":
+			args = append(args, "--build-info")
+		case "watchdog":
+			args = append(args, "-rollback-watch=/tmp/journal")
+		}
+		cmdline := strings.Join(args, "\x00") + "\x00"
+		if mode == "truncated" {
+			cmdline = strings.TrimSuffix(cmdline, "\x00")
+		}
+		os.WriteFile(filepath.Join(proc, "12345", "cmdline"), []byte(cmdline), 0600)
 		script := filepath.Join(dir, "service")
 		os.WriteFile(script, []byte(strings.ReplaceAll(string(original), "/proc/", proc+"/")), 0700)
 		exe := "/opt/sbin/ukn"
@@ -199,7 +227,7 @@ set -- status
 `, "status-test", script, exe)
 		cmd.Env = append(os.Environ(), "UKN_CONFIG="+config)
 		out, err := cmd.CombinedOutput()
-		if (err == nil) != (mode == "running") {
+		if (err == nil) != (mode == "running" || mode == "spaces") {
 			t.Fatalf("mode=%s err=%v output=%s", mode, err, out)
 		}
 	}

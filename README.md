@@ -178,6 +178,10 @@ process and checks it again after one second to catch immediate exits. A repeate
 start keeps an already verified process. This is a bounded process-liveness check,
 not confirmation that native initialization, controller connectivity or WLAN
 provisioning completed.
+Status/stop also require the service's explicit state-directory argument. Stop
+refuses a live PID for another state directory even when the executable matches.
+Manually launched processes outside the service's argument ordering are not
+claimed by this script; state paths with spaces work, but newlines are rejected.
 
 Adoption-state saves use a unique mode-600 temporary file, synchronize it before
 atomic replacement, and synchronize the parent directory afterward. This also

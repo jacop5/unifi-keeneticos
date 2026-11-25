@@ -25,15 +25,41 @@ pid=$PID_FILE
 for path in "$STATE_DIR" "$PID_FILE"; do
  case "$path" in /*) ;; *) printf '%s\n' 'STATE_DIR and PID_FILE must be absolute paths' >&2; exit 1 ;; esac
 done
+case "$STATE_DIR" in *'
+'*) printf '%s\n' 'STATE_DIR must not contain a newline' >&2; exit 1 ;; esac
+process_matches() {
+ observed_pid=$1
+ case "$observed_pid" in ''|*[!0-9]*|0|1) return 1 ;; esac
+ expected_exe=$(readlink -f "$daemon" 2>/dev/null || true)
+ [ -n "$expected_exe" ] && kill -0 "$observed_pid" 2>/dev/null &&
+  [ -r "/proc/$observed_pid/status" ] &&
+  ! grep -q '^State:[[:space:]]*Z' "/proc/$observed_pid/status" 2>/dev/null &&
+  [ "$(readlink "/proc/$observed_pid/exe" 2>/dev/null)" = "$expected_exe" ] || return 1
+ [ -r "/proc/$observed_pid/cmdline" ] || return 1
+ # The service always supplies -state first. Preserve spaces/backslashes and
+ # reject later overrides and diagnostic/recovery modes. This is a service
+ # argument-shape check, not authentication or atomic PID-generation signalling.
+ tr '\000' '\n' < "/proc/$observed_pid/cmdline" | {
+  valid=1
+  IFS= read -r executable && IFS= read -r option && IFS= read -r selected_state &&
+   [ "$option" = -state ] && [ "$selected_state" = "$STATE_DIR" ] || valid=0
+  while IFS= read -r argument; do
+   case "$argument" in -*)
+    argument=${argument%%=*}
+    argument=${argument#-}
+    argument=${argument#-}
+    case "$argument" in
+     state|probe|terminal-probe|wifi-system-status|installation-status|rollback-probe|rollback-probe-mode|crash-probe|rollback-watch|rollback-id|plan|plan-json|preflight-running|provision-status|build-info|models) valid=0 ;;
+    esac ;;
+   esac
+  done
+  [ "$valid" = 1 ]
+ }
+}
 daemon_running() {
  [ -r "$pid" ] || return 1
  current_pid=$(cat "$pid")
- case "$current_pid" in ''|*[!0-9]*|0|1) return 1 ;; esac
- expected_exe=$(readlink -f "$daemon" 2>/dev/null || true)
- [ -n "$expected_exe" ] && kill -0 "$current_pid" 2>/dev/null &&
-  [ -r "/proc/$current_pid/status" ] &&
-  ! grep -q '^State:[[:space:]]*Z' "/proc/$current_pid/status" 2>/dev/null &&
-  [ "$(readlink "/proc/$current_pid/exe" 2>/dev/null)" = "$expected_exe" ]
+ process_matches "$current_pid"
 }
 case "${1:-}" in
  start)
@@ -109,9 +135,14 @@ case "${1:-}" in
    old_pid=$(cat "$pid")
    case "$old_pid" in ''|*[!0-9]*|0|1) printf '%s\n' 'Invalid daemon PID file; refusing stop' >&2; exit 1 ;; esac
   fi
-  start-stop-daemon -K -p "$pid" -x "$daemon" -s TERM || true
+  [ -n "$old_pid" ] || exit 0
+  if ! kill -0 "$old_pid" 2>/dev/null; then exit 0; fi
+  if [ -r "/proc/$old_pid/status" ] && grep -q '^State:[[:space:]]*Z' "/proc/$old_pid/status" 2>/dev/null; then exit 0; fi
+  process_matches "$old_pid" || { printf '%s\n' 'PID does not identify the selected instance; refusing stop' >&2; exit 1; }
+  # Signal the checked PID, not a PID file that can change after validation.
+  kill -TERM "$old_pid"
   attempts=0
-  while [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; do
+  while process_matches "$old_pid"; do
    # A zombie has exited and released its locks; its parent may reap it later.
    if [ -r "/proc/$old_pid/status" ] && grep -q '^State:[[:space:]]*Z' "/proc/$old_pid/status" 2>/dev/null; then break; fi
    [ "$attempts" -lt 15 ] || { printf '%s\n' 'Daemon has not exited; refusing immediate restart' >&2; exit 1; }
