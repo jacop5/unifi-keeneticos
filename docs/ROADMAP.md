@@ -91,6 +91,14 @@ Clean `50bf98c` passed the full offline release gate; see
 
 ### P0.2 — Upgrade/recovery readiness
 
+- The container runner accepts `--previous-agent-revision COMMIT` to build
+  artifact A from a local historical commit and B from the current tree. Both
+  packages deliberately retain current installer/service scripts. Reports pin
+  agent revisions and executable hashes; this is not a historical-package
+  upgrade test. Startup recovery is checked in both journal directions.
+  The selected `62b1285` → current-source pair passed all fifteen checks; see
+  [cross-revision recovery evidence](cross-revision-recovery-2026-11-25.md).
+
 - [x] Verify enabled service startup establishes the expected process and catches
       immediate exit; make repeated starts preserve an existing verified process.
       Add real-agent container cases for invalid saved state and idempotent start.

@@ -30,7 +30,8 @@ EXPECTED = ['private-atomic-adoption-state', 'durable-adoption-before-controller
             'startup-detects-immediate-daemon-exit',
             'failed-upgrade-restores-and-restarts-real-agent', 'clean-stop-no-native-writes',
             'detached-watchdog-recovers-after-executable-replacement',
-            'startup-recovers-pending-journal-before-telemetry']
+            'startup-recovers-pending-journal-before-telemetry',
+            'replacement-agent-recovers-predecessor-journal-before-telemetry']
 NATIVE = '''#!/bin/sh
 set -eu
 [ "$1" = -c ] || exit 99
@@ -70,6 +71,7 @@ esac
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--image', required=True, help='existing local Linux image; never pulled')
+    parser.add_argument('--previous-agent-revision', help='local Git commit for artifact A agent; packaging stays current')
     parser.add_argument('--report', type=Path, default=ROOT / 'dist/validation/container-lifecycle.json')
     args = parser.parse_args()
     os.umask(0o077)
@@ -81,11 +83,20 @@ def main():
     if image.get('Os') != 'linux' or arch not in ('arm64', 'amd64'):
         parser.error('selected image must be Linux arm64 or amd64')
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    previous = revision
+    if args.previous_agent_revision:
+        previous = subprocess.check_output(['git', 'rev-parse', '--verify', '--end-of-options',
+                                            args.previous_agent_revision + '^{commit}'], cwd=ROOT, text=True).strip()
+        if previous == revision:
+            parser.error('previous agent revision must differ from HEAD')
     report = dict(schema_version=1, status='running', revision=revision,
                   modified=bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip()),
                   scope='isolated-container-synthetic-native-loopback-controller-only',
                   image_id=image['Id'], architecture=arch, checks=[],
-                  limitations=['same-source artifacts with distinct build IDs, not cross-version compatibility',
+                  agent_revisions={'a': previous, 'b': revision}, packaging_revision=revision,
+                  limitations=[('cross-revision agents with current packaging; not historical-package upgrade proof'
+                                if args.previous_agent_revision else
+                                'same-source artifacts with distinct build IDs, not cross-version compatibility'),
                                'no MIPS runtime, physical reboot, power loss or native WLAN enforcement'])
     container = 'ukn-lifecycle-' + secrets.token_hex(8)
     started = time.monotonic()
@@ -93,6 +104,14 @@ def main():
     args.report.write_text(json.dumps(report, indent=2) + '\n')
     with tempfile.TemporaryDirectory(prefix='ukn-container-lifecycle-') as temp:
         base = Path(temp)
+        previous_root = ROOT
+        if args.previous_agent_revision:
+            previous_root = base / 'previous-source'
+            previous_root.mkdir()
+            archive = base / 'previous-source.tar'
+            subprocess.run(['git', 'archive', '--format=tar', '-o', str(archive), previous],
+                           cwd=ROOT, check=True, timeout=30)
+            subprocess.run(['tar', '-xf', str(archive), '-C', str(previous_root)], check=True, timeout=30)
         env = dict(os.environ, GOOS='linux', GOARCH=arch, CGO_ENABLED='0', GOPROXY='off', GOSUMDB='off')
         for label in ('a', 'b'):
             package = base / ('package-' + label)
@@ -100,7 +119,8 @@ def main():
             print('Building container artifact ' + label, flush=True)
             try:
                 subprocess.run([go, 'build', '-trimpath', '-ldflags=-s -w -buildid=ukn-lifecycle-' + label,
-                                '-o', str(package / 'ukn'), './cmd/ukn'], cwd=ROOT, env=env, check=True, timeout=300)
+                                '-o', str(package / 'ukn'), './cmd/ukn'],
+                               cwd=previous_root if label == 'a' else ROOT, env=env, check=True, timeout=300)
             except (OSError, subprocess.SubprocessError):
                 report['status'] = 'failed'
                 args.report.write_text(json.dumps(report, indent=2) + '\n')
@@ -115,6 +135,8 @@ def main():
                 hashlib.sha256((package / name).read_bytes()).hexdigest() + '  ' + name + '\n' for name in FILES))
         if (base / 'package-a/ukn').read_bytes() == (base / 'package-b/ukn').read_bytes():
             raise RuntimeError('test requires distinct replacement artifacts')
+        report['agent_sha256'] = {label: hashlib.sha256((base / ('package-' + label) / 'ukn').read_bytes()).hexdigest()
+                                  for label in ('a', 'b')}
         (base / 'ndmc').write_text(NATIVE)
         (base / 'ndmc').chmod(0o755)
         shutil.copyfile(ROOT / 'tools/fixtures/container-lifecycle.sh', base / 'run.sh')

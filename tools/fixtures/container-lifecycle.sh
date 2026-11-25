@@ -233,3 +233,40 @@ assert_preserved
 assert_stopped
 test ! -e /work/forbidden-native-command
 printf 'PASS startup-recovers-pending-journal-before-telemetry\n'
+
+# Artifact A is now installed and stopped. Have it produce a journal, then
+# replace it with B and prove B can recover A's pending transaction. The earlier
+# startup check exercised the opposite direction (B's journal recovered by A).
+rm -f /work/require-recovery-before-telemetry
+if /opt/sbin/ukn -state "$state" -rollback-probe WifiMaster0/AccessPoint5 -crash-probe > /work/predecessor-crash-probe.log 2>&1; then
+ exit 1
+else
+ code=$?
+fi
+[ "$code" = 77 ]
+test -e /work/fake-ap-ssid
+test -f "$state/rollback-probe.json"
+mv "$state/rollback-probe.json" "$state/rollback.json"
+sh /test/package-b/install.sh > /work/predecessor-upgrade.log 2>&1
+assert_clean
+assert_stopped
+cmp -s /test/package-b/ukn /opt/sbin/ukn
+# Installation deliberately performs a read-only -probe. Restrict ordering at
+# daemon startup, after that probe, as in the earlier startup recovery case.
+test ! -e /work/forbidden-native-command
+: > /work/require-recovery-before-telemetry
+"$service" start
+wait_running
+n=0
+while [ -e "$state/rollback.json" ]; do
+ n=$((n+1)); [ "$n" -lt 50 ] || exit 1
+ sleep 0.1
+done
+test ! -e /work/fake-ap-ssid
+[ "$(stat -c %i "$state/rollback.json.lock")" = "$normal_lock_inode" ]
+[ "$(wc -l < /work/inverse-calls | tr -d '[:space:]')" = 3 ]
+assert_preserved
+"$service" stop
+assert_stopped
+test ! -e /work/forbidden-native-command
+printf 'PASS replacement-agent-recovers-predecessor-journal-before-telemetry\n'
