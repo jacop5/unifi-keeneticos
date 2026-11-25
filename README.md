@@ -74,6 +74,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | Client block/kick, locate and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
 | DTIM period and U-APSD | No Keenetic translation; ignored setting names reported in plans/logs |
+| Per-WLAN group-key rekey interval | No translation; ignored setting name reported, shared-radio interval preserved |
 | Minimum data/management/beacon rates and CCK selection | No Keenetic translation; requested setting names reported as ignored |
 | Service lifecycle and status | Private Titan start/restart/stop and live/stale/unrelated PID status verified; real-agent installer upgrades/recovery pass in an isolated Linux container; hardware installed-package upgrade remains untested |
 | Offline preflight | Saved configuration/rollback preparation tested against a fresh Titan snapshot and followed by guarded AP6 apply |

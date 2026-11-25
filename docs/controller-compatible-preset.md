@@ -36,8 +36,9 @@ not hardcoded deployment restrictions.
 
 Known ignored requests include DTIM, U-APSD, minimum data/management/beacon rates,
 CCK-rate selection and matched per-client bandwidth limits. They produce no
-corresponding native commands. This preset does not establish support for other
-unmapped controller options, including group-key rekey timing. Do not interpret
+corresponding native commands. Per-WLAN group-key rekey timing is also reported
+as ignored; the documented shared-radio command is not used as a substitute.
+This preset does not establish support for other unmapped options. Do not interpret
 an accepted plan as full controller/native feature parity.
 
 The current dedicated Titan profile was inspected on 2026-11-25: WPA2 Personal,

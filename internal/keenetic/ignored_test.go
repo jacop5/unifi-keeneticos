@@ -7,6 +7,31 @@ import (
 	"testing"
 )
 
+func TestGroupRekeyRequestIsVisibleWithoutSharedRadioChanges(t *testing.T) {
+	base := strings.ReplaceAll(wlan, "Home WiFi", "UKN-Test-Rekey")
+	slots := map[string]string{"1": "WifiMaster0/AccessPoint6"}
+	for _, build := range []struct {
+		name string
+		plan func(string, map[string]string) (Plan, error)
+	}{{"normal", BuildPlan}, {"connected-test", BuildWLANTestPlan}} {
+		t.Run(build.name, func(t *testing.T) {
+			baseline, err := build.plan(base, slots)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, value := range []string{"3600", "0", "private-invalid-value"} {
+				p, err := build.plan(base+"aaa.1.wpa.group_rekey="+value+"\naaa.99.wpa.group_rekey=unowned-value\n", slots)
+				if err != nil || !reflect.DeepEqual(p.Ignored, []string{"aaa.1.wpa.group_rekey"}) {
+					t.Fatalf("rekey diagnostics: %v %v", p.Ignored, err)
+				}
+				if !reflect.DeepEqual(p.Commands, baseline.Commands) || !reflect.DeepEqual(p.Unsupported, baseline.Unsupported) {
+					t.Fatal("ignored rekey request changed native planning")
+				}
+			}
+		})
+	}
+}
+
 func TestKnownUntranslatedSettingsAreVisibleAndScoped(t *testing.T) {
 	cfg := strings.ReplaceAll(wlan, "Home WiFi", "UKN-Test-Ignored") + `radio.1.phyname=wifi0
 radio.1.txpower=17

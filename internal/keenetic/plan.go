@@ -228,6 +228,11 @@ func BuildPlanWithOptions(text string, slots map[string]string, options PlannerO
 			p.AccessLists = append(p.AccessLists, *acl)
 		}
 		aaa := "aaa." + id + "."
+		// Native rekey-interval is documented on the shared radio. Do not
+		// translate a per-WLAN request into a change affecting other WLANs.
+		if cfg[aaa+"wpa.group_rekey"] != "" {
+			p.Ignored = append(p.Ignored, aaa+"wpa.group_rekey")
+		}
 		if err := validateBooleanStatus(cfg, aaa+"is_guest"); err != nil {
 			return p, err
 		}
