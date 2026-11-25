@@ -139,3 +139,9 @@ exact ACL and AP state; complete recovery clears the journal. Every mutation
 requires a persisted private journal and simulated watchdog arm. Successful and
 reconciled no-op plans still require a fresh controller exchange. This test does
 not spawn the detached watchdog or replace a real radio/client enforcement test.
+
+Clean candidate `ef31a77` passed the full release gate and all sixteen expanded
+Linux container checks. The added container check runs the guarded application
+test and the actual CLI same-version/restart block-policy tests on Linux arm64.
+The separate lifecycle checks still exercise the actual detached watchdog and
+cross-revision journals. Native blocking/client enforcement remains unverified.
