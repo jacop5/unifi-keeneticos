@@ -409,7 +409,7 @@ func main() {
 			}
 			x.Extra = func() map[string]any {
 				cfg, _ := x.S.CurrentControllerConfig()
-				return s.FieldsForConfig(cfg)
+				return s.FieldsForMappedConfig(cfg, slots)
 			}
 			informErr := exchange(ctx, client, x, path, &interval, actionHandler)
 			if informErr != nil {

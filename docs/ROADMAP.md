@@ -61,6 +61,12 @@ inventories. No minimum-rate/DTIM/U-APSD mapping was established. Host-wide shap
 needs resource ownership and association-lifetime handling before VAP translation;
 power requests need a justified conversion to native percentage units.
 
+Controller telemetry now correlates WLANs through the explicit slot map and
+matching native SSID/band. Same-name WLANs on one band remain distinct; unowned,
+drifted or ambiguous entries retain native identities. Top-level and per-WLAN
+client rows share consistent identities. Synthetic tests cover duplicate SSIDs,
+duplicate mappings/aliases, mismatches, collisions and unchanged traffic counts.
+
 ## P0 tasks
 
 ### P0.1 — One offline command and candidate evidence

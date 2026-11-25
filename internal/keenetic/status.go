@@ -251,8 +251,11 @@ func (s *Snapshot) StationFields() []map[string]any {
 }
 
 func (s *Snapshot) VAPFields() []map[string]any {
+	return s.vapFields(s.StationFields())
+}
+
+func (s *Snapshot) vapFields(stations []map[string]any) []map[string]any {
 	out := []map[string]any{}
-	stations := s.StationFields()
 	for _, v := range s.VAPs {
 		band, name, index := "ng", "wifi0", 0
 		if strings.HasPrefix(v["id"], "WifiMaster1/") {
@@ -316,35 +319,94 @@ func (s *Snapshot) Fields() map[string]any {
 		// may retain its desired configuration while this daemon is log-only.
 		radios = append(radios, map[string]any{"name": name, "radio": band, "channel": number(r["channel"]), "ht": r["bandwidth"], "bw": number(r["bandwidth"]), "num_sta": count, "user-num_sta": count, "temperature": number(r["temperature"])})
 	}
-	count := len(s.StationFields())
-	return map[string]any{"port_table": s.PortFields(), "num_sta": count, "user-num_sta": count, "stat": map[string]any{"user-num_sta": count}, "sta_table": s.StationFields(), "vap_table": s.VAPFields(), "sys_stats": stats, "system-stats": map[string]any{"cpu": s.System["cpuload"], "mem": fmt.Sprintf("%.1f", 100*float64(total-free)/float64(max(total, 1))), "uptime": number(s.System["uptime"])}, "uptime": number(s.System["uptime"]), "radio_table": radioTable, "radio_table_stats": radios}
+	stations := s.StationFields()
+	count := len(stations)
+	return map[string]any{"port_table": s.PortFields(), "num_sta": count, "user-num_sta": count, "stat": map[string]any{"user-num_sta": count}, "sta_table": stations, "vap_table": s.vapFields(stations), "sys_stats": stats, "system-stats": map[string]any{"cpu": s.System["cpuload"], "mem": fmt.Sprintf("%.1f", 100*float64(total-free)/float64(max(total, 1))), "uptime": number(s.System["uptime"])}, "uptime": number(s.System["uptime"]), "radio_table": radioTable, "radio_table_stats": radios}
 }
 
+// FieldsForConfig supports only unambiguous SSID/band matches when no explicit
+// ownership map is supplied. The runtime uses FieldsForMappedConfig instead.
 func (s *Snapshot) FieldsForConfig(text string) map[string]any {
+	return s.fieldsForConfig(text, nil, false)
+}
+
+func (s *Snapshot) FieldsForMappedConfig(text string, slots map[string]string) map[string]any {
+	return s.fieldsForConfig(text, slots, true)
+}
+
+func (s *Snapshot) fieldsForConfig(text string, slots map[string]string, mapped bool) map[string]any {
 	f := s.Fields()
 	cfg := translate.ParseCfg(text)
+	var prefixes []string
+	aliasOwners, slotOwners := map[string]int{}, map[string]int{}
+	for _, target := range slots {
+		slotOwners[target]++
+	}
+	for key := range cfg {
+		rest, ok := strings.CutPrefix(key, "wireless.")
+		if !ok {
+			continue
+		}
+		id, property, ok := strings.Cut(rest, ".")
+		if !ok || id == "" || property != "ssid" || (mapped && slots[id] == "") {
+			continue
+		}
+		prefix := "wireless." + id + "."
+		prefixes = append(prefixes, prefix)
+		if name := cfg[prefix+"devname"]; name != "" {
+			aliasOwners[name]++
+		}
+	}
+	nativeNames := map[string]bool{}
+	nativeMatches := map[string]int{}
 	for _, vap := range f["vap_table"].([]map[string]any) {
-		for key, ssid := range cfg {
-			if !strings.HasPrefix(key, "wireless.") || !strings.HasSuffix(key, ".ssid") || ssid != vap["essid"] {
+		if name, ok := vap["name"].(string); ok {
+			nativeNames[name] = true
+		}
+		for _, prefix := range prefixes {
+			if cfg[prefix+"ssid"] == vap["essid"] && cfg[prefix+"parent"] == vap["radio_name"] {
+				nativeMatches[prefix]++
+			}
+		}
+	}
+	for _, vap := range f["vap_table"].([]map[string]any) {
+		native, _ := vap["name"].(string)
+		if native == "" {
+			continue
+		}
+		var matches []string
+		for _, prefix := range prefixes {
+			if !mapped && nativeMatches[prefix] != 1 {
 				continue
 			}
-			prefix := strings.TrimSuffix(key, "ssid")
-			if cfg[prefix+"parent"] != vap["radio_name"] {
+			if cfg[prefix+"ssid"] != vap["essid"] || cfg[prefix+"parent"] != vap["radio_name"] {
 				continue
 			}
-			if id := cfg[prefix+"id"]; id != "" {
-				vap["id"] = id
+			id := strings.TrimSuffix(strings.TrimPrefix(prefix, "wireless."), ".")
+			if mapped && (slots[id] != native || slotOwners[native] != 1) {
+				continue
 			}
-			if name := cfg[prefix+"devname"]; name != "" {
-				old := vap["name"]
-				vap["name"] = name
-				for _, sta := range f["sta_table"].([]map[string]any) {
-					if sta["vap"] == old {
-						sta["vap"] = name
-					}
+			matches = append(matches, prefix)
+		}
+		if len(matches) != 1 {
+			continue
+		}
+		prefix := matches[0]
+		name := cfg[prefix+"devname"]
+		if name != "" && (aliasOwners[name] != 1 || (nativeNames[name] && name != native)) {
+			continue
+		}
+		if id := cfg[prefix+"id"]; id != "" {
+			vap["id"] = id
+		}
+		if name != "" {
+			vap["name"] = name
+			for _, sta := range f["sta_table"].([]map[string]any) {
+				if sta["vap"] == native {
+					// Nested per-VAP rows share these same generated records.
+					sta["vap"] = name
 				}
 			}
-			break
 		}
 	}
 	return f
