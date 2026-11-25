@@ -21,6 +21,22 @@ copy the test slot numbers from another device without checking ownership.
 The named household WLAN protections used in our lab are test-session rules,
 not hardcoded deployment restrictions.
 
+## Advertised capabilities
+
+The Keenetic runtime selects a UniFi model for protocol identity but does not
+copy its broad firmware/Wi-Fi capability bitmaps. Firmware capability reporting
+retains the protocol's placeholder value; hardware/secondary firmware and Wi-Fi
+capability words are not added. Radio rows contain native measurements without
+guessed stream counts, power ranges, antenna gains or DFS capabilities. The
+experimental SAE radio bit is zero unless explicitly opted in.
+
+An encrypted loopback test of the actual CLI daemon checks these default claims
+after serialization, while refreshing and acknowledging its configuration
+snapshot. This protects against accidentally inheriting a model profile; it
+does not prove that UniFi will hide every unsupported setting. The model's UI
+and existing WLAN requests can still expose BSS Transition or other unsupported
+features, so plan inspection and explicit rejection remain necessary.
+
 ## Verify before applying
 
 1. Start with application disabled and inspect `-provision-status`. Confirm

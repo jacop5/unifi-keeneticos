@@ -78,6 +78,35 @@ aaa.1.wpa.psk=private-snapshot-password
 		if strings.Contains(string(plain), "private-snapshot-password") {
 			t.Error("configuration secret leaked")
 		}
+		// Exercise the actual CLI/session serialization, not just Snapshot.Fields:
+		// selecting a UniFi model must not import its unimplemented capabilities.
+		if payload["fw_caps"] != float64(inform.PlaceholderFWCaps) {
+			t.Error("daemon advertised the emulated model's firmware capabilities")
+		}
+		for _, field := range []string{"wifi_caps", "wifi_caps2", "fw2_caps", "hw_caps"} {
+			if _, exists := payload[field]; exists {
+				t.Errorf("daemon advertised unimplemented capability field %s", field)
+			}
+		}
+		radios, ok := payload["radio_table"].([]any)
+		if !ok || len(radios) != 2 {
+			t.Error("missing native radio rows")
+		}
+		for _, entry := range radios {
+			row, ok := entry.(map[string]any)
+			if !ok {
+				t.Error("invalid radio row")
+				continue
+			}
+			if row["radio_caps2"] != float64(0) {
+				t.Error("default daemon advertised experimental SAE")
+			}
+			for _, field := range []string{"radio_caps", "nss", "tx_power", "min_txpower", "max_txpower", "antenna_gain", "is_11ac", "has_dfs"} {
+				if _, exists := row[field]; exists {
+					t.Errorf("daemon advertised unmeasured radio field %s", field)
+				}
+			}
+		}
 		reply := snapshotTestReply(n == 1, cfg)
 		if n == 1 && payload["cfgversion"] != "0" {
 			t.Error("legacy daemon did not request full config")
