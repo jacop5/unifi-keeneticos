@@ -203,6 +203,9 @@ registration makes the same request eligible at its retry deadline, after which
 ordinary guarded application and confirmation succeed. Error classification uses
 the typed condition, not message text. No native retry behavior has been deployed
 or observed on the household router yet.
+Clean retry candidate `1b0d2cc` passed the full release gate and all seventeen
+historical-package Linux lifecycle checks, including the expanded registration-
+arrival integration case. The report recorded an unmodified source tree.
 
 ## Disabled-slot block ACL rollback probe
 
