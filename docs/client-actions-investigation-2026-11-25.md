@@ -190,3 +190,17 @@ The original daemon PID/executable remained selected and no rollback was pending
 Raw inputs/results stayed privately on the router; only redacted policy/count and
 preflight fields were inspected locally. This proves native diagnostic execution,
 not live blocking, client eviction or applying-mode acceptance.
+
+## Disabled-slot block ACL rollback probe
+
+`-rollback-probe-mode blocked-acl` extends the existing unused-slot probe. It
+requires a non-primary AP, administratively down, with no SSID in either status
+or running configuration. It reuses one existing valid known-host registration;
+it never creates a global registration. The composed one-client deny ACL and
+temporary probe SSID remain on that disabled AP only. Native ACL readback and
+continued down state are checked, then an intentional health failure exercises
+the normal journal rollback and exact AP preimage restoration.
+
+Tests cover registration selection, reversible target-only commands without `up`,
+and actual CLI refusal of primary, enabled or configured slots before mutation.
+This probe cannot establish client eviction or blocking on an active WLAN.

@@ -17,7 +17,7 @@ import (
 // ProbeRollback uses an unused, administratively disabled AP slot. It never
 // enables the interface or changes a serving WLAN's credentials.
 func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode string) error {
-	if mode != "ft" && mode != "ssid" && mode != "owe" && mode != "acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "wmm" && mode != "schedule" && mode != "schedule-binding" && mode != "schedule-active" && mode != "schedule-start" {
+	if mode != "ft" && mode != "ssid" && mode != "owe" && mode != "acl" && mode != "blocked-acl" && mode != "wpa3" && mode != "transition" && mode != "rssi" && mode != "wmm" && mode != "schedule" && mode != "schedule-binding" && mode != "schedule-active" && mode != "schedule-start" {
 		return fmt.Errorf("unknown rollback probe mode")
 	}
 	if !regexp.MustCompile(`^WifiMaster[01]/AccessPoint[1-6]$`).MatchString(id) {
@@ -112,6 +112,16 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 	if mode == "acl" {
 		plan.AccessLists = []keenetic.AccessList{{Target: id, Policy: "deny", MACs: []string{"02:00:00:00:00:fe"}}}
 	}
+	if mode == "blocked-acl" {
+		running, err := keenetic.Local(ctx, "show running-config")
+		if err != nil {
+			return err
+		}
+		plan, err = blockedACLProbePlan(id, string(running))
+		if err != nil {
+			return err
+		}
+	}
 	if mode == "rssi" {
 		plan.Commands = append(plan.Commands, keenetic.Command{Text: "interface " + id + " rssi-threshold -75"})
 	}
@@ -159,7 +169,7 @@ func probeRollback(ctx context.Context, id, stateDir string, crash bool, mode st
 				return err
 			}
 		}
-		if mode == "acl" {
+		if mode == "acl" || mode == "blocked-acl" {
 			block, err := readBlock()
 			if err != nil {
 				return err
