@@ -48,6 +48,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | Client authentication, DHCP and internet access | Titan 2.4/5 GHz Mac authentication, router-issued IPv4 leases and Wi-Fi-bound HTTPS verified; automatic reconnection remains unverified |
 | Client IP, band, signal, width, rates and throughput | Observed in UniFi and compared with NDM data |
 | WLAN/client identity correlation | Runtime uses explicit slot mappings with SSID/band checks; ambiguous or unowned WLANs retain native identities; nested client rows remain consistent |
+| WLAN operational state | Configured inactive WLANs report `up=false`/`INIT`; explicit native down state excludes stale clients from counts; fixture/race tested, inactive-state GUI ingestion unverified |
 | Client names, counts and power-save status | Titan controller API count consistency, DHCP hostname equality and active power-state reporting verified; sleeping-client transitions untested |
 | Active-host name/IP fallback | Implemented with ARP/DHCP precedence and offline/conflict filtering; external-DHCP/AP-mode live validation outstanding |
 | Uptime, memory, CPU and radio/client telemetry | Implemented; basic live reporting verified, not every field is complete |

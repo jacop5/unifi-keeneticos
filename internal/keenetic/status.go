@@ -91,9 +91,11 @@ type Snapshot struct {
 	Radios                []map[string]string
 	Stations              []map[string]string
 	VAPs                  []map[string]string
-	Ports                 []map[string]string
-	ARP                   map[string]string
-	Hostnames             map[string]string
+	// Includes disabled/unlinked APs without an SSID, which have no VAP row.
+	InactiveAPs []string
+	Ports       []map[string]string
+	ARP         map[string]string
+	Hostnames   map[string]string
 }
 
 func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
@@ -140,7 +142,10 @@ func Collect(ctx context.Context, run Runner) (*Snapshot, error) {
 		if v["type"] == "Port" && nativeEthernetPort.MatchString(v["id"]) {
 			s.Ports = append(s.Ports, v)
 		}
-		if v["type"] == "AccessPoint" && v["state"] == "up" && v["ssid"] != "" {
+		if v["type"] == "AccessPoint" && regexpAP.MatchString(v["id"]) && !nativeVAPUp(v) {
+			s.InactiveAPs = append(s.InactiveAPs, v["id"])
+		}
+		if v["type"] == "AccessPoint" && (v["state"] == "up" || v["state"] == "down") && v["ssid"] != "" {
 			s.VAPs = append(s.VAPs, v)
 		}
 	}
@@ -281,9 +286,20 @@ func (s *Snapshot) vapFields(stations []map[string]any) []map[string]any {
 				rx += sta["rx_bytes"].(int64)
 			}
 		}
-		out = append(out, map[string]any{"name": v["id"], "radio": band, "radio_name": name, "essid": v["ssid"], "bssid": v["mac"], "channel": number(channel), "bw": number(width), "num_sta": count, "up": true, "is_guest": false, "state": "RUN", "usage": "user", "sta_table": clients, "tx_bytes": tx, "rx_bytes": rx})
+		up, state := nativeVAPUp(v), "RUN"
+		if !up {
+			state = "INIT"
+		}
+		out = append(out, map[string]any{"name": v["id"], "radio": band, "radio_name": name, "essid": v["ssid"], "bssid": v["mac"], "channel": number(channel), "bw": number(width), "num_sta": count, "up": up, "is_guest": false, "state": state, "usage": "user", "sta_table": clients, "tx_bytes": tx, "rx_bytes": rx})
 	}
 	return out
+}
+
+// Native collection supplies administrative state. An explicit down link is
+// independent evidence against RUN; missing link measurements retain the
+// administrative-state fallback rather than inventing a down transition.
+func nativeVAPUp(v map[string]string) bool {
+	return v["state"] != "down" && v["link"] != "down"
 }
 
 func (s *Snapshot) Fields() map[string]any {

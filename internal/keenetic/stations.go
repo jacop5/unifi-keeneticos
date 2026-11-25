@@ -10,9 +10,18 @@ func (s *Snapshot) stationRecords() []map[string]string {
 	rows := []map[string]string{}
 	owners := map[string]string{}
 	conflicts := map[string]bool{}
+	unavailable := map[string]bool{}
+	for _, target := range s.InactiveAPs {
+		unavailable[target] = true
+	}
+	for _, vap := range s.VAPs {
+		if !nativeVAPUp(vap) {
+			unavailable[vap["id"]] = true
+		}
+	}
 	for _, r := range s.Stations {
 		mac, err := net.ParseMAC(r["mac"])
-		if r["authenticated"] != "yes" || err != nil || len(mac) != 6 || mac[0]&1 != 0 || mac.String() == "00:00:00:00:00:00" || !regexpAP.MatchString(r["ap"]) {
+		if unavailable[r["ap"]] || r["authenticated"] != "yes" || err != nil || len(mac) != 6 || mac[0]&1 != 0 || mac.String() == "00:00:00:00:00:00" || !regexpAP.MatchString(r["ap"]) {
 			continue
 		}
 		id := mac.String()
