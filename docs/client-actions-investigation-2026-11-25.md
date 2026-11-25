@@ -61,3 +61,24 @@ not replacement of an operator's ACL. In particular:
 These are implementation prerequisites, not delivered blocking functionality.
 The current session parser already retains the controller block list and emits
 actions; the Keenetic runtime logs those actions without native execution.
+
+## ACL composition prerequisite
+
+`ComposeBlockedACL` now implements the pure policy operation for a separately
+retained, controller-owned baseline: authorization becomes baseline authorization
+intersected with the complement of the block list. Permit entries are removed;
+deny entries are added. A baseline with policy `none` contributes no dormant
+entries to an active deny overlay. An empty block list restores those dormant
+entries and the original policy. Inputs are validated, normalized and deduplicated;
+the result does not alias or mutate the baseline.
+
+Tests check authorization across all three policies, duplicate/case-normalized
+addresses, malformed inputs and exact baseline preservation. A transaction test
+blocks the last permitted client, retains an empty permit list, verifies native
+readback and prepares an unblock restoring that client. It checks AP quiescing
+and the inverse commands, using the existing transaction machinery.
+
+This is not wired to the daemon or exposed as an opt-in. Ownership persistence,
+reconciliation and action/application confirmation remain required before runtime
+integration. Neither native enforcement nor immediate client eviction follows
+from the local tests.
