@@ -56,6 +56,11 @@ alone do not implement guest authorization, restricted networks, or a portal.
 Local tests cover normal/scoped planning, paused guest requests, malformed flags,
 and refusal before apply preparation. This is a compatibility guard, not guest support.
 
+The [client-action investigation](client-actions-investigation-2026-11-25.md)
+establishes the documented per-AP ACL boundary and prerequisites for persistent
+block ownership. No equivalent targeted kick was established by the bounded
+manual/export searches; radio timeout or AP cycling must not substitute for it.
+
 Minimum data/management/beacon rates, CCK-rate selection, and enabled per-client
 bandwidth requests matched by VAP are now reported as ignored setting names in
 normal and scoped test plans. Their values are not retained in diagnostics and
