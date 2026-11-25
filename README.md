@@ -71,7 +71,7 @@ See the prioritized [roadmap](docs/ROADMAP.md) for remaining work, dependencies 
 | VLAN/uplink creation, mesh, guest policy/portal, scanning, traffic shaping | Not ported; unmapped VLANs and explicit guest WLAN requests are rejected |
 | Controller LED on/off | Opt-in with `-led-control`; real controller override → native off/on readback verified on Hero DSL; original override restored |
 | Controller reboot | Opt-in native dispatch with test-scope/recovery guards; mock/encrypted-controller tests pass; physical reboot unverified |
-| Client block/unblock | Experimental opt-in planner reconciliation for explicitly controller-owned ACLs; encrypted CLI/restart and transaction tests pass; live enforcement unverified |
+| Client block/unblock | Experimental opt-in for explicitly controller-owned ACLs; encrypted CLI/restart tests pass, composed deny ACL/readback/rollback verified on a disabled Titan AP; active-client enforcement unverified |
 | Client kick, locate and other controller actions | Not implemented on Keenetic; logged rather than executed |
 | Enterprise/WEP security, transmit-power control, advanced management | Not supported by the Keenetic translator |
 | DTIM period and U-APSD | No Keenetic translation; ignored setting names reported in plans/logs |

@@ -204,3 +204,30 @@ the normal journal rollback and exact AP preimage restoration.
 Tests cover registration selection, reversible target-only commands without `up`,
 and actual CLI refusal of primary, enabled or configured slots before mutation.
 This probe cannot establish client eviction or blocking on an active WLAN.
+
+### Titan native rollback result
+
+Clean `4cc2052` passed the full offline release gate, then its MIPS little-endian
+softfloat executable was staged and hash-verified on the Titan:
+`73e5d81ac6352c73e77759e2eb3f04c4cd37d27de8ce9133081170c68c07cf02`.
+The unused `d36e003` diagnostic artifact was retired after hash/process checks;
+the running `ef31a77` log-only agent was retained unchanged.
+
+The `blocked-acl` probe passed on `WifiMaster0/AccessPoint5`. Its guards verified
+the slot was disabled and SSID-free. It reused an existing known-host registration,
+prepared three reversible changes, verified the composed deny ACL while the AP
+remained down, deliberately failed health and restored the exact AP preimage.
+No global host registration, controller block command or shared-radio operation
+was issued. Neither household WLAN was targeted.
+
+Full normalized native configuration matched the pre-test baseline immediately
+after rollback. The actual detached watchdog was observed, then allowed to finish
+its normal deadline. A second full comparison after its exit still matched:
+`2ca5600874df4cda00a4e6f8c150f4b393bda75006cc3cdab997f8c42d5ff77b`.
+The probe journal was absent, credential receipts and selected adoption identity
+fields were unchanged, and the original log-only agent executable remained active.
+Private raw preimages stayed on the router.
+
+This establishes native deny-ACL composition, readback and journal restoration on
+a disabled Titan AP. It does not establish active-client enforcement, immediate
+kick or end-to-end controller blocking on a serving WLAN.
