@@ -93,7 +93,10 @@ power requests need a justified conversion to native percentage units.
       separate text file as diagnostic. Request a fresh full config for legacy
       or mismatched records; detect same-version body changes during planning
       and confirmation. Test blocked diagnostic writes and encrypted migration.
-      Real-controller refresh interoperability still needs acceptance validation.
+      Clean `27710ed` passed the full offline gate and all eleven container checks.
+      Actual UniFi OS refreshed legacy Titan state automatically in log-only mode;
+      adoption and native configuration were preserved. See
+      [snapshot validation](config-snapshot-validation-2026-11-25.md).
 - [x] Add a separately invoked network-isolated Linux container harness using
       the actual installer/service and agent. Cover disabled installation,
       start/stop, successful upgrade, explicit restart, failed-upgrade restoration
