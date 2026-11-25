@@ -31,3 +31,8 @@ stale authenticated records, nested summary fields, controller aliases, counts
 and traffic totals. A separate test checks missing-link fallback. These are
 synthetic transition cases, not live disabled-WLAN GUI acceptance; no candidate
 containing this change has been deployed on the household router yet.
+
+Clean candidate `1ff89ef` passed the full offline release gate, including race
+tests, static/tooling checks, both MIPS packages/manifests and offline rebuilds
+from bundled vendored source. This does not establish controller UI rendering
+of the newly retained inactive rows.
