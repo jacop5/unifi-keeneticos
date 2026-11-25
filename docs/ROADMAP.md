@@ -29,7 +29,9 @@ confirmed a zero-change restart with both credential records reused.
 
 The [conservative controller preset](controller-compatible-preset.md) documents
 the P1.1 starting settings and the distinction between accepted plans, ignored
-options and client acceptance. Its fresh live acceptance remains pending.
+options and client acceptance. A fresh [log-only controller check](preset-validation-2026-11-25.md)
+accepted the selected preset and verified restoration; native applying/client
+acceptance remains pending.
 
 | Order | Workstream | Why this comes here | Completion evidence |
 | --- | --- | --- | --- |

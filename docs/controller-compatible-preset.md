@@ -43,8 +43,10 @@ an accepted plan as full controller/native feature parity.
 
 The current dedicated Titan profile was inspected on 2026-11-25: WPA2 Personal,
 WPA3 off, PMF disabled and fast roaming off. BSS Transition was enabled and was
-the only reported unsupported setting, on both test bands. This observation
-does **not** establish that disabling it has passed a fresh live acceptance run.
+the only reported unsupported setting, on both test bands. Temporarily disabling
+that one flag produced an accepted log-only plan on the live Titan agent; the
+exact profile was restored afterward. Native application and client traffic
+were not tested in this run. See the [live check](preset-validation-2026-11-25.md).
 The synthetic `compatible-wpa2.cfg` regression fixture checks both owned bands,
 WPA2 with WPA3/PMF/FT disabled, LAN membership, credential redaction, the exact
 DTIM/U-APSD omissions and rejection when BSS Transition is enabled. It also
