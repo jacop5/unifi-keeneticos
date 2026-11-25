@@ -25,6 +25,16 @@ pid=$PID_FILE
 for path in "$STATE_DIR" "$PID_FILE"; do
  case "$path" in /*) ;; *) printf '%s\n' 'STATE_DIR and PID_FILE must be absolute paths' >&2; exit 1 ;; esac
 done
+daemon_running() {
+ [ -r "$pid" ] || return 1
+ current_pid=$(cat "$pid")
+ case "$current_pid" in ''|*[!0-9]*|0|1) return 1 ;; esac
+ expected_exe=$(readlink -f "$daemon" 2>/dev/null || true)
+ [ -n "$expected_exe" ] && kill -0 "$current_pid" 2>/dev/null &&
+  [ -r "/proc/$current_pid/status" ] &&
+  ! grep -q '^State:[[:space:]]*Z' "/proc/$current_pid/status" 2>/dev/null &&
+  [ "$(readlink "/proc/$current_pid/exe" 2>/dev/null)" = "$expected_exe" ]
+}
 case "${1:-}" in
  start)
   [ "$ENABLED" = 1 ] || { printf '%s\n' 'unifi-keenetic is disabled'; exit 0; }
@@ -75,9 +85,23 @@ case "${1:-}" in
   [ "$LED_CONTROL" = 0 ] || set -- "$@" -led-control
   [ "$REBOOT_CONTROL" = 0 ] || set -- "$@" -reboot-control
   [ "$REPORT_UPGRADE_VERSION" = 0 ] || set -- "$@" -report-upgrade-version
+  if daemon_running; then
+   printf 'unifi-keenetic is already running (PID %s)\n' "$current_pid"
+   exit 0
+  fi
   mkdir -p "$(dirname "$pid")" "$STATE_DIR"
   chmod 700 "$STATE_DIR"
   start-stop-daemon -S -b -m -p "$pid" -x "$daemon" -- "$@"
+  attempts=0
+  until daemon_running; do
+   [ "$attempts" -lt 5 ] || { printf '%s\n' 'Daemon process was not established; inspect configuration and state' >&2; exit 1; }
+   sleep 1
+   attempts=$((attempts + 1))
+  done
+  # Process existence is not controller/WLAN health. Catch immediate exits
+  # (for example invalid saved state), without claiming complete readiness.
+  sleep 1
+  daemon_running || { printf '%s\n' 'Daemon exited during startup; inspect configuration and state' >&2; exit 1; }
   ;;
  stop)
   old_pid=''
@@ -99,11 +123,7 @@ case "${1:-}" in
   if [ ! -r "$pid" ]; then printf '%s\n' 'unifi-keenetic is not running'; exit 3; fi
   current_pid=$(cat "$pid")
   case "$current_pid" in ''|*[!0-9]*|0|1) printf '%s\n' 'Invalid daemon PID file'; exit 3 ;; esac
-  expected_exe=$(readlink -f "$daemon" 2>/dev/null || true)
-  if [ -n "$expected_exe" ] && kill -0 "$current_pid" 2>/dev/null &&
-     [ -r "/proc/$current_pid/status" ] &&
-     ! grep -q '^State:[[:space:]]*Z' "/proc/$current_pid/status" 2>/dev/null &&
-     [ "$(readlink "/proc/$current_pid/exe" 2>/dev/null)" = "$expected_exe" ]; then
+  if daemon_running; then
    printf 'unifi-keenetic is running (PID %s)\n' "$current_pid"
    exit 0
   fi

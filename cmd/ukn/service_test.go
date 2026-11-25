@@ -12,11 +12,21 @@ import (
 // Exercise the shipped service itself. Shell functions intercept filesystem
 // preparation and process launch so these checks cannot touch a host's /opt.
 func TestEntwareServiceOptions(t *testing.T) {
-	script, err := filepath.Abs("../../packaging/keenetic/S99unifi-keenetic")
+	original, err := os.ReadFile("../../packaging/keenetic/S99unifi-keenetic")
 	if err != nil {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
+	// These option tests mock process observation only. Dedicated status tests
+	// and the Linux container exercise the actual observer.
+	text := strings.Replace(string(original), "\ncase \"${1:-}\" in\n", "\ndaemon_running() { [ \"${test_started:-0}\" = 1 ]; }\ncase \"${1:-}\" in\n", 1)
+	if text == string(original) {
+		t.Fatal("service dispatch not found")
+	}
+	script := filepath.Join(dir, "service")
+	if err := os.WriteFile(script, []byte(text), 0700); err != nil {
+		t.Fatal(err)
+	}
 	slots := filepath.Join(dir, "slots with spaces.json")
 	if err := os.WriteFile(slots, []byte(`{}`), 0600); err != nil {
 		t.Fatal(err)
@@ -55,7 +65,8 @@ func TestEntwareServiceOptions(t *testing.T) {
 			cmd := exec.Command("bash", "-c", `
 mkdir() { :; }
 chmod() { :; }
-start-stop-daemon() { printf 'ARG:%s\n' "$@"; }
+start-stop-daemon() { printf 'ARG:%s\n' "$@"; test_started=1; }
+sleep() { :; }
 script=$1
 set -- start
 . "$script"

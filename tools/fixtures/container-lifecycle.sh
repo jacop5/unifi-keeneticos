@@ -77,6 +77,9 @@ before_pid=$(cat /opt/var/run/unifi-keenetic.pid)
 test "$(readlink /proc/"$before_pid"/exe)" = /opt/sbin/ukn
 assert_preserved
 printf 'PASS real-agent-service-start\n'
+"$service" start
+[ "$(cat /opt/var/run/unifi-keenetic.pid)" = "$before_pid" ]
+printf 'PASS already-running-start-keeps-process\n'
 
 sh /test/package-b/install.sh > /work/successful-upgrade.log 2>&1
 assert_clean
@@ -90,6 +93,20 @@ printf 'PASS successful-upgrade-preserves-private-data\n'
 wait_running
 assert_preserved
 printf 'PASS explicit-restart-after-upgrade\n'
+
+"$service" stop
+assert_stopped
+printf '{invalid-state\n' > "$state/state.json"
+if "$service" start > /work/invalid-state-start.log 2>&1; then
+ printf 'Service start falsely succeeded for a daemon that exits\n' >&2
+ exit 1
+fi
+assert_stopped
+cp -p /work/preimage/var/lib/unifi-keenetic/state.json "$state/state.json"
+assert_preserved
+"$service" start
+wait_running
+printf 'PASS startup-detects-immediate-daemon-exit\n'
 
 # Fail after binary/service replacement. The real installer must restore the
 # previous artifact and restart the real executable through the shipped service.

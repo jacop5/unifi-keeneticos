@@ -338,10 +338,15 @@ esac
         config.write_text("ENABLED=1\nINFORM_URL='http://192.0.2.1:8080/inform'\n")
         service = self.root / 'etc/init.d/S99unifi-keenetic'
         shipped = (ROOT / 'packaging/keenetic/S99unifi-keenetic').read_text()
-        self.write_exec(service, shipped.replace('/opt', str(self.root)))
+        marker = self.base / 'daemon-started'
+        # This case isolates installation-marker admission, not process status.
+        localized = shipped.replace('/opt', str(self.root))
+        dispatch = '\ncase "${1:-}" in\n'
+        observer = '\ndaemon_running() { test -e "' + str(marker) + '"; }\nsleep() { :; }\n'
+        self.assertIn(dispatch, localized)
+        self.write_exec(service, localized.replace(dispatch, observer + dispatch, 1))
         bindir = self.root / 'bin'
         bindir.mkdir()
-        marker = self.base / 'daemon-started'
         self.write_exec(bindir / 'start-stop-daemon',
                         '#!/bin/sh\n[ "${UKN_INSTALL_RECOVERY+x}" != x ] || exit 98\n'
                         'touch "' + str(marker) + '"\n')

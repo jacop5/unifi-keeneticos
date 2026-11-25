@@ -85,6 +85,10 @@ Clean `50bf98c` passed the full offline release gate; see
 
 ### P0.2 — Upgrade/recovery readiness
 
+- [x] Verify enabled service startup establishes the expected process and catches
+      immediate exit; make repeated starts preserve an existing verified process.
+      Add real-agent container cases for invalid saved state and idempotent start.
+      The bounded check does not establish full initialization/controller health.
 - [x] Harden shared adoption-state persistence: unique private stages, file sync,
       atomic rename and directory sync; cover legacy temp symlinks, failed
       replacement and concurrent complete-record writes. The Linux container

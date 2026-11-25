@@ -173,6 +173,12 @@ Then start or stop it:
 
 The packaged service starts in **log-only mode**: it reports status and receives controller configuration but does not apply it. `ukn -models` lists available identities; `-model CODE` selects one. Default persistent state is `/opt/var/lib/unifi-keenetic`. `STATE_DIR` and `PID_FILE` can select separate absolute paths; isolated instances also need distinct listener ports and controller identities. `status` checks process identity, not controller or WLAN health. `ukn -build-info` reports the actual executable build separately from its UniFi compatibility version.
 
+An enabled service start waits up to five seconds to observe the expected daemon
+process and checks it again after one second to catch immediate exits. A repeated
+start keeps an already verified process. This is a bounded process-liveness check,
+not confirmation that native initialization, controller connectivity or WLAN
+provisioning completed.
+
 Adoption-state saves use a unique mode-600 temporary file, synchronize it before
 atomic replacement, and synchronize the parent directory afterward. This also
 avoids following a leftover fixed temporary-file symlink. Keep the state directory
