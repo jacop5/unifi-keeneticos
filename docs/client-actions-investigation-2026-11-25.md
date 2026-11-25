@@ -162,3 +162,31 @@ would have exceeded the verified single-device scope. The Titan's running agent
 remains log-only with block control disabled. The offline CLI test checks both
 bands, block/unblock, malformed input, action conflicts, secret redaction and a
 native-command sentinel using a deliberately unusable adoption-state path.
+
+### Titan offline execution
+
+Clean candidate `d36e003` passed the release gate and was staged separately on the
+Titan, without replacing the running `ef31a77` daemon. Its hash was
+`4c154480b956f60ca623101c89c23f2549368a464c768ae5129d5d22566bf8f8`;
+native build metadata confirmed linux/mipsle softfloat and the clean revision.
+The earlier unused `27710ed` artifact was retired after hash/process checks to
+retain staging headroom; the active tested executable remained untouched.
+
+The saved controller configuration had `macacl.status=disabled`. A private copy
+had BSS Transition disabled for the two test WLANs; the original controller
+profile/cache was unchanged. Native offline planning then established:
+
+- A supplied synthetic blocked address produced a supported deny ACL with one
+  client on each AP6 test band. This was planning, not successful preflight.
+- An empty list restored policy `none` on both bands and passed saved-native
+  preflight, with two total prepared changes in the complete WLAN plan.
+- Preflight with the synthetic block was rejected for missing Keenetic known-host
+  registration. No registration was created and no forward/inverse command ran.
+
+Post-run normalized native configuration matched exactly (SHA-256
+`2ca5600874df4cda00a4e6f8c150f4b393bda75006cc3cdab997f8c42d5ff77b`);
+credential receipt bytes and selected adoption identity fields were unchanged.
+The original daemon PID/executable remained selected and no rollback was pending.
+Raw inputs/results stayed privately on the router; only redacted policy/count and
+preflight fields were inspected locally. This proves native diagnostic execution,
+not live blocking, client eviction or applying-mode acceptance.
