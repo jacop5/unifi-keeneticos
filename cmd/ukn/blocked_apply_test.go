@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -25,7 +26,7 @@ func TestBlockedApplyConfirmsOrRollsBackAcrossEncryptedControllerExchange(t *tes
 	const target, client = "WifiMaster0/AccessPoint6", "02:00:00:00:00:0a"
 	const key = "00112233445566778899aabbccddeeff"
 	mac, _ := net.ParseMAC("02:00:00:00:00:01")
-	for _, scenario := range []string{"confirm", "unblock-during-confirmation", "controller-outage", "removed-during-confirmation"} {
+	for _, scenario := range []string{"confirm", "unblock-during-confirmation", "controller-outage", "removed-during-confirmation", "registration-arrives"} {
 		t.Run(scenario, func(t *testing.T) {
 			var requests atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -72,12 +73,16 @@ func TestBlockedApplyConfirmsOrRollsBackAcrossEncryptedControllerExchange(t *tes
 				RequireConfigSnapshot: true, Dev: inform.Device{MAC: mac, Radios: []inform.Radio{}}}
 			base := keenetic.Plan{AccessLists: []keenetic.AccessList{{Target: target, Policy: "none"}}}
 			policy, up, member, mutations, armed := "none", true, false, 0, false
+			registered := scenario != "registration-arrives"
 			running := func() string {
 				state := "down"
 				if up {
 					state = "up"
 				}
-				text := "known host client " + client + "\ninterface " + target + "\n    " + state + "\n    mac access-list type " + policy + "\n"
+				text := "interface " + target + "\n    " + state + "\n    mac access-list type " + policy + "\n"
+				if registered {
+					text = "known host client " + client + "\n" + text
+				}
 				if member {
 					text += "    mac access-list address " + client + "\n"
 				}
@@ -141,13 +146,30 @@ func TestBlockedApplyConfirmsOrRollsBackAcrossEncryptedControllerExchange(t *tes
 				})
 			}
 			err := apply()
-			if (err == nil) != (scenario == "confirm") || mutations == 0 || requests.Load() != 1 || !up {
+			if scenario == "registration-arrives" {
+				if !errors.Is(err, keenetic.ErrKnownHostRegistrationMissing) || mutations != 0 || armed || requests.Load() != 0 {
+					t.Fatal("missing registration did not fail safely before mutation/confirmation")
+				}
+				if _, err := os.Stat(journal); !os.IsNotExist(err) {
+					t.Fatal("preflight failure created a rollback journal")
+				}
+				_, identity, _ := provisioningConfigWithBlocks(x.S, true)
+				var retry provisionRetry
+				now := time.Now()
+				if !retry.failed(identity, err, now) || retry.ready(identity, now) || !retry.ready(identity, now.Add(time.Minute)) {
+					t.Fatal("same-version host-registration failure did not schedule bounded retry")
+				}
+				registered = true // An external native registration, not agent-created.
+				err = apply()
+			}
+			wantConfirmation := scenario == "confirm" || scenario == "registration-arrives"
+			if (err == nil) != wantConfirmation || mutations == 0 || requests.Load() != 1 || !up {
 				t.Fatalf("unexpected outcome: scenario=%s err=%v mutations=%d", scenario, err, mutations)
 			}
-			if (policy == "deny" && member) != (scenario == "confirm") {
+			if (policy == "deny" && member) != wantConfirmation {
 				t.Fatal("confirmation or rollback did not preserve intended ACL")
 			}
-			if scenario != "confirm" && (policy != "none" || member) {
+			if !wantConfirmation && (policy != "none" || member) {
 				t.Fatal("failed confirmation lost exact baseline")
 			}
 			if _, err := os.Stat(journal); !os.IsNotExist(err) {
@@ -156,7 +178,7 @@ func TestBlockedApplyConfirmsOrRollsBackAcrossEncryptedControllerExchange(t *tes
 			if scenario == "removed-during-confirmation" && x.S.Adopted {
 				t.Fatal("controller removal did not invalidate adoption")
 			}
-			if scenario == "confirm" || scenario == "unblock-during-confirmation" {
+			if wantConfirmation || scenario == "unblock-during-confirmation" {
 				before := mutations
 				if err := apply(); err != nil || mutations != before || requests.Load() != 2 {
 					t.Fatalf("fresh confirmation of reconciled no-op failed: %v", err)

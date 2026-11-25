@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/antoniocosta/unifi-openwrt/internal/keenetic"
 )
 
 func TestProvisionRetryRecoversSameVersionWithBoundedBackoff(t *testing.T) {
@@ -40,16 +42,16 @@ func TestProvisionRetryRecoversSameVersionWithBoundedBackoff(t *testing.T) {
 }
 
 func TestProvisionRetryRejectsPermanentFailures(t *testing.T) {
-	for _, err := range []error{errors.New("unsupported setting"), errors.New("pending rollback journal exists"), context.Canceled, controllerHTTPError{400}, controllerHTTPError{401}, controllerHTTPError{404}} {
+	for _, err := range []error{errors.New("unsupported setting"), errors.New("pending rollback journal exists"), errors.New(keenetic.ErrKnownHostRegistrationMissing.Error()), context.Canceled, controllerHTTPError{400}, controllerHTTPError{401}, controllerHTTPError{404}} {
 		var p provisionRetry
 		if p.failed("v1", err, time.Now()) || p.ready("v1", time.Now().Add(time.Hour)) {
 			t.Fatalf("permanent configuration/recovery error retries: %v", err)
 		}
 	}
-	for _, err := range []error{context.DeadlineExceeded, controllerHTTPError{408}, controllerHTTPError{429}, controllerHTTPError{500}, controllerHTTPError{503}} {
+	for _, err := range []error{context.DeadlineExceeded, controllerHTTPError{408}, controllerHTTPError{429}, controllerHTTPError{500}, controllerHTTPError{503}, keenetic.ErrKnownHostRegistrationMissing} {
 		var p provisionRetry
 		if !p.failed("v1", fmt.Errorf("wrapped health failure: %w", err), time.Now()) {
-			t.Fatalf("recoverable controller failure was dropped: %v", err)
+			t.Fatalf("recoverable apply failure was dropped: %v", err)
 		}
 	}
 }

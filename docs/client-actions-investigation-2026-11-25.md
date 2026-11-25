@@ -106,6 +106,11 @@ preflight, quiescing and native readback verification. It may briefly interrupt
 every client on the mapped AP while replacing that AP's ACL. It never substitutes
 a radio-wide kick. Associations outside mapped WLANs are unaffected by the plan.
 Missing Keenetic known-host registrations can prevent a block from applying.
+This specific preflight failure now retries the same controller request after
+one minute, doubling up to five minutes, so an external registration can unblock
+application without a controller version change. The agent still does not create
+registrations. Each attempt prepares the complete plan before any mutation;
+other permanent configuration/ownership/recovery failures remain non-retryable.
 Omitted paused WLANs in scoped testing remain down; their native ACL is restored
 from the explicit controller baseline when they are configured again.
 
@@ -190,6 +195,14 @@ The original daemon PID/executable remained selected and no rollback was pending
 Raw inputs/results stayed privately on the router; only redacted policy/count and
 preflight fields were inspected locally. This proves native diagnostic execution,
 not live blocking, client eviction or applying-mode acceptance.
+
+The retry regression test uses mutable synthetic registration state and an
+encrypted controller exchange: the first attempt returns the typed missing-host
+condition before journal/watchdog/mutation or confirmation; an external simulated
+registration makes the same request eligible at its retry deadline, after which
+ordinary guarded application and confirmation succeed. Error classification uses
+the typed condition, not message text. No native retry behavior has been deployed
+or observed on the household router yet.
 
 ## Disabled-slot block ACL rollback probe
 

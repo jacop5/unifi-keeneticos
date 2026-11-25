@@ -72,7 +72,7 @@ func preimageSettings(plan Plan, running string) ([]Change, error) {
 		for _, change := range delta {
 			for _, command := range []Command{change.Forward, change.Undo} {
 				if _, mac, ok := strings.Cut(command.Text, " mac access-list address "); ok && !known[mac] {
-					return nil, fmt.Errorf("MAC ACL requires existing Keenetic known-host registrations")
+					return nil, ErrKnownHostRegistrationMissing
 				}
 			}
 		}

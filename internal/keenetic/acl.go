@@ -2,6 +2,7 @@
 package keenetic
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -12,6 +13,10 @@ import (
 )
 
 var regexpAP = regexp.MustCompile(`^WifiMaster[01]/AccessPoint[0-7]$`)
+
+// This preflight-only condition can change independently of controller config.
+// No native command has been applied when it is returned by Preimage.
+var ErrKnownHostRegistrationMissing = errors.New("MAC ACL requires existing Keenetic known-host registrations")
 
 type AccessList struct {
 	Target string
