@@ -102,6 +102,12 @@ Clean `50bf98c` passed the full offline release gate; see
 
 ### P0.2 — Upgrade/recovery readiness
 
+- [x] Exercise a selected full historical source-package migration, including its
+      historical scripts/configuration/notices rather than only its executable.
+      The isolated `f0e999b` → current-source run passed seventeen checks and
+      preserved the old config while keeping new block control disabled.
+      [Evidence and limits](historical-package-upgrade-2026-11-25.md).
+
 - The container runner accepts `--previous-agent-revision COMMIT` to build
   artifact A from a local historical commit and B from the current tree. Both
   packages deliberately retain current installer/service scripts. Reports pin

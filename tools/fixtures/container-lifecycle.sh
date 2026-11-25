@@ -122,6 +122,12 @@ wait_running
 assert_preserved
 printf 'PASS explicit-restart-after-upgrade\n'
 
+args=$(tr '\000' ' ' < /proc/"$(cat /opt/var/run/unifi-keenetic.pid)"/cmdline)
+case "$args" in *' -client-block-control '*) exit 1;; esac
+/opt/sbin/ukn -state "$state" -provision-status > /work/upgraded-status.json
+grep -q '"client_block_control":false' /work/upgraded-status.json
+printf 'PASS client-block-control-defaults-off-after-upgrade\n'
+
 "$service" stop
 assert_stopped
 printf '{invalid-state\n' > "$state/state.json"

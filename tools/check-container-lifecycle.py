@@ -28,6 +28,7 @@ EXPECTED = ['private-atomic-adoption-state', 'durable-adoption-before-controller
             'first-install-disabled', 'real-agent-service-start', 'already-running-start-keeps-process',
             'same-executable-other-state-is-not-stopped',
             'successful-upgrade-preserves-private-data', 'explicit-restart-after-upgrade',
+            'client-block-control-defaults-off-after-upgrade',
             'startup-detects-immediate-daemon-exit',
             'failed-upgrade-restores-and-restarts-real-agent', 'clean-stop-no-native-writes',
             'detached-watchdog-recovers-after-executable-replacement',
@@ -72,7 +73,9 @@ esac
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--image', required=True, help='existing local Linux image; never pulled')
-    parser.add_argument('--previous-agent-revision', help='local Git commit for artifact A agent; packaging stays current')
+    history = parser.add_mutually_exclusive_group()
+    history.add_argument('--previous-agent-revision', help='local Git commit for artifact A agent; packaging stays current')
+    history.add_argument('--previous-package-revision', help='local Git commit for artifact A agent, scripts, config and notices')
     parser.add_argument('--report', type=Path, default=ROOT / 'dist/validation/container-lifecycle.json')
     args = parser.parse_args()
     os.umask(0o077)
@@ -85,9 +88,10 @@ def main():
         parser.error('selected image must be Linux arm64 or amd64')
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     previous = revision
-    if args.previous_agent_revision:
+    historical = args.previous_package_revision or args.previous_agent_revision
+    if historical:
         previous = subprocess.check_output(['git', 'rev-parse', '--verify', '--end-of-options',
-                                            args.previous_agent_revision + '^{commit}'], cwd=ROOT, text=True).strip()
+                                            historical + '^{commit}'], cwd=ROOT, text=True).strip()
         if previous == revision:
             parser.error('previous agent revision must differ from HEAD')
     report = dict(schema_version=1, status='running', revision=revision,
@@ -95,7 +99,10 @@ def main():
                   scope='isolated-container-synthetic-native-loopback-controller-only',
                   image_id=image['Id'], architecture=arch, checks=[],
                   agent_revisions={'a': previous, 'b': revision}, packaging_revision=revision,
-                  limitations=[('cross-revision agents with current packaging; not historical-package upgrade proof'
+                  packaging_revisions={'a': previous if args.previous_package_revision else revision, 'b': revision},
+                  limitations=[('selected historical package sources rebuilt with current compiler; not original release artifacts'
+                                if args.previous_package_revision else
+                                'cross-revision agents with current packaging; not historical-package upgrade proof'
                                 if args.previous_agent_revision else
                                 'same-source artifacts with distinct build IDs, not cross-version compatibility'),
                                'no MIPS runtime, physical reboot, power loss or native WLAN enforcement'])
@@ -106,7 +113,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='ukn-container-lifecycle-') as temp:
         base = Path(temp)
         previous_root = ROOT
-        if args.previous_agent_revision:
+        if historical:
             previous_root = base / 'previous-source'
             previous_root.mkdir()
             archive = base / 'previous-source.tar'
@@ -115,6 +122,7 @@ def main():
             subprocess.run(['tar', '-xf', str(archive), '-C', str(previous_root)], check=True, timeout=30)
         env = dict(os.environ, GOOS='linux', GOARCH=arch, CGO_ENABLED='0', GOPROXY='off', GOSUMDB='off')
         for label in ('a', 'b'):
+            package_root = previous_root if label == 'a' and args.previous_package_revision else ROOT
             package = base / ('package-' + label)
             (package / 'licenses').mkdir(parents=True)
             print('Building container artifact ' + label, flush=True)
@@ -127,21 +135,23 @@ def main():
                 args.report.write_text(json.dumps(report, indent=2) + '\n')
                 raise
             for name in FILES[1:5]:
-                shutil.copyfile(ROOT / 'packaging/keenetic' / name, package / name)
+                shutil.copyfile(package_root / 'packaging/keenetic' / name, package / name)
             for name in ('LICENSE', 'NOTICE'):
-                shutil.copyfile(ROOT / name, package / name)
-            shutil.copyfile(ROOT / 'LICENSES/Go-BSD-3-Clause.txt', package / FILES[7])
-            shutil.copyfile(ROOT / 'internal/models/NOTICE', package / FILES[8])
+                shutil.copyfile(package_root / name, package / name)
+            shutil.copyfile(package_root / 'LICENSES/Go-BSD-3-Clause.txt', package / FILES[7])
+            shutil.copyfile(package_root / 'internal/models/NOTICE', package / FILES[8])
             (package / 'SHA256SUMS').write_text(''.join(
                 hashlib.sha256((package / name).read_bytes()).hexdigest() + '  ' + name + '\n' for name in FILES))
         if (base / 'package-a/ukn').read_bytes() == (base / 'package-b/ukn').read_bytes():
             raise RuntimeError('test requires distinct replacement artifacts')
         report['agent_sha256'] = {label: hashlib.sha256((base / ('package-' + label) / 'ukn').read_bytes()).hexdigest()
                                   for label in ('a', 'b')}
+        report['package_sha256'] = {label: {name: hashlib.sha256((base / ('package-' + label) / name).read_bytes()).hexdigest()
+                                           for name in FILES} for label in ('a', 'b')}
         (base / 'ndmc').write_text(NATIVE)
         (base / 'ndmc').chmod(0o755)
         shutil.copyfile(ROOT / 'tools/fixtures/container-lifecycle.sh', base / 'run.sh')
-        config = (ROOT / 'packaging/keenetic/unifi-keenetic.conf').read_text()
+        config = (base / 'package-a/unifi-keenetic.conf').read_text()
         config = config.replace('ENABLED=0', 'ENABLED=1').replace("INFORM_URL=''", "INFORM_URL='http://127.0.0.1:9/inform'")
         config = config.replace("SSH_LISTEN=':2222'", "SSH_LISTEN=''")
         config = config.replace("SLOTS=''", "SLOTS='/opt/etc/slots.json'")
