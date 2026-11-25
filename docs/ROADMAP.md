@@ -66,6 +66,8 @@ matching native SSID/band. Same-name WLANs on one band remain distinct; unowned,
 drifted or ambiguous entries retain native identities. Top-level and per-WLAN
 client rows share consistent identities. Synthetic tests cover duplicate SSIDs,
 duplicate mappings/aliases, mismatches, collisions and unchanged traffic counts.
+Clean `50bf98c` passed the full offline release gate; see
+[telemetry identity validation](telemetry-identity-validation-2026-11-25.md).
 
 ## P0 tasks
 
