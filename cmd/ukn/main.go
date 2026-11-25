@@ -511,14 +511,7 @@ func main() {
 								if err := exchange(checkCtx, client, x, path, &interval, actionHandler); err != nil {
 									return err
 								}
-								if !x.S.Adopted {
-									return fmt.Errorf("controller removed adoption during health check")
-								}
-								_, currentIdentity, currentVerified := provisioningConfigWithBlocks(x.S, *clientBlockControl)
-								if !currentVerified || currentIdentity != plannedIdentity {
-									return fmt.Errorf("controller configuration changed during provisioning")
-								}
-								return nil
+								return requireProvisioningIdentity(x.S, plannedIdentity, *clientBlockControl)
 							}, armWatchdog, receipts)
 							cancel()
 							if err != nil {

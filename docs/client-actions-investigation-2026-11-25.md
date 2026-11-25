@@ -130,3 +130,12 @@ current packaging and block control disabled by default. Those lifecycle checks
 validate default service/upgrade recovery, not native blocking. The new block
 reconciliation tests used the actual CLI against an encrypted loopback controller
 with application disabled; the transaction tests used synthetic running config.
+
+The guarded application integration test subsequently uses a mutable synthetic
+native ACL and an encrypted loopback controller with the runtime confirmation
+identity guard. It checks successful confirmation, same-version unblock during
+confirmation, HTTP 503 and controller removal. Failed confirmation restores the
+exact ACL and AP state; complete recovery clears the journal. Every mutation
+requires a persisted private journal and simulated watchdog arm. Successful and
+reconciled no-op plans still require a fresh controller exchange. This test does
+not spawn the detached watchdog or replace a real radio/client enforcement test.

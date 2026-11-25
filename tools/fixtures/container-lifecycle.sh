@@ -53,6 +53,8 @@ printf 'PASS private-atomic-adoption-state\n'
 printf 'PASS durable-adoption-before-controller-ack\n'
 /test/ukn-tests -test.run='^(TestConfigIdentityChangesWithBodyAndRejectsUnboundData|TestConfigSnapshotDaemonRefreshesLegacyAndIgnoresDiagnosticFailure)$'
 printf 'PASS version-bound-controller-configuration\n'
+/test/ukn-tests -test.run='^(TestBlockedApplyConfirmsOrRollsBackAcrossEncryptedControllerExchange|TestDaemonReplansBlockedListWithoutConfigurationVersionChange|TestDaemonRestoresBlockedBaselineFromDurableState)$'
+printf 'PASS guarded-block-policy-controller-confirmation\n'
 sh /test/package-a/install.sh > /work/first-install.log 2>&1
 assert_clean
 assert_stopped
