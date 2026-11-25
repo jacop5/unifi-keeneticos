@@ -88,6 +88,11 @@ Clean `50bf98c` passed the full offline release gate; see
 
 ## P0 tasks
 
+A [real-controller write-denied no-op run](write-denied-noop-validation-2026-11-25.md)
+confirmed candidate `1b0d2cc` with zero prepared changes and two reused credential
+receipts. The prior agent/profile were restored. Positive applying-mode and client
+acceptance remain separate P1.2 work.
+
 ### P0.1 — One offline command and candidate evidence
 
 - [x] Add `tools/check-release.py`: local checks only, no router/Docker/controller
