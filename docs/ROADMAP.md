@@ -88,9 +88,12 @@ power requests need a justified conversion to native percentage units.
       no acknowledgement during failure, deferred actions and encrypted resumption
       with the new key through a loopback controller test.
       Clean `8833382` passed the full offline gate and all ten container checks.
-- [ ] Bind saved controller configuration to its received version; inject
-      `system_cfg` write failures and prove stale configuration cannot be applied
-      or acknowledged as a newly stored configuration.
+- [x] Bind received configuration text, version and controller/key identity in
+      the atomic adoption-state record. Plan only from that snapshot; treat the
+      separate text file as diagnostic. Request a fresh full config for legacy
+      or mismatched records; detect same-version body changes during planning
+      and confirmation. Test blocked diagnostic writes and encrypted migration.
+      Real-controller refresh interoperability still needs acceptance validation.
 - [x] Add a separately invoked network-isolated Linux container harness using
       the actual installer/service and agent. Cover disabled installation,
       start/stop, successful upgrade, explicit restart, failed-upgrade restoration

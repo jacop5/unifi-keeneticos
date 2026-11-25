@@ -343,6 +343,7 @@ func main() {
 	x := &device.Session{S: st, StateDir: *stateDir, Boot: time.Now(), Dev: inform.Device{MAC: mac, IP: s.Home["address"], Netmask: s.Home["mask"], Hostname: s.System["hostname"], Radios: []inform.Radio{}}}
 	x.Dev.Model = profile.Model
 	x.PhysicalDevice = true
+	x.RequireConfigSnapshot = true
 	x.ReportUpgradeVersion = *reportUpgradeVersion
 	if *reportUpgradeVersion {
 		log.Print("controller firmware policy: report offered version only; no download or reboot")
@@ -407,22 +408,22 @@ func main() {
 				x.Dev.Radios = append(x.Dev.Radios, inform.Radio{Name: fmt.Sprintf("wifi%d", i), Radio: band, Channel: r["channel"], HT: r["bandwidth"]})
 			}
 			x.Extra = func() map[string]any {
-				cfg, _ := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
-				return s.FieldsForConfig(string(cfg))
+				cfg, _ := x.S.CurrentControllerConfig()
+				return s.FieldsForConfig(cfg)
 			}
 			informErr := exchange(ctx, client, x, path, &interval, actionHandler)
 			if informErr != nil {
 				log.Printf("inform: %v", informErr)
 			}
-			if ctx.Err() == nil && informErr == nil && provisioning.ready(x.S.CfgVersion, time.Now()) {
+			cfg, plannedIdentity, configVerified := provisioningConfig(x.S)
+			if ctx.Err() == nil && informErr == nil && provisioning.ready(plannedIdentity, time.Now()) {
 				plannedVersion := x.S.CfgVersion
-				cfg, err := os.ReadFile(filepath.Join(*stateDir, "system_cfg.txt"))
-				if err == nil {
-					plan, err := buildPlan(string(cfg), slots)
+				if configVerified {
+					plan, err := buildPlan(cfg, slots)
 					if err != nil {
 						log.Printf("configuration plan: %v", err)
 						recordProvision(plannedVersion, "plan-rejected", nil, time.Time{})
-						provisioning.complete(plannedVersion)
+						provisioning.complete(plannedIdentity)
 					} else {
 						for _, command := range plan.Commands {
 							log.Printf("plan: %s", command)
@@ -505,7 +506,8 @@ func main() {
 								if !x.S.Adopted {
 									return fmt.Errorf("controller removed adoption during health check")
 								}
-								if x.S.CfgVersion != plannedVersion {
+								_, currentIdentity, currentVerified := provisioningConfig(x.S)
+								if !currentVerified || currentIdentity != plannedIdentity {
 									return fmt.Errorf("controller configuration changed during provisioning")
 								}
 								return nil
@@ -513,22 +515,23 @@ func main() {
 							cancel()
 							if err != nil {
 								log.Printf("apply: %v", err)
-								if provisioning.failed(plannedVersion, err, time.Now()) {
+								if provisioning.failed(plannedIdentity, err, time.Now()) {
 									log.Printf("transient apply failure; retry in %s", provisioning.delay)
 								}
 								recordProvision(plannedVersion, "apply-failed", &plan, provisioning.at)
 							} else {
-								provisioning.complete(plannedVersion)
+								provisioning.complete(plannedIdentity)
 								log.Print("configuration applied and confirmed")
 								recordProvision(plannedVersion, "confirmed", &plan, time.Time{})
 							}
 						} else {
 							recordProvision(plannedVersion, phase, &plan, time.Time{})
-							provisioning.complete(plannedVersion)
+							provisioning.complete(plannedIdentity)
 						}
 					}
 				} else {
-					recordProvision(plannedVersion, "config-unavailable", nil, time.Time{})
+					recordProvision(plannedVersion, "config-unverified", nil, time.Time{})
+					provisioning.complete(plannedIdentity)
 				}
 			}
 		}

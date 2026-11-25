@@ -21,6 +21,7 @@ import (
 func TestFailedAdoptionSaveBlocksAcknowledgementAndDefersActions(t *testing.T) {
 	mac, _ := net.ParseMAC("02:00:00:00:00:01")
 	key := "00112233445566778899aabbccddeeff"
+	const config = "wireless.1.ssid=UKN-Test-Pending\n"
 	dir := t.TempDir()
 	path := filepath.Join(dir, "state.json")
 	// A directory blocks atomic replacement even under root in the Linux lab.
@@ -42,12 +43,17 @@ func TestFailedAdoptionSaveBlocksAcknowledgementAndDefersActions(t *testing.T) {
 		}
 		reply := map[string]any{"_type": "noop"}
 		if n == 1 {
-			reply = map[string]any{"_type": "setparam", "interval": 1,
+			reply = map[string]any{"_type": "setparam", "interval": 1, "system_cfg": config,
 				"mgmt_cfg": "authkey=" + key + "\nuse_aes_gcm=true\nled_enabled=true\ncfgversion=persisted-version\n"}
 		} else {
 			saved, found, err := device.Load(path)
 			if err != nil || !found || saved.Key != key || !saved.Adopted || !saved.GCM {
 				t.Error("controller received acknowledgement before key persistence")
+				w.WriteHeader(500)
+				return
+			}
+			if text, verified := saved.CurrentControllerConfig(); !verified || text != config {
+				t.Error("controller received acknowledgement before configuration persistence")
 				w.WriteHeader(500)
 				return
 			}
@@ -62,7 +68,7 @@ func TestFailedAdoptionSaveBlocksAcknowledgementAndDefersActions(t *testing.T) {
 	}))
 	defer server.Close()
 	x := &device.Session{S: device.NewState(server.URL), StateDir: dir,
-		PhysicalDevice: true, Dev: inform.Device{MAC: mac, IP: "192.0.2.1"}, Boot: time.Now()}
+		PhysicalDevice: true, RequireConfigSnapshot: true, Dev: inform.Device{MAC: mac, IP: "192.0.2.1"}, Boot: time.Now()}
 	interval := 10 * time.Second
 	actions := 0
 	handler := func(context.Context, string) error { actions++; return nil }

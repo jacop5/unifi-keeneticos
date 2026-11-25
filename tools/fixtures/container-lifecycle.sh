@@ -47,10 +47,12 @@ assert_preserved() {
 test ! -e /opt/sbin/ukn
 mkdir -p /opt/etc/init.d /work /work/preimage
 ln -s /test/ndmc /usr/sbin/ndmc
-/test/device-tests -test.run='^(TestStateSaveIgnoresLegacyTempSymlinkAndRepairsPermissions|TestFailedStateReplacementCleansPrivateStage|TestConcurrentStateSavesKeepCompletePrivateRecords)$'
+/test/device-tests -test.run='^(TestStateSaveIgnoresLegacyTempSymlinkAndRepairsPermissions|TestFailedStateReplacementCleansPrivateStage|TestConcurrentStateSavesKeepCompletePrivateRecords|TestStoredConfigMatchesVersionAndStaysPrivate)$'
 printf 'PASS private-atomic-adoption-state\n'
 /test/ukn-tests -test.run='^TestFailedAdoptionSaveBlocksAcknowledgementAndDefersActions$'
 printf 'PASS durable-adoption-before-controller-ack\n'
+/test/ukn-tests -test.run='^(TestConfigIdentityChangesWithBodyAndRejectsUnboundData|TestConfigSnapshotDaemonRefreshesLegacyAndIgnoresDiagnosticFailure)$'
+printf 'PASS version-bound-controller-configuration\n'
 sh /test/package-a/install.sh > /work/first-install.log 2>&1
 assert_clean
 assert_stopped

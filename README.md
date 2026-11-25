@@ -89,6 +89,14 @@ Keenetic sessions refuse controller firmware upgrades by default. Optional `-rep
 
 The controller's configuration version acknowledges receipt, independently of native application. `ukn -provision-status` reads a separate local JSON report with the latest provisioning decision, known ignored/unsupported settings, retry time and last confirmed apply, including its own recorded test scope and ignored settings. Use `-state PATH` for a custom instance. It reads no router/controller data or adoption key. The report is a historical snapshot with timestamps, not a live health check; confirmation covers the mapped plan and its configured test scope, not every controller setting. Older builds have no report and return `unknown` after upgrading until a provisioning decision is recorded.
 
+Keenetic planning uses the controller configuration snapshot saved atomically in
+`state.json`, bound to its version, controller address and adoption key. The
+separate `system_cfg.txt` is a diagnostic copy. Legacy state upgrades retain
+adoption and request a fresh full configuration by advertising configuration
+version `0`; planning stays blocked with `config-unverified` until it arrives.
+The state file now also contains WLAN secrets and must remain private. A changed
+configuration body under the same version is treated as new planning work.
+
 ## Requirements
 
 - KeeneticOS with Entware and a working `ndmc` command.

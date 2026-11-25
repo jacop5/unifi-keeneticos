@@ -31,20 +31,43 @@ import (
 
 // State is persisted (mode 600) so a restart keeps the adopted key.
 type State struct {
-	Key        string           `json:"key"`                   // current authkey (hex); secret
-	GCM        bool             `json:"gcm"`                   // encrypt informs with AES-GCM
-	Adopted    bool             `json:"adopted"`               // holds a per-device key
-	CfgVersion string           `json:"cfgversion"`            // echoed in every inform
-	InformURL  string           `json:"inform_url"`            // where to inform
-	Version    string           `json:"version"`               // firmware version we report
-	MgmtCfg    string           `json:"mgmt_cfg"`              // last mgmt_cfg (may hold authkey); secret
-	LED        bool             `json:"led"`                   // mgmt_cfg led_enabled
-	Locating   bool             `json:"locating"`              // UniFi "Locate" active
-	Blocked    []string         `json:"blocked_sta,omitempty"` // blocked client MACs (controller's blocked_sta)
-	Guests     map[string]int64 `json:"guests,omitempty"`      // portal-authorized guest MAC -> expiry (unix s)
-	GuestToken string           `json:"guest_token,omitempty"` // portal cookie key (32 hex), sent in informs; secret
-	HashID     string           `json:"hash_id,omitempty"`     // device hash (16 hex), sent in informs; names us in encrypted syslog
-	SystemCfgN int              `json:"system_cfg_bytes"`
+	Key              string                  `json:"key"`                   // current authkey (hex); secret
+	GCM              bool                    `json:"gcm"`                   // encrypt informs with AES-GCM
+	Adopted          bool                    `json:"adopted"`               // holds a per-device key
+	CfgVersion       string                  `json:"cfgversion"`            // echoed in every inform
+	InformURL        string                  `json:"inform_url"`            // where to inform
+	Version          string                  `json:"version"`               // firmware version we report
+	MgmtCfg          string                  `json:"mgmt_cfg"`              // last mgmt_cfg (may hold authkey); secret
+	LED              bool                    `json:"led"`                   // mgmt_cfg led_enabled
+	Locating         bool                    `json:"locating"`              // UniFi "Locate" active
+	Blocked          []string                `json:"blocked_sta,omitempty"` // blocked client MACs (controller's blocked_sta)
+	Guests           map[string]int64        `json:"guests,omitempty"`      // portal-authorized guest MAC -> expiry (unix s)
+	GuestToken       string                  `json:"guest_token,omitempty"` // portal cookie key (32 hex), sent in informs; secret
+	HashID           string                  `json:"hash_id,omitempty"`     // device hash (16 hex), sent in informs; names us in encrypted syslog
+	SystemCfgN       int                     `json:"system_cfg_bytes"`
+	ControllerConfig *StoredControllerConfig `json:"controller_config,omitempty"`
+}
+
+// StoredControllerConfig binds received text to the version saved with the key.
+// Its text is private and must never be copied into inform payloads or reports.
+type StoredControllerConfig struct {
+	Version   string `json:"version"`
+	Text      string `json:"text"`
+	InformURL string `json:"inform_url"`
+	KeyDigest string `json:"key_digest"`
+}
+
+func (s *State) BindControllerConfig(text string) {
+	s.ControllerConfig = &StoredControllerConfig{Version: s.CfgVersion, Text: text,
+		InformURL: s.InformURL, KeyDigest: fmt.Sprintf("%x", sha256.Sum256([]byte(s.Key)))}
+}
+
+func (s State) CurrentControllerConfig() (string, bool) {
+	if s.ControllerConfig == nil || s.ControllerConfig.Version == "" || s.ControllerConfig.Version != s.CfgVersion || s.ControllerConfig.Text == "" ||
+		s.ControllerConfig.InformURL != s.InformURL || s.ControllerConfig.KeyDigest != fmt.Sprintf("%x", sha256.Sum256([]byte(s.Key))) {
+		return "", false
+	}
+	return s.ControllerConfig.Text, true
 }
 
 func NewState(informURL string) State {
@@ -71,6 +94,10 @@ func (s State) Save(path string) error {
 	if err != nil {
 		return err
 	}
+	return writePrivateAtomic(path, b)
+}
+
+func writePrivateAtomic(path string, b []byte) error {
 	// Stage privately under a unique name. A leftover public file or symlink at
 	// the old fixed .tmp name must not receive adoption credentials.
 	directory, err := os.Open(filepath.Dir(path))
@@ -103,6 +130,9 @@ func (s State) Save(path string) error {
 
 // Session ties the state to the device description and a boot clock.
 type Session struct {
+	// RequireConfigSnapshot requests a fresh full configuration until its current
+	// version is backed by the authoritative state record. Used by Keenetic.
+	RequireConfigSnapshot bool
 	// PendingPersistence is an in-memory controller outcome awaiting a durable
 	// state save. The Keenetic transport retries it before another inform.
 	PendingPersistence *Outcome
@@ -167,6 +197,11 @@ func (x *Session) Payload(now time.Time) ([]byte, error) {
 	}
 	m["version"] = x.S.Version
 	m["cfgversion"] = x.S.CfgVersion
+	if x.RequireConfigSnapshot {
+		if _, verified := x.S.CurrentControllerConfig(); !verified {
+			m["cfgversion"] = "0"
+		}
+	}
 	m["x_authkey"] = x.S.Key
 	m["locating"] = x.S.Locating
 	if x.S.HashID != "" {
@@ -384,17 +419,18 @@ func (x *Session) setparam(r Reply, now time.Time, o *Outcome) {
 	}
 	if r.SystemCfg != "" {
 		x.S.SystemCfgN = len(r.SystemCfg)
+		x.S.BindControllerConfig(r.SystemCfg)
 		o.Changed = true
 		path := filepath.Join(x.StateDir, "system_cfg.txt")
-		if err := os.WriteFile(path, []byte(r.SystemCfg), 0o600); err != nil {
-			ev += " (saving system_cfg failed: " + err.Error() + ")"
+		if err := writePrivateAtomic(path, []byte(r.SystemCfg)); err != nil {
+			ev += " (saving diagnostic system_cfg copy failed: " + err.Error() + ")"
 		}
 		// keep every version, to see what the controller changed
 		hist := filepath.Join(x.StateDir, "system_cfg.history")
 		os.MkdirAll(hist, 0o700)
 		os.WriteFile(filepath.Join(hist, time.Now().Format("20060102-150405")+"-"+x.S.CfgVersion+".txt"), []byte(r.SystemCfg), 0o600)
 		pruneHistory(hist, HistoryKeep)
-		ev += fmt.Sprintf(" system_cfg %d bytes saved (not applied), sections=%v", len(r.SystemCfg), sections(r.SystemCfg))
+		ev += fmt.Sprintf(" system_cfg %d bytes received (not applied), sections=%v", len(r.SystemCfg), sections(r.SystemCfg))
 		if x.KnownSection != nil {
 			for _, sec := range sections(r.SystemCfg) {
 				if sec = strings.TrimSpace(sec); sec != "" && !strings.HasPrefix(sec, "#") && !x.KnownSection(sec) {

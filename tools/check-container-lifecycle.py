@@ -23,6 +23,7 @@ FILES = ['ukn', 'install.sh', 'space-check.sh', 'S99unifi-keenetic',
          'unifi-keenetic.conf', 'LICENSE', 'NOTICE',
          'licenses/Go-BSD-3-Clause.txt', 'licenses/model-catalogue-MIT.txt']
 EXPECTED = ['private-atomic-adoption-state', 'durable-adoption-before-controller-ack',
+            'version-bound-controller-configuration',
             'first-install-disabled', 'real-agent-service-start',
             'successful-upgrade-preserves-private-data', 'explicit-restart-after-upgrade',
             'failed-upgrade-restores-and-restarts-real-agent', 'clean-stop-no-native-writes',

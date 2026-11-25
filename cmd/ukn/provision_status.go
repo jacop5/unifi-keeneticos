@@ -69,7 +69,7 @@ type provisionReporter struct {
 
 func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, retry time.Time) error {
 	switch phase {
-	case "starting", "config-unavailable", "plan-rejected", "unsupported", "log-only", "not-adopted", "ownership-rejected", "applying", "apply-failed", "confirmed":
+	case "starting", "config-unavailable", "config-unverified", "plan-rejected", "unsupported", "log-only", "not-adopted", "ownership-rejected", "applying", "apply-failed", "confirmed":
 	default:
 		return fmt.Errorf("invalid provision report phase")
 	}
