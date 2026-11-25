@@ -95,6 +95,7 @@ Clean `50bf98c` passed the full offline release gate; see
       command lines; signal the checked numeric PID instead of rereading a mutable
       PID file. Test two real instances with a deliberately misdirected PID file.
       This does not provide atomic PID-generation signalling.
+      Clean `f0e999b` passed the full offline gate and all fourteen container checks.
 - [x] Harden shared adoption-state persistence: unique private stages, file sync,
       atomic rename and directory sync; cover legacy temp symlinks, failed
       replacement and concurrent complete-record writes. The Linux container

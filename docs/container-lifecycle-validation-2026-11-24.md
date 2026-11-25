@@ -149,3 +149,30 @@ continue to cover admission separately from process liveness.
 These checks do not wait for all native initialization or establish controller/WLAN
 health, nor do they guarantee the daemon remains alive after the observation
 window. Native BusyBox/MIPS startup and hardware boot validation remain open.
+
+## Same-executable instance selection — 2026-11-25
+
+Clean candidate `f0e999b` passed the full offline release gate and all fourteen
+container checks. The service now requires its leading `-state` argument to
+match the selected state directory in addition to executable/PID/zombie checks.
+Later state overrides and diagnostic/recovery command lines are rejected. Stop
+checks the numeric PID and signals that checked value, rather than allowing a
+launcher to reread a changed PID file.
+
+The new real-process scenario starts another agent from the same installed ELF
+with a different private state directory. It deliberately points the selected
+service PID file at that process. Status reports it as unselected and stop returns
+failure without terminating it. The test verifies that process is still alive,
+restores the selected PID file, checks the selected instance and separately stops
+the fixture's second instance. All upgrade/recovery scenarios continue to pass.
+
+Unit cases cover state paths containing spaces, missing/late/overridden state
+arguments, truncated command lines, diagnostic/watchdog flags and the existing
+invalid/unrelated/zombie PID cases. Newlines in `STATE_DIR` are rejected because
+the shell observer decodes NUL-separated arguments into records. This selector
+supports service-generated argument ordering; it is not a general command-line
+parser or an authentication boundary. It does not make PID checking and signalling
+atomic against process-generation changes.
+
+No live router changes were made. Native BusyBox/MIPS service behavior and
+hardware-installed lifecycle validation remain outstanding.
