@@ -27,6 +27,10 @@ confirmed a zero-change restart with both credential records reused.
 
 ## Priority and dependencies
 
+The [conservative controller preset](controller-compatible-preset.md) documents
+the P1.1 starting settings and the distinction between accepted plans, ignored
+options and client acceptance. Its fresh live acceptance remains pending.
+
 | Order | Workstream | Why this comes here | Completion evidence |
 | --- | --- | --- | --- |
 | P0.1 | Consolidated offline candidate gate | Recent fixes span planning, verification, actions, packaging and reporting; they need one repeatable baseline | One report pins source revision/tree, passes race/static/Python checks, builds both MIPS variants, verifies manifests and rebuilds from bundled vendored source offline |
