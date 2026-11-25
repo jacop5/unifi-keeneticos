@@ -121,3 +121,12 @@ through the actual CLI and encrypted loopback controller, restart with a saved
 baseline/block list, confirmation identity invalidation, reporting and service
 switch validation. Native enforcement and live client behavior remain unverified.
 This mode has not been deployed to the household router.
+
+Clean integration candidate `85a45cb` passed the full offline release gate:
+uncached race/static/tooling checks, both MIPS packages and manifests, and
+offline rebuilds from bundled source. All fifteen cross-revision container
+lifecycle checks also passed with agent A at `62b1285` and B at `85a45cb`, using
+current packaging and block control disabled by default. Those lifecycle checks
+validate default service/upgrade recovery, not native blocking. The new block
+reconciliation tests used the actual CLI against an encrypted loopback controller
+with application disabled; the transaction tests used synthetic running config.
