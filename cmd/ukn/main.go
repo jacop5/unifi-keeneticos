@@ -50,6 +50,7 @@ func main() {
 	watchPath := flag.String("rollback-watch", "", "internal rollback watchdog journal")
 	watchID := flag.String("rollback-id", "", "internal rollback journal identity")
 	planFile := flag.String("plan", "", "print a redacted plan for a saved UniFi system_cfg and exit")
+	planBlocked := flag.String("plan-blocked", "", "with -plan, compose a JSON array of blocked client MACs; read-only, never loads adoption state")
 	slotsFile := flag.String("slots", "", "JSON mapping of UniFi WLAN indexes to Keenetic AP interface IDs")
 	networksFile := flag.String("networks", "", "JSON mapping of VLAN IDs to existing non-home Keenetic bridges; not allowed in Wi-Fi test mode")
 	ftDomainsFile := flag.String("experimental-ft-domains", "", "JSON SSID-to-native-MDID map for experimental matched dual-band WPA2 FT; no UniFi interoperability claim")
@@ -75,6 +76,11 @@ func main() {
 	}
 	if err := validateOfflineMode(*preflightRunning, *planFile, offlineModes); err != nil {
 		log.Fatal(err)
+	}
+	if *planBlocked != "" {
+		if err := validateOfflineMode("requested", *planFile, offlineModes, "-plan-blocked"); err != nil {
+			log.Fatal(err)
+		}
 	}
 	if *jsonPlan {
 		if err := validateOfflineMode("requested", *planFile, offlineModes, "-plan-json"); err != nil {
@@ -208,6 +214,23 @@ func main() {
 		plan, err := buildPlan(string(data), slots)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if *planBlocked != "" {
+			f, err := os.Open(*planBlocked)
+			if err != nil {
+				log.Fatal("cannot open offline block-list input")
+			}
+			b, err := io.ReadAll(io.LimitReader(f, 65537))
+			_ = f.Close()
+			var blocked []string
+			trimmed := bytes.TrimSpace(b)
+			if err != nil || len(b) > 65536 || len(trimmed) == 0 || trimmed[0] != '[' || json.Unmarshal(b, &blocked) != nil {
+				log.Fatal("offline block-list input must be a JSON array of MAC strings under 64 KiB")
+			}
+			plan, err = keenetic.ComposeBlockedPlan(plan, blocked)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 		var preflightChanges *int
 		if *preflightRunning != "" {

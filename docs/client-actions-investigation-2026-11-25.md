@@ -145,3 +145,20 @@ Linux container checks. The added container check runs the guarded application
 test and the actual CLI same-version/restart block-policy tests on Linux arm64.
 The separate lifecycle checks still exercise the actual detached watchdog and
 cross-revision journals. Native blocking/client enforcement remains unverified.
+
+## Read-only block-list planning
+
+Use `-plan-blocked /private/path/blocked.json` together with `-plan` and
+`-plan-json` to compose an explicitly supplied JSON array of client MAC strings.
+An empty array previews unblock back to the explicit controller baseline.
+The input is capped at 64 KiB. This mode never loads adoption state or contacts a
+router/controller; it also works with `-preflight-running` for saved native
+rollback preparation. It rejects live/action modes before dispatch. JSON output
+contains ACL policies and counts, not client addresses or credentials.
+
+This input was added after a read-only check found two adopted devices on the
+local test controller. No global block-list command was issued: a site-wide test
+would have exceeded the verified single-device scope. The Titan's running agent
+remains log-only with block control disabled. The offline CLI test checks both
+bands, block/unblock, malformed input, action conflicts, secret redaction and a
+native-command sentinel using a deliberately unusable adoption-state path.
