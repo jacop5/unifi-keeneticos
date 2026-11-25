@@ -44,6 +44,7 @@ func main() {
 	apply := flag.Bool("apply", false, "apply supported settings with rollback; requires explicit WLAN slots")
 	rebootControl := flag.Bool("reboot-control", false, "allow controller-requested physical reboot; unavailable in WLAN test mode")
 	ledControl := flag.Bool("led-control", false, "allow controller LED on/off commands independently of WLAN apply; no reboot or locate")
+	clientBlockControl := flag.Bool("client-block-control", false, "compose controller block list into explicitly controller-owned WLAN ACLs; requires slots; native enforcement requires -apply")
 	reportUpgradeVersion := flag.Bool("report-upgrade-version", false, "acknowledge controller upgrades by reporting their version only; never download firmware or reboot (default: refuse)")
 	wlanTestOnly := flag.Bool("wlan-test-only", false, "restrict planning to UKN-Test SSIDs on non-primary slots; exclude all radio changes")
 	watchPath := flag.String("rollback-watch", "", "internal rollback watchdog journal")
@@ -58,6 +59,9 @@ func main() {
 	experimentalSAE := flag.Bool("experimental-sae", false, "advertise only the controller SAE radio capability for WPA3 testing; client interoperability unverified")
 	jsonPlan := flag.Bool("plan-json", false, "with -plan, print a redacted structured plan without router access")
 	flag.Parse()
+	if *clientBlockControl && (*slotsFile == "" || *planFile != "") {
+		log.Fatal("-client-block-control requires -slots and cannot be used with offline -plan")
+	}
 	if *rebootControl && *wlanTestOnly {
 		log.Fatal("-reboot-control cannot be used in WLAN test mode")
 	}
@@ -65,8 +69,9 @@ func main() {
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
 		"crash-probe": *crashProbe, "apply": *apply, "led-control": *ledControl, "reboot-control": *rebootControl,
 		"probe": *probe, "terminal-probe": *terminalProbe, "models": *listModels, "build-info": *showBuild, "provision-status": *showProvisionStatus,
-		"wifi-system-status":  *wifiSystemStatus,
-		"installation-status": *installationStatus != "",
+		"wifi-system-status":   *wifiSystemStatus,
+		"client-block-control": *clientBlockControl,
+		"installation-status":  *installationStatus != "",
 	}
 	if err := validateOfflineMode(*preflightRunning, *planFile, offlineModes); err != nil {
 		log.Fatal(err)
@@ -329,7 +334,7 @@ func main() {
 	if statusErr != nil {
 		log.Printf("provision status: %v", statusErr)
 	}
-	reporter := provisionReporter{path: statusPath, report: previousStatus, apply: *apply, testOnly: *wlanTestOnly}
+	reporter := provisionReporter{path: statusPath, report: previousStatus, apply: *apply, testOnly: *wlanTestOnly, clientBlockControl: *clientBlockControl}
 	recordProvision := func(version, phase string, plan *keenetic.Plan, retry time.Time) {
 		if err := reporter.record(version, phase, plan, retry); err != nil {
 			log.Printf("provision status: %v", err)
@@ -415,11 +420,14 @@ func main() {
 			if informErr != nil {
 				log.Printf("inform: %v", informErr)
 			}
-			cfg, plannedIdentity, configVerified := provisioningConfig(x.S)
+			cfg, plannedIdentity, configVerified := provisioningConfigWithBlocks(x.S, *clientBlockControl)
 			if ctx.Err() == nil && informErr == nil && provisioning.ready(plannedIdentity, time.Now()) {
 				plannedVersion := x.S.CfgVersion
 				if configVerified {
 					plan, err := buildPlan(cfg, slots)
+					if err == nil && *clientBlockControl {
+						plan, err = keenetic.ComposeBlockedPlan(plan, x.S.Blocked)
+					}
 					if err != nil {
 						log.Printf("configuration plan: %v", err)
 						recordProvision(plannedVersion, "plan-rejected", nil, time.Time{})
@@ -506,7 +514,7 @@ func main() {
 								if !x.S.Adopted {
 									return fmt.Errorf("controller removed adoption during health check")
 								}
-								_, currentIdentity, currentVerified := provisioningConfig(x.S)
+								_, currentIdentity, currentVerified := provisioningConfigWithBlocks(x.S, *clientBlockControl)
 								if !currentVerified || currentIdentity != plannedIdentity {
 									return fmt.Errorf("controller configuration changed during provisioning")
 								}

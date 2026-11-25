@@ -60,6 +60,10 @@ The [client-action investigation](client-actions-investigation-2026-11-25.md)
 establishes the documented per-AP ACL boundary and prerequisites for persistent
 block ownership. No equivalent targeted kick was established by the bounded
 manual/export searches; radio timeout or AP cycling must not substitute for it.
+Experimental `CLIENT_BLOCK_CONTROL=1` now reconciles saved controller blocks
+against explicit controller-owned WLAN ACLs, with same-version/restart tests and
+ordinary guarded apply. Native-managed overlays and live enforcement acceptance
+remain open; see that investigation's runtime integration section.
 
 Minimum data/management/beacon rates, CCK-rate selection, and enabled per-client
 bandwidth requests matched by VAP are now reported as ignored setting names in

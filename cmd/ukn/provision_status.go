@@ -16,12 +16,14 @@ import (
 // This is a local historical diagnostic, not controller protocol state or a
 // current-health assertion. Never store raw errors, commands or system_cfg.
 type provisionScope struct {
-	WLANTestOnly bool     `json:"wlan_test_only"`
-	Interfaces   []string `json:"interfaces"`
-	Ignored      []string `json:"ignored_settings"`
+	ClientBlockControl bool     `json:"client_block_control"`
+	WLANTestOnly       bool     `json:"wlan_test_only"`
+	Interfaces         []string `json:"interfaces"`
+	Ignored            []string `json:"ignored_settings"`
 }
 
 type provisionStatus struct {
+	ClientBlockControl   bool            `json:"client_block_control"`
 	SchemaVersion        int             `json:"schema_version"`
 	Phase                string          `json:"phase"`
 	ReceivedVersion      string          `json:"received_cfgversion,omitempty"`
@@ -62,9 +64,10 @@ func readProvisionStatus(path string) (provisionStatus, error) {
 }
 
 type provisionReporter struct {
-	path            string
-	report          provisionStatus
-	apply, testOnly bool
+	path               string
+	report             provisionStatus
+	apply, testOnly    bool
+	clientBlockControl bool
 }
 
 func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, retry time.Time) error {
@@ -80,6 +83,7 @@ func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, r
 	r.report.SchemaVersion = 1
 	r.report.Phase, r.report.ReceivedVersion = phase, version
 	r.report.ApplyEnabled, r.report.WLANTestOnly = r.apply, r.testOnly
+	r.report.ClientBlockControl = r.clientBlockControl
 	r.report.UpdatedAt = &now
 	r.report.Unsupported, r.report.Ignored = []string{}, []string{}
 	if plan != nil {
@@ -95,6 +99,7 @@ func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, r
 		r.report.LastConfirmedVersion = version
 		r.report.LastConfirmedAt = &now
 		r.report.LastConfirmedScope = confirmedScope(plan, r.testOnly)
+		r.report.LastConfirmedScope.ClientBlockControl = r.clientBlockControl
 	}
 	b, err := json.MarshalIndent(r.report, "", "  ")
 	if err != nil {

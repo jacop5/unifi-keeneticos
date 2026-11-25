@@ -101,3 +101,33 @@ func TestBlockingLastPermittedClientKeepsDenyAllThroughTransaction(t *testing.T)
 		t.Fatal("unblock did not restore original permitted client")
 	}
 }
+
+func TestBlockedPlanRequiresExplicitACLOnEveryConfiguredWLAN(t *testing.T) {
+	const ap = "WifiMaster0/AccessPoint6"
+	for _, cfg := range []string{wlan, wlan + "macacl.status=disabled\n"} {
+		base, err := BuildPlan(cfg, map[string]string{"1": ap})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, blocked := range [][]string{nil, {"02:00:00:00:00:0a"}} {
+			p, err := ComposeBlockedPlan(base, blocked)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(base.AccessLists) == 0 {
+				if !reflect.DeepEqual(p.Unsupported, []string{"client-block." + ap + ".baseline-missing"}) {
+					t.Fatal("missing ownership did not prevent the entire plan")
+				}
+			} else if len(p.Unsupported) != 0 || len(p.AccessLists) != 1 || len(p.AccessLists[0].MACs) != len(blocked) {
+				t.Fatal("explicit controller baseline did not compose")
+			}
+			if !reflect.DeepEqual(p.Commands, base.Commands) || len(base.Unsupported) != 0 {
+				t.Fatal("overlay changed unrelated commands or input diagnostics")
+			}
+		}
+	}
+	paused := Plan{Commands: []Command{{Text: "interface " + ap + " down"}}}
+	if p, err := ComposeBlockedPlan(paused, nil); err != nil || len(p.Unsupported) != 0 {
+		t.Fatal("omitted/paused slot could not remain down")
+	}
+}

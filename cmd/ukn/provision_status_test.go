@@ -138,7 +138,7 @@ func TestProvisionReportCannotConfirmDisabledOrUnsupportedApply(t *testing.T) {
 
 func TestConfirmedScopeSurvivesDifferentRunAndPlan(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "status.json")
-	r := provisionReporter{path: path, report: emptyProvisionStatus(), apply: true, testOnly: true}
+	r := provisionReporter{path: path, report: emptyProvisionStatus(), apply: true, testOnly: true, clientBlockControl: true}
 	plan := keenetic.Plan{
 		Commands:    []keenetic.Command{{Text: "interface WifiMaster0/AccessPoint6 authentication wpa-psk private-key", Secret: true}, {Text: "interface Bridge0 include WifiMaster0/AccessPoint6"}},
 		AccessLists: []keenetic.AccessList{{Target: "WifiMaster0/AccessPoint6", MACs: []string{"02:00:00:00:00:01"}}},
@@ -166,6 +166,9 @@ func TestConfirmedScopeSurvivesDifferentRunAndPlan(t *testing.T) {
 	}
 	if got.WLANTestOnly || got.LastConfirmedScope == nil || !got.LastConfirmedScope.WLANTestOnly {
 		t.Fatal("current scope overwrote historical test scope")
+	}
+	if got.ClientBlockControl || !got.LastConfirmedScope.ClientBlockControl {
+		t.Fatal("current block policy overwrote historical confirmation scope")
 	}
 	want := []string{"Bridge0", "WifiMaster0/AccessPoint6", "WifiMaster1/AccessPoint6"}
 	if !reflect.DeepEqual(got.LastConfirmedScope.Interfaces, want) || !reflect.DeepEqual(got.LastConfirmedScope.Ignored, []string{"wireless.3.dtim_period"}) {

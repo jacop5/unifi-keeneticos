@@ -4,7 +4,42 @@ package keenetic
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
+
+// ComposeBlockedPlan requires an explicit controller ACL for each configured
+// WLAN. Its durable controller snapshot remains the baseline, so no native
+// operator ACL is inferred, captured or claimed by this operation.
+func ComposeBlockedPlan(plan Plan, blocked []string) (Plan, error) {
+	result := plan
+	result.AccessLists = nil
+	owned := map[string]bool{}
+	for _, base := range plan.AccessLists {
+		if owned[base.Target] {
+			return Plan{}, fmt.Errorf("duplicate block baseline")
+		}
+		owned[base.Target] = true
+		acl, err := ComposeBlockedACL(base, blocked)
+		if err != nil {
+			return Plan{}, err
+		}
+		result.AccessLists = append(result.AccessLists, acl)
+	}
+	missing := map[string]bool{}
+	for _, command := range plan.Commands {
+		parts := strings.SplitN(command.Text, " ", 3)
+		if len(parts) == 3 && parts[0] == "interface" && regexpAP.MatchString(parts[1]) &&
+			strings.HasPrefix(parts[2], "ssid ") && !owned[parts[1]] {
+			missing[parts[1]] = true
+		}
+	}
+	result.Unsupported = append([]string(nil), plan.Unsupported...)
+	for target := range missing {
+		result.Unsupported = append(result.Unsupported, "client-block."+target+".baseline-missing")
+	}
+	sort.Strings(result.Unsupported)
+	return result, nil
+}
 
 // ComposeBlockedACL intersects a controller-owned baseline ACL with a block
 // list. The caller must retain that baseline separately: feeding the result

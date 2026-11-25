@@ -58,9 +58,9 @@ not replacement of an operator's ACL. In particular:
 - Test individual entries and live disconnect/reconnect behavior with a separate
   client before exposing controller action support.
 
-These are implementation prerequisites, not delivered blocking functionality.
-The current session parser already retains the controller block list and emits
-actions; the Keenetic runtime logs those actions without native execution.
+These are prerequisites for general native-policy overlays. The bounded
+controller-owned integration below is now implemented; immediate kick and
+overlays on independently managed native ACLs remain unavailable.
 
 ## ACL composition prerequisite
 
@@ -78,7 +78,46 @@ blocks the last permitted client, retains an empty permit list, verifies native
 readback and prepares an unblock restoring that client. It checks AP quiescing
 and the inverse commands, using the existing transaction machinery.
 
-This is not wired to the daemon or exposed as an opt-in. Ownership persistence,
-reconciliation and action/application confirmation remain required before runtime
-integration. Neither native enforcement nor immediate client eviction follows
-from the local tests.
+## Experimental controller-owned runtime integration
+
+`-client-block-control` / `CLIENT_BLOCK_CONTROL=1` opts into reconciliation using
+the controller's explicit ACL as the baseline. The default is off. `SLOTS` is
+required; `APPLY=0` only previews the composed plan. Native enforcement additionally
+requires `APPLY=1`, adoption and all ordinary apply/ownership/recovery checks.
+
+Each configured mapped WLAN must have an explicit controller ACL request,
+including the explicit globally disabled policy (`macacl.status=disabled`).
+Without it, the entire plan is rejected as
+`client-block.<native-target>.baseline-missing`, even with an empty block list.
+No native operator policy is inferred or claimed. A controller-owned ACL can be
+replaced by that controller's current policy; later native edits to it are not
+independently owned or merged. Do not enable this mode for native-managed ACLs.
+
+The existing version/controller/key-bound configuration snapshot durably retains
+the baseline; the adopted state also retains the controller block list. Planning
+composes those inputs afresh instead of treating the previous native overlay as
+the baseline. Restart and unblock therefore do not need a second mutable baseline
+file for this ownership model. Block-list changes participate in the internal
+planning and confirmation identity, so changes under the same configuration
+version trigger reconciliation and changes during confirmation invalidate it.
+
+ACL application uses the existing journal, preimage, known-host registration
+preflight, quiescing and native readback verification. It may briefly interrupt
+every client on the mapped AP while replacing that AP's ACL. It never substitutes
+a radio-wide kick. Associations outside mapped WLANs are unaffected by the plan.
+Missing Keenetic known-host registrations can prevent a block from applying.
+Omitted paused WLANs in scoped testing remain down; their native ACL is restored
+from the explicit controller baseline when they are configured again.
+
+`client_block_control` is recorded in current provisioning status and separately
+in the last confirmed scope. Protocol receipt/action log messages are not proof
+of enforcement; use the provisioning report and native/client checks. Disabling
+the opt-in returns to ordinary controller ACL planning. If that controller then
+omits its ACL request, no automatic cleanup of previously managed native ACLs is
+claimed; restore an explicit baseline before relinquishing ownership.
+
+Tests cover missing ownership, baseline preservation, same-version block/unblock
+through the actual CLI and encrypted loopback controller, restart with a saved
+baseline/block list, confirmation identity invalidation, reporting and service
+switch validation. Native enforcement and live client behavior remain unverified.
+This mode has not been deployed to the household router.

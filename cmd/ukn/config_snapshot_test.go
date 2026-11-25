@@ -44,7 +44,38 @@ func TestConfigIdentityChangesWithBodyAndRejectsUnboundData(t *testing.T) {
 	}
 }
 
+func TestBlockChangesInvalidateProvisioningAndConfirmationIdentity(t *testing.T) {
+	s := device.State{CfgVersion: "same-version", Key: "synthetic-key", InformURL: "http://127.0.0.1:9/inform"}
+	s.BindControllerConfig("same-body")
+	_, before, _ := provisioningConfigWithBlocks(s, true)
+	_, disabledBefore, _ := provisioningConfigWithBlocks(s, false)
+	s.Blocked = []string{"02:00:00:00:00:0a"}
+	_, after, _ := provisioningConfigWithBlocks(s, true)
+	_, disabledAfter, _ := provisioningConfigWithBlocks(s, false)
+	if before == after || disabledBefore != disabledAfter {
+		t.Fatal("block changes were ignored or affected the disabled policy")
+	}
+	s.Blocked = nil
+	_, restored, _ := provisioningConfigWithBlocks(s, true)
+	if restored != before {
+		t.Fatal("clearing blocks did not restore baseline identity")
+	}
+}
+
 func TestConfigSnapshotDaemonRefreshesLegacyAndIgnoresDiagnosticFailure(t *testing.T) {
+	runSnapshotDaemonTest(t, false, false)
+}
+
+func TestDaemonReplansBlockedListWithoutConfigurationVersionChange(t *testing.T) {
+	runSnapshotDaemonTest(t, true, false)
+}
+
+func TestDaemonRestoresBlockedBaselineFromDurableState(t *testing.T) {
+	runSnapshotDaemonTest(t, true, true)
+}
+
+func runSnapshotDaemonTest(t *testing.T, blockControl, restoredBlock bool) {
+	t.Helper()
 	dir := t.TempDir()
 	state := filepath.Join(dir, "state")
 	if err := os.Mkdir(state, 0700); err != nil {
@@ -61,6 +92,7 @@ wireless.1.usage=user
 aaa.1.ssid=UKN-Test-Snapshot
 aaa.1.wpa=2
 aaa.1.wpa.psk=private-snapshot-password
+macacl.status=disabled
 `
 	const key = "00112233445566778899aabbccddeeff"
 	mac, _ := net.ParseMAC("02:00:00:00:00:01")
@@ -108,7 +140,17 @@ aaa.1.wpa.psk=private-snapshot-password
 			}
 		}
 		reply := snapshotTestReply(n == 1, cfg)
-		if n == 1 && payload["cfgversion"] != "0" {
+		if blockControl {
+			if n == 1 {
+				reply["blocked_sta"] = "02:00:00:00:00:0a"
+			} else if n == 2 {
+				reply = map[string]any{"_type": "setparam", "blocked_sta": "", "interval": 1}
+			}
+		}
+		if restoredBlock && n == 1 {
+			reply = map[string]any{"_type": "noop", "interval": 1}
+		}
+		if n == 1 && !restoredBlock && payload["cfgversion"] != "0" {
 			t.Error("legacy daemon did not request full config")
 		}
 		if n > 1 && payload["cfgversion"] != "snapshot-version" {
@@ -125,6 +167,11 @@ aaa.1.wpa.psk=private-snapshot-password
 	defer server.Close()
 	s := device.NewState(server.URL)
 	s.Key, s.Adopted, s.GCM, s.CfgVersion = key, true, true, "legacy-version"
+	if restoredBlock {
+		s.CfgVersion = "snapshot-version"
+		s.BindControllerConfig(cfg)
+		s.Blocked = []string{"02:00:00:00:00:0a"}
+	}
 	if err := s.Save(filepath.Join(state, "state.json")); err != nil {
 		t.Fatal(err)
 	}
@@ -154,6 +201,9 @@ esac
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestStartupCLIHelper$", "--", "-state", state,
 		"-url", server.URL, "-ssh-listen", "", "-slots", filepath.Join(dir, "slots.json"), "-wlan-test-only")
+	if blockControl {
+		cmd.Args = append(cmd.Args, "-client-block-control")
+	}
 	cmd.Env = append(os.Environ(), "UKN_STARTUP_HELPER=1", "PATH="+dir+":"+os.Getenv("PATH"))
 	cmd.Stdout, cmd.Stderr = log, log
 	if err := cmd.Start(); err != nil {
@@ -164,6 +214,9 @@ esac
 	for time.Now().Before(deadline) {
 		r, err := readProvisionStatus(filepath.Join(state, "provision-status.json"))
 		if err == nil && r.Phase == "log-only" && r.ReceivedVersion == "snapshot-version" && requests.Load() > 1 {
+			if r.ClientBlockControl != blockControl || r.ApplyEnabled {
+				t.Fatal("block policy scope or log-only state misreported")
+			}
 			saved, found, err := device.Load(filepath.Join(state, "state.json"))
 			if err != nil || !found {
 				t.Fatal("missing committed state")
@@ -177,6 +230,10 @@ esac
 			b, _ := os.ReadFile(filepath.Join(dir, "agent.log"))
 			if !strings.Contains(string(b), `ssid "UKN-Test-Snapshot"`) || strings.Contains(string(b), "private-snapshot-password") {
 				t.Fatal("wrong plan or leaked credential")
+			}
+			if blockControl && (!strings.Contains(string(b), "policy=deny clients=1") || !strings.Contains(string(b), "policy=none clients=0")) {
+				time.Sleep(25 * time.Millisecond)
+				continue
 			}
 			return
 		}
