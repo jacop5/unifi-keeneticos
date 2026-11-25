@@ -1,8 +1,10 @@
 # KeeneticOS port roadmap
 
-Updated 2026-11-24. This is the implementation/test order, not a claim that the
+Updated 2026-11-25. This is the implementation/test order, not a claim that the
 port is complete. Baseline for this plan: repository revision `3985993`.
-The current temporary Titan agent is `9911433`, log-only;
+The current temporary Titan agent is `ef31a77`, log-only; its
+[candidate refresh](candidate-refresh-2026-11-25.md) preserved native configuration
+and adoption, with block control disabled. Earlier
 [credential receipt validation](credential-receipt-validation-2026-11-24.md)
 confirmed a zero-change restart with both credential records reused.
 [Controller validation](controller-validation-2026-11-24.md) and
