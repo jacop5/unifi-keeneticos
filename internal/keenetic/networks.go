@@ -104,11 +104,13 @@ func resolveNetworks(cfg translate.Cfg, networks map[string]string) (map[string]
 			unsupported = append(unsupported, "vlan."+id+".bridge")
 		}
 	}
-	if len(declared) > 0 {
+	// Explicit network ownership must not depend on the controller including
+	// a VLAN declaration: an incomplete VLAN-less snapshot is ambiguous too.
+	if len(networks) > 0 {
 		for key := range cfg {
 			if strings.HasPrefix(key, "wireless.") && strings.HasSuffix(key, ".ssid") {
 				id := strings.TrimSuffix(strings.TrimPrefix(key, "wireless."), ".ssid")
-				if bridges[id] == "" && len(networks) > 0 {
+				if bridges[id] == "" {
 					unsupported = append(unsupported, "wireless."+id+".network")
 				}
 			}

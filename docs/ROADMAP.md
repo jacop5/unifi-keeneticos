@@ -14,6 +14,11 @@ confirmed a zero-change restart with both credential records reused.
 
 ## Working rules
 
+The [2026-11-26 offline VLAN membership fix](vlan-membership-guard-2026-11-26.md)
+closes an implicit Home fallback when mappings are enabled but the controller
+omits both VLAN declarations and explicit WLAN membership. This does not
+establish live VLAN data-plane isolation.
+
 - While the operator is away or connectivity is unstable: local code, fixtures,
   package builds and analysis only. Do not change router/controller configuration.
 - Main-router testing stays on explicitly mapped test WLANs. Exclude serving

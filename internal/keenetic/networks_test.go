@@ -2,9 +2,51 @@
 package keenetic
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
+
+func TestEnabledNetworkMappingsRequireMembershipWithoutVLANDeclarations(t *testing.T) {
+	const target = "WifiMaster0/AccessPoint6"
+	base := wlan + "wireless.1.devname=wifi0ap5\n"
+	slots, networks := map[string]string{"1": target}, map[string]string{"77": "Bridge2"}
+	for _, cfg := range []string{base, base + "bridge.2.devname=br0\nbridge.2.port.1.devname=unrelated\n"} {
+		p, err := BuildPlanWithNetworks(cfg, slots, networks)
+		if err != nil || !strings.Contains(strings.Join(p.Unsupported, ","), "wireless.1.network") {
+			t.Fatalf("missing membership did not block plan: %v %v", p.Unsupported, err)
+		}
+		mutations := 0
+		err = ApplyPlan(context.Background(), func(_ context.Context, command string) ([]byte, error) {
+			if command != "show running-config" {
+				mutations++
+			}
+			return []byte("interface Bridge0\n    up\n!\ninterface WifiMaster0\n    up\n!\ninterface " + target + "\n    down\n!\n"), nil
+		}, p, t.TempDir()+"/rollback.json", func(context.Context) error { t.Fatal("unsupported plan reached health"); return nil })
+		if err == nil || mutations != 0 {
+			t.Fatal("unsupported network plan reached native mutation")
+		}
+	}
+	for _, tc := range []struct {
+		cfg     string
+		mapping map[string]string
+	}{
+		{base, nil}, // Existing untagged behavior remains when mappings are off.
+		{base + "bridge.2.devname=br0\nbridge.2.port.1.devname=wifi0ap5\n", networks},
+	} {
+		p, err := BuildPlanWithNetworks(tc.cfg, slots, tc.mapping)
+		if err != nil || len(p.Unsupported) != 0 {
+			t.Fatalf("valid untagged control rejected: %v %v", p.Unsupported, err)
+		}
+		found := false
+		for _, command := range p.Commands {
+			found = found || command.Text == "interface Bridge0 include "+target
+		}
+		if !found {
+			t.Fatal("valid untagged binding lost")
+		}
+	}
+}
 
 const taggedWLAN = wlan + "wireless.1.devname=wifi0ap5\nvlan.1.id=77\nvlan.1.devname=eth0\nbridge.2.devname=br0.77\nbridge.2.port.1.devname=wifi0ap5\nbridge.2.port.2.devname=eth0.77\n"
 
