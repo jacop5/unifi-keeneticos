@@ -39,3 +39,7 @@ The existence/semantics of those status fields was not established offline.
 No router/controller access or live changes occurred in this work. VLAN/uplink
 creation, installed hardware behavior and actual tagged traffic/isolation remain
 separate acceptance tasks.
+
+Clean candidate `41f2f9a` passed the full offline release gate: uncached race,
+static and tooling checks, both MIPS packages/manifests and bundled-source
+offline rebuilds. It has not been deployed to the router.
