@@ -39,3 +39,11 @@ Clean candidate `1ff89ef` passed the full offline release gate, including race
 tests, static/tooling checks, both MIPS packages/manifests and offline rebuilds
 from bundled vendored source. This does not establish controller UI rendering
 of the newly retained inactive rows.
+
+On 2026-11-26, an independent source/evidence review led to offline lifecycle
+coverage in `vap_identity_lifecycle_test.go`: retained identity while down,
+configuration omission, SSID-free inactive APs, resume, slot mismatch and alias
+collision. The worker's package tests/vet passed, followed by an independent
+lead run of `go test -race ./internal/keenetic -count=1`. These are synthetic
+payload-contract checks, not controller API or GUI verification. No production
+behavior or router configuration changed in this follow-up.
