@@ -92,6 +92,10 @@ A [real-controller write-denied no-op run](write-denied-noop-validation-2026-11-
 confirmed candidate `1b0d2cc` with zero prepared changes and two reused credential
 receipts. The prior agent/profile were restored. Positive applying-mode and client
 acceptance remain separate P1.2 work.
+Candidate `1ff89ef` subsequently passed guarded, controller-driven AP6 pause/resume
+on both bands with exactly four administrative writes and exact restoration.
+[Evidence](ap6-pause-resume-2026-11-25.md) distinguishes that result from the
+unmet inactive-row API assertion and outstanding active-client tests.
 
 ### P0.1 — One offline command and candidate evidence
 

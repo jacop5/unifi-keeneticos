@@ -6,8 +6,8 @@ and an administratively enabled AP with an explicit down link was still reported
 running. Authenticated association records could also survive an inactive AP in
 the independently collected station list.
 
-The collector now retains configured APs whose administrative state is up or
-down. VAP rows report `up=false`/`INIT` when native administrative state or native
+The collector now retains APs with a nonempty native SSID whose administrative
+state is up or down. VAP rows report `up=false`/`INIT` when native administrative state or native
 link is explicitly down; otherwise they retain `RUN`. Missing link measurements
 retain the administrative-state fallback. Unknown administrative states are not
 newly interpreted as configured active WLANs by collection.
@@ -29,8 +29,11 @@ The regression fixture runs complete collection and mapped inform conversion.
 It covers active, enabled-but-unlinked, configured paused and unused inactive APs,
 stale authenticated records, nested summary fields, controller aliases, counts
 and traffic totals. A separate test checks missing-link fallback. These are
-synthetic transition cases, not live disabled-WLAN GUI acceptance; no candidate
-containing this change has been deployed on the household router yet.
+synthetic transition cases, not live disabled-WLAN GUI acceptance. A subsequent
+[guarded native/controller pause/resume run](ap6-pause-resume-2026-11-25.md) used
+this candidate temporarily, then restored the old log-only agent. The paused
+controller request omitted WLAN identity fields, and matching inactive API rows
+were not observed; inactive GUI acceptance remains open.
 
 Clean candidate `1ff89ef` passed the full offline release gate, including race
 tests, static/tooling checks, both MIPS packages/manifests and offline rebuilds

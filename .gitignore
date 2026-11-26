@@ -8,3 +8,4 @@ dist/
 .secrets
 *.pass
 testing/controller/.env
+/.orchestration/
