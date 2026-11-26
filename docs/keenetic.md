@@ -301,6 +301,12 @@ Inspect a saved controller configuration without accessing the router:
 indexes to AP interfaces, for example `{"1":"WifiMaster0/AccessPoint0"}`.
 Credential commands are redacted in this output.
 
+Mapping files for `-slots`, `-networks` and `-experimental-ft-domains` must be
+JSON objects with unique decoded keys and string values. Duplicate keys
+(including escaped equivalents), `null`, nested/non-string values and trailing
+data are rejected. An empty `{}` is valid JSON; planner requirements still
+apply. Parse errors identify the flag without printing mapping keys or values.
+
 Preflight treats optional SSID quoting as equivalent, but native credentials
 need separate handling. The Titan exports `authentication wpa-psk ns3 <value>`;
 those two arguments must not compare equal to the literal passphrase

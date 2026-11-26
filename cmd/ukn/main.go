@@ -155,23 +155,19 @@ func main() {
 		if *wlanTestOnly {
 			log.Fatal("VLAN bridge mappings are not allowed in Wi-Fi test mode")
 		}
-		b, err := os.ReadFile(*networksFile)
+		m, err := loadMappingFile(*networksFile, "-networks")
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := json.Unmarshal(b, &networks); err != nil {
-			log.Fatal(err)
-		}
+		networks = m
 	}
 	ftDomains := map[string]string{}
 	if *ftDomainsFile != "" {
-		b, err := os.ReadFile(*ftDomainsFile)
+		m, err := loadMappingFile(*ftDomainsFile, "-experimental-ft-domains")
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := json.Unmarshal(b, &ftDomains); err != nil {
-			log.Fatal("invalid FT domains JSON")
-		}
+		ftDomains = m
 	}
 	buildPlan := func(text string, slots map[string]string) (keenetic.Plan, error) {
 		if *wlanTestOnly {
@@ -203,13 +199,11 @@ func main() {
 		}
 		slots := map[string]string{}
 		if *slotsFile != "" {
-			b, err := os.ReadFile(*slotsFile)
+			m, err := loadMappingFile(*slotsFile, "-slots")
 			if err != nil {
 				log.Fatal(err)
 			}
-			if err := json.Unmarshal(b, &slots); err != nil {
-				log.Fatal(err)
-			}
+			slots = m
 		}
 		plan, err := buildPlan(string(data), slots)
 		if err != nil {
@@ -382,13 +376,11 @@ func main() {
 	x.RestoreFromMgmtCfg()
 	slots := map[string]string{}
 	if *slotsFile != "" {
-		b, err := os.ReadFile(*slotsFile)
+		m, err := loadMappingFile(*slotsFile, "-slots")
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := json.Unmarshal(b, &slots); err != nil {
-			log.Fatal(err)
-		}
+		slots = m
 	}
 	var provisioning provisionRetry
 	var requests chan device.AdoptRequest
