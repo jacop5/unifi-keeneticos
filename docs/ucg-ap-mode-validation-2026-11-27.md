@@ -97,3 +97,53 @@ mizore on 5 GHz); native readback showed WPA2 and WPA3 enabled, so the disabled
 profiles were set to WPA2/WPA3 transition with optional PMF. Existing household
 APs remain up. A production WLAN-only provisioning option is being implemented
 and requires independent verification before native handover.
+
+## Overnight production checkpoint
+
+Clean production candidate `654dc52bb024c4ec18afbec5c9619c7ca223ba6a` passed all
+nine offline release checks. The new production `-wlan-only` mode passed planner,
+CLI, service and status tests plus lead targeted race checks. Independent static
+review was accepted; reviewer probes attempted after a Smart denial were
+explicitly excluded from acceptance evidence.
+
+Both production controller profiles were enabled in a Titan-only group. Verified
+controller IDs 3/4 map to existing native 2.4 GHz AP1 / 5 GHz AP0. IDs 1/2 retain
+ownership of the disabled test AP6s. The refreshed controller configuration after
+SAE capability advertisement preserved WPA2/WPA3: an earlier cached config had
+planned WPA2-only and was not applied. A Titan-only force-provision produced the
+correct transition plan. No regulatory country change was performed.
+
+The accepted WLAN-only plan excluded every master-radio target. Guarded native
+application prepared nine changes, confirmed version `1182856ed254668c`, and
+cleared the rollback journal. Both household APs reported RUN/up; both test APs
+reported disabled/down. Native radio country/channels/width remain owned locally.
+The conservative profile disables FT/BSS transition; this run does not establish
+fast-roaming support. Speedster integration is explicitly deferred until morning.
+
+Real Mac client acceptance passed on each actual production SSID: authentication,
+UCG DHCP leases and HTTPS bound to Wi-Fi (HTTP 200). Native associations and UCG
+ath2/ath3 telemetry agreed with the respective bands. This proves client access
+for the tested Mac, not every WPA2/WPA3 client or protocol-level SAE negotiation.
+
+The guarded package was installed persistently. The known disabled legacy script
+had no status command: its exact hash, disabled configuration, absent PID and
+absence of processes using the old installed binary were verified before moving
+it to a backup. Original script/config/binary are retained privately under
+`/opt/var/backups/ukn-before-654dc52`. No installer status guard was weakened.
+
+The confirmed session, receipts and SSH host keys were copied locally within the
+Titan to private `/opt/var/lib/unifi-keenetic-ucg`. Service configuration uses
+`ENABLED=1`, `APPLY=1`, `WLAN_ONLY=1`, explicit four-slot mapping, native SAE
+advertisement enabled, and LED/reboot/block/version-spoof actions disabled.
+Keenetic already has `opkg initrc /opt/etc/init.d/rc.unslung`; boot integration
+is configured. Physical device reboot was not performed.
+
+Installed service activation and a subsequent service restart both passed. PID
+changed from 10049 to 10281; confirmed provisioning returned, UCG remained
+connected, no rollback remained, normalized native configuration was unchanged
+across restart, and Wi-Fi-bound production HTTPS still returned 200. The stable
+instance now runs from `/opt/sbin/ukn`, not a temporary executable.
+
+Tonight's production-WLAN objective is met. Automatic Network 11 SSH adoption,
+physical reboot acceptance and the broader roadmap remain open; do not infer
+completion of the entire port from these core deployment results.

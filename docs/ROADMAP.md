@@ -1,11 +1,13 @@
 # KeeneticOS port roadmap
 
 Updated 2026-11-27. This is the implementation/test order, not a claim that the
-port is complete. The current temporary Titan is in AP mode, running `d491c45`
-with applying limited to the two AP6 test slots. The new UCG Network 11 session,
-manual-key bootstrap limits, 2.4 GHz client acceptance and zero-write restart are
+port is complete. The Titan is in AP mode with installed candidate `654dc52` managing the two
+production WLANs through `WLAN_ONLY=1`. Both bands passed real client traffic
+and the installed service restart passed. The new UCG Network 11 session,
+manual-key bootstrap limits, dual-band production client acceptance and installed restart are
 recorded in [UCG AP-mode validation](ucg-ap-mode-validation-2026-11-27.md).
-Automatic Network 11 SSH adoption and persistent installation remain open.
+Automatic Network 11 SSH adoption and physical reboot acceptance remain open.
+The Speedster is explicitly deferred until the operator returns in the morning.
 The previous `ef31a77` log-only instance and its
 [candidate refresh](candidate-refresh-2026-11-25.md) are historical router-mode
 evidence. Earlier [credential receipt validation](credential-receipt-validation-2026-11-24.md)
