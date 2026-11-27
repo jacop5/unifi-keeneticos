@@ -350,6 +350,15 @@ listener defaults to port 2222 and accepts connections only from the
 controller IP. It does not execute shell commands. Use `-ssh-listen ''`
 to disable it. No controller address is bundled into the source.
 
+Use `-debug-adoption` to log numeric inform HTTP status changes (for example,
+404 while pending adoption, then 200). Repeated identical statuses are
+suppressed. This diagnostic does not log request/reply bodies, URLs, headers or
+keys. Listener startup reports the bind address and permitted controller IP.
+On a controller with several LAN addresses, use its address on the AP LAN; the
+adoption listener permits only the configured inform host, not every address
+belonging to the same gateway. A controller marking a device adopted does not
+prove the first encrypted inform has succeeded.
+
 ## Current limits
 
 This is not yet a finished replacement for the upstream daemon. Basic adoption

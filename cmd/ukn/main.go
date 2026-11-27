@@ -33,6 +33,7 @@ func main() {
 	modelCode := flag.String("model", "U7PG2", "UniFi AP model code")
 	listModels := flag.Bool("models", false, "list UniFi model catalogue and exit")
 	sshListen := flag.String("ssh-listen", ":2222", "controller-only SSH adoption listener; empty disables")
+	debugAdoption := flag.Bool("debug-adoption", false, "log only the numeric HTTP status of inform replies when it changes (never URLs, headers, bodies, errors or keys)")
 	stateDir := flag.String("state", "/opt/var/lib/unifi-keenetic", "private persistent state directory")
 	probe := flag.Bool("probe", false, "collect router status and exit without contacting a controller")
 	wifiSystemStatus := flag.Bool("wifi-system-status", false, "read native Wi-Fi-system WLAN/AP membership; no controller or configuration changes")
@@ -402,9 +403,13 @@ func main() {
 		if err := adopt.Start(); err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("ssh-adopt: listening on %s (allowed controller %v)", *sshListen, adopt.AllowFrom)
 		defer adopt.Close()
 	}
 	client := &http.Client{Timeout: 15 * time.Second}
+	if *debugAdoption {
+		client.Transport = newStatusLoggingTransport(http.DefaultTransport)
+	}
 	var actionHandler func(context.Context, string) error
 	if *ledControl || *rebootControl {
 		actionHandler = nativeActionHandler(keenetic.Local, keenetic.ActionPolicy{LED: *ledControl, Reboot: *rebootControl, WLANTestOnly: *wlanTestOnly}, journal, stop)
