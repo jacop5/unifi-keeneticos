@@ -1,11 +1,14 @@
 # KeeneticOS port roadmap
 
-Updated 2026-11-25. This is the implementation/test order, not a claim that the
-port is complete. Baseline for this plan: repository revision `3985993`.
-The current temporary Titan agent is `ef31a77`, log-only; its
-[candidate refresh](candidate-refresh-2026-11-25.md) preserved native configuration
-and adoption, with block control disabled. Earlier
-[credential receipt validation](credential-receipt-validation-2026-11-24.md)
+Updated 2026-11-27. This is the implementation/test order, not a claim that the
+port is complete. The current temporary Titan is in AP mode, running `d491c45`
+with applying limited to the two AP6 test slots. The new UCG Network 11 session,
+manual-key bootstrap limits, 2.4 GHz client acceptance and zero-write restart are
+recorded in [UCG AP-mode validation](ucg-ap-mode-validation-2026-11-27.md).
+Automatic Network 11 SSH adoption and persistent installation remain open.
+The previous `ef31a77` log-only instance and its
+[candidate refresh](candidate-refresh-2026-11-25.md) are historical router-mode
+evidence. Earlier [credential receipt validation](credential-receipt-validation-2026-11-24.md)
 confirmed a zero-change restart with both credential records reused.
 [Controller validation](controller-validation-2026-11-24.md) and
 [2.4 GHz/hidden-SSID checks](band-hidden-validation-2026-11-24.md) used `632f35b`.

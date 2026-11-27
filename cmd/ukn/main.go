@@ -48,6 +48,7 @@ func main() {
 	clientBlockControl := flag.Bool("client-block-control", false, "compose controller block list into explicitly controller-owned WLAN ACLs; requires slots; native enforcement requires -apply")
 	reportUpgradeVersion := flag.Bool("report-upgrade-version", false, "acknowledge controller upgrades by reporting their version only; never download firmware or reboot (default: refuse)")
 	wlanTestOnly := flag.Bool("wlan-test-only", false, "restrict planning to UKN-Test SSIDs on non-primary slots; exclude all radio changes")
+	wlanOnly := flag.Bool("wlan-only", false, "restrict provisioning to explicitly mapped WLAN slots with arbitrary SSIDs; exclude all radio-wide changes; requires -slots")
 	watchPath := flag.String("rollback-watch", "", "internal rollback watchdog journal")
 	watchID := flag.String("rollback-id", "", "internal rollback journal identity")
 	planFile := flag.String("plan", "", "print a redacted plan for a saved UniFi system_cfg and exit")
@@ -66,6 +67,12 @@ func main() {
 	}
 	if *rebootControl && *wlanTestOnly {
 		log.Fatal("-reboot-control cannot be used in WLAN test mode")
+	}
+	if *wlanOnly && *wlanTestOnly {
+		log.Fatal("-wlan-only cannot be used with -wlan-test-only")
+	}
+	if *wlanOnly && *slotsFile == "" {
+		log.Fatal("-wlan-only requires -slots")
 	}
 	offlineModes := map[string]bool{
 		"rollback-watch": *watchPath != "", "rollback-probe": *rollbackProbe != "",
@@ -173,6 +180,9 @@ func main() {
 	buildPlan := func(text string, slots map[string]string) (keenetic.Plan, error) {
 		if *wlanTestOnly {
 			return keenetic.BuildWLANTestPlanWithFT(text, slots, ftDomains)
+		}
+		if *wlanOnly {
+			return keenetic.BuildWLANPlanWithOptions(text, slots, keenetic.PlannerOptions{Networks: networks, FTDomains: ftDomains})
 		}
 		return keenetic.BuildPlanWithOptions(text, slots, keenetic.PlannerOptions{Networks: networks, FTDomains: ftDomains})
 	}
@@ -352,7 +362,7 @@ func main() {
 	if statusErr != nil {
 		log.Printf("provision status: %v", statusErr)
 	}
-	reporter := provisionReporter{path: statusPath, report: previousStatus, apply: *apply, testOnly: *wlanTestOnly, clientBlockControl: *clientBlockControl}
+	reporter := provisionReporter{path: statusPath, report: previousStatus, apply: *apply, testOnly: *wlanTestOnly, wlanOnly: *wlanOnly, clientBlockControl: *clientBlockControl}
 	recordProvision := func(version, phase string, plan *keenetic.Plan, retry time.Time) {
 		if err := reporter.record(version, phase, plan, retry); err != nil {
 			log.Printf("provision status: %v", err)

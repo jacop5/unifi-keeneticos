@@ -9,6 +9,7 @@ SSH_LISTEN=':2222'
 MODEL='U7PG2'
 APPLY=0
 WLAN_TEST_ONLY=0
+WLAN_ONLY=0
 LED_CONTROL=0
 CLIENT_BLOCK_CONTROL=0
 REBOOT_CONTROL=0
@@ -79,14 +80,18 @@ case "${1:-}" in
   done
   unset UKN_INSTALL_RECOVERY
   [ -n "$INFORM_URL" ] || { printf '%s\n' 'INFORM_URL is required' >&2; exit 1; }
-  for option in "$APPLY" "$WLAN_TEST_ONLY" "$LED_CONTROL" "$CLIENT_BLOCK_CONTROL" "$REBOOT_CONTROL" "$REPORT_UPGRADE_VERSION" "$EXPERIMENTAL_SAE"; do
+  for option in "$APPLY" "$WLAN_TEST_ONLY" "$WLAN_ONLY" "$LED_CONTROL" "$CLIENT_BLOCK_CONTROL" "$REBOOT_CONTROL" "$REPORT_UPGRADE_VERSION" "$EXPERIMENTAL_SAE"; do
    case "$option" in 0|1) ;; *) printf '%s\n' 'Action switches must be 0 or 1' >&2; exit 1 ;; esac
   done
-  if [ "$APPLY" = 1 ] || [ "$WLAN_TEST_ONLY" = 1 ] || [ "$CLIENT_BLOCK_CONTROL" = 1 ]; then
-   [ -n "$SLOTS" ] || { printf '%s\n' 'SLOTS is required for application, client blocking or WLAN test mode' >&2; exit 1; }
+  if [ "$APPLY" = 1 ] || [ "$WLAN_TEST_ONLY" = 1 ] || [ "$WLAN_ONLY" = 1 ] || [ "$CLIENT_BLOCK_CONTROL" = 1 ]; then
+   [ -n "$SLOTS" ] || { printf '%s\n' 'SLOTS is required for application, client blocking, WLAN test mode or WLAN-only mode' >&2; exit 1; }
   fi
   if [ "$WLAN_TEST_ONLY" = 1 ] && [ -n "$NETWORKS" ]; then
    printf '%s\n' 'NETWORKS cannot be used in connected Wi-Fi test mode' >&2
+   exit 1
+  fi
+  if [ "$WLAN_TEST_ONLY" = 1 ] && [ "$WLAN_ONLY" = 1 ]; then
+   printf '%s\n' 'WLAN_TEST_ONLY and WLAN_ONLY are mutually exclusive' >&2
    exit 1
   fi
   if [ "$WLAN_TEST_ONLY" = 1 ] && [ "$REBOOT_CONTROL" = 1 ]; then
@@ -108,6 +113,7 @@ case "${1:-}" in
   fi
   [ "$APPLY" = 0 ] || set -- "$@" -apply
   [ "$WLAN_TEST_ONLY" = 0 ] || set -- "$@" -wlan-test-only
+  [ "$WLAN_ONLY" = 0 ] || set -- "$@" -wlan-only
   [ "$EXPERIMENTAL_SAE" = 0 ] || set -- "$@" -experimental-sae
   [ "$LED_CONTROL" = 0 ] || set -- "$@" -led-control
   [ "$REBOOT_CONTROL" = 0 ] || set -- "$@" -reboot-control

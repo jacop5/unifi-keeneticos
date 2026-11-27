@@ -18,6 +18,7 @@ import (
 type provisionScope struct {
 	ClientBlockControl bool     `json:"client_block_control"`
 	WLANTestOnly       bool     `json:"wlan_test_only"`
+	WLANOnly           bool     `json:"wlan_only"`
 	Interfaces         []string `json:"interfaces"`
 	Ignored            []string `json:"ignored_settings"`
 }
@@ -29,6 +30,7 @@ type provisionStatus struct {
 	ReceivedVersion      string          `json:"received_cfgversion,omitempty"`
 	ApplyEnabled         bool            `json:"apply_enabled"`
 	WLANTestOnly         bool            `json:"wlan_test_only"`
+	WLANOnly             bool            `json:"wlan_only"`
 	Unsupported          []string        `json:"unsupported"`
 	Ignored              []string        `json:"ignored_settings"`
 	UpdatedAt            *time.Time      `json:"updated_at,omitempty"`
@@ -64,10 +66,10 @@ func readProvisionStatus(path string) (provisionStatus, error) {
 }
 
 type provisionReporter struct {
-	path               string
-	report             provisionStatus
-	apply, testOnly    bool
-	clientBlockControl bool
+	path                      string
+	report                    provisionStatus
+	apply, testOnly, wlanOnly bool
+	clientBlockControl        bool
 }
 
 func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, retry time.Time) error {
@@ -82,7 +84,7 @@ func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, r
 	now := time.Now().UTC()
 	r.report.SchemaVersion = 1
 	r.report.Phase, r.report.ReceivedVersion = phase, version
-	r.report.ApplyEnabled, r.report.WLANTestOnly = r.apply, r.testOnly
+	r.report.ApplyEnabled, r.report.WLANTestOnly, r.report.WLANOnly = r.apply, r.testOnly, r.wlanOnly
 	r.report.ClientBlockControl = r.clientBlockControl
 	r.report.UpdatedAt = &now
 	r.report.Unsupported, r.report.Ignored = []string{}, []string{}
@@ -98,7 +100,7 @@ func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, r
 	if phase == "confirmed" {
 		r.report.LastConfirmedVersion = version
 		r.report.LastConfirmedAt = &now
-		r.report.LastConfirmedScope = confirmedScope(plan, r.testOnly)
+		r.report.LastConfirmedScope = confirmedScope(plan, r.testOnly, r.wlanOnly)
 		r.report.LastConfirmedScope.ClientBlockControl = r.clientBlockControl
 	}
 	b, err := json.MarshalIndent(r.report, "", "  ")
@@ -122,7 +124,7 @@ func (r *provisionReporter) record(version, phase string, plan *keenetic.Plan, r
 }
 
 // Store only native target identifiers, never credentials or SSID values.
-func confirmedScope(plan *keenetic.Plan, testOnly bool) *provisionScope {
+func confirmedScope(plan *keenetic.Plan, testOnly, wlanOnly bool) *provisionScope {
 	targets := map[string]bool{}
 	for _, c := range plan.Commands {
 		parts := strings.SplitN(c.Text, " ", 3)
@@ -136,7 +138,7 @@ func confirmedScope(plan *keenetic.Plan, testOnly bool) *provisionScope {
 	for _, s := range plan.Schedules {
 		targets[s.Target] = true
 	}
-	result := &provisionScope{WLANTestOnly: testOnly, Interfaces: []string{}, Ignored: append([]string{}, plan.Ignored...)}
+	result := &provisionScope{WLANTestOnly: testOnly, WLANOnly: wlanOnly, Interfaces: []string{}, Ignored: append([]string{}, plan.Ignored...)}
 	for target := range targets {
 		result.Interfaces = append(result.Interfaces, target)
 	}

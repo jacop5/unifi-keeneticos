@@ -359,6 +359,28 @@ adoption listener permits only the configured inform host, not every address
 belonging to the same gateway. A controller marking a device adopted does not
 prove the first encrypted inform has succeeded.
 
+## WLAN-only production provisioning
+
+`-wlan-only -slots slots.json` scopes provisioning to the explicitly mapped
+WLANs while leaving radio-wide country, channel, width and administrative state
+under native control. It accepts ordinary SSID names and primary AP slots.
+The service equivalent is `WLAN_ONLY=1`; `APPLY=1` is still required for writes.
+Do not combine this with `WLAN_TEST_ONLY=1`.
+
+Mappings declare ownership. A mapped WLAN absent from the verified full
+controller configuration is brought down, including when the controller pauses
+it. Check the IDs and native AP identities before enabling application; a stale
+map can target the wrong WLAN. Existing bridge mappings and experimental FT
+options retain their ordinary validation. No bridges, uplinks or DHCP services
+are created. Provision status and its last-confirmed scope include `wlan_only`.
+
+This is separate from `-wlan-test-only`, which continues to require non-primary
+slots and `UKN-Test` names and performs its additional test-ownership check.
+Production WLAN-only mode has no household-name blacklist. LED/reboot actions
+remain controlled by their separate, default-off switches. Native driver or DFS
+behavior can still interrupt a shared radio when virtual AP settings change;
+excluding explicit radio commands does not guarantee uninterrupted service.
+
 ## Current limits
 
 This is not yet a finished replacement for the upstream daemon. Basic adoption
