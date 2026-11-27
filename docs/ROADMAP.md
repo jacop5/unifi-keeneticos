@@ -8,6 +8,8 @@ manual-key bootstrap limits, dual-band production client acceptance and installe
 recorded in [UCG AP-mode validation](ucg-ap-mode-validation-2026-11-27.md).
 Automatic Network 11 SSH adoption and physical reboot acceptance remain open.
 The Speedster is explicitly deferred until the operator returns in the morning.
+The [Speedster handoff](speedster-handoff.md) lists the required access/topology
+information and the device-specific preflight; it contains no credentials.
 The previous `ef31a77` log-only instance and its
 [candidate refresh](candidate-refresh-2026-11-25.md) are historical router-mode
 evidence. Earlier [credential receipt validation](credential-receipt-validation-2026-11-24.md)
