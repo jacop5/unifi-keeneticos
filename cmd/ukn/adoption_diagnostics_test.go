@@ -19,7 +19,7 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { retu
 
 func testRequest(t *testing.T) *http.Request {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, "http://10.9.12.1:8080/inform?secret=supersecretvalue", strings.NewReader("authkey=0011223344556677889900aabbccddeeff"))
+	req, err := http.NewRequest(http.MethodPost, "http://192.0.2.1:8080/inform?secret=supersecretvalue", strings.NewReader("authkey=0011223344556677889900aabbccddeeff"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestStatusTransportPassThrough(t *testing.T) {
 }
 
 func TestStatusTransportErrorPassThrough(t *testing.T) {
-	wantErr := errors.New("dial tcp 10.9.12.1:8080: secret-refused-detail")
+	wantErr := errors.New("dial tcp 192.0.2.1:8080: secret-refused-detail")
 	tr := newStatusLoggingTransport(roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		return nil, wantErr
 	}))
@@ -124,7 +124,7 @@ func TestStatusTransportNoSensitiveLeak(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	for _, secret := range []string{"supersecretvalue", "0011223344556677889900aabbccddeeff", "topsecrettoken123", "10.9.12.1", "/inform?"} {
+	for _, secret := range []string{"supersecretvalue", "0011223344556677889900aabbccddeeff", "topsecrettoken123", "192.0.2.1", "/inform?"} {
 		if strings.Contains(logged, secret) {
 			t.Errorf("log %q leaks %q", logged, secret)
 		}

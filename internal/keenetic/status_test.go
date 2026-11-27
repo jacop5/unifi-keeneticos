@@ -96,8 +96,8 @@ func TestARPTableNamesWithSpaces(t *testing.T) {
 }
 
 func TestParentFieldsWin(t *testing.T) {
-	v := Values("address: 10.9.12.1\nlink: up\nipv6:\n address: fe80::1\nsummary:\n link: running\n")
-	if v["address"] != "10.9.12.1" || v["link"] != "up" {
+	v := Values("address: 192.0.2.1\nlink: up\nipv6:\n address: fe80::1\nsummary:\n link: running\n")
+	if v["address"] != "192.0.2.1" || v["link"] != "up" {
 		t.Fatalf("nested fields replaced parent: %#v", v)
 	}
 }

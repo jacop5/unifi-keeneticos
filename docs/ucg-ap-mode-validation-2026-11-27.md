@@ -92,8 +92,8 @@ changing it to native IT was separately awaiting explicit operator approval.
 The agent was returned to log-only before production profiles were created.
 Both household profiles are stored disabled in a Titan-only AP group, with the
 operator-supplied corrected passphrases sent only to the UCG. Neither credential
-is recorded here. Bands match the existing configuration (nozomi on 2.4 GHz,
-mizore on 5 GHz); native readback showed WPA2 and WPA3 enabled, so the disabled
+is recorded here. Bands match the existing configuration (one household SSID on
+each band); native readback showed WPA2 and WPA3 enabled, so the disabled
 profiles were set to WPA2/WPA3 transition with optional PMF. Existing household
 APs remain up. A production WLAN-only provisioning option is being implemented
 and requires independent verification before native handover.
