@@ -14,6 +14,10 @@ confirmed a zero-change restart with both credential records reused.
 
 ## Working rules
 
+The [2026-11-26 mapping parser validation](mapping-json-validation-2026-11-26.md)
+rejects ambiguous JSON mappings before planning. Clean `6386b11` passed the full
+offline release gate; it has not been deployed.
+
 The [2026-11-26 offline VLAN membership fix](vlan-membership-guard-2026-11-26.md)
 closes an implicit Home fallback when mappings are enabled but the controller
 omits both VLAN declarations and explicit WLAN membership. This does not
